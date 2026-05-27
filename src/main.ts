@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
 import { HomelandScene } from './scenes/HomelandScene';
 import { ExpeditionScene } from './scenes/ExpeditionScene';
+import { ExpeditionRecapScene } from './scenes/ExpeditionRecapScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -14,7 +15,7 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene, HomelandScene, ExpeditionScene],
+  scene: [BootScene, HomelandScene, ExpeditionScene, ExpeditionRecapScene],
 };
 
 new Phaser.Game(config);
