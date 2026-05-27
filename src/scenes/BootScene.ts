@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { gameState } from '../systems/GameState';
 
 export class BootScene extends Phaser.Scene {
   private loadingBar!: Phaser.GameObjects.Graphics;
@@ -9,6 +10,8 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
+    gameState.load();
+
     const cx = this.cameras.main.centerX;
     const cy = this.cameras.main.centerY;
 

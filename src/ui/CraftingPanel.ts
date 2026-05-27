@@ -12,10 +12,10 @@ export class CraftingPanel {
   private hintText: Phaser.GameObjects.Text;
   private visible: boolean = false;
   private recipes: { id: string; name: string }[] = [];
+  private selectedIndex: number = 0;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
-
     this.container = scene.add.container(0, 0).setDepth(200).setScrollFactor(0);
 
     this.overlay = scene.add.graphics();
@@ -33,7 +33,7 @@ export class CraftingPanel {
     }).setOrigin(0.5, 0);
     this.container.add(this.contentText);
 
-    this.hintText = scene.add.text(960 / 2, 610, '[SPACE] Craft selected  |  [TAB/ESC] close', {
+    this.hintText = scene.add.text(960 / 2, 610, '[W/S] Select  [SPACE] Craft  [ESC] Close', {
       fontSize: '11px', fontFamily: 'monospace', color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
@@ -43,6 +43,7 @@ export class CraftingPanel {
 
   show(): void {
     this.visible = true;
+    this.selectedIndex = 0;
     this.refresh();
     this.container.setVisible(true);
 
@@ -80,6 +81,69 @@ export class CraftingPanel {
     return this.visible;
   }
 
+  navigateUp(): void {
+    if (this.recipes.length < 2) return;
+    this.selectedIndex = (this.selectedIndex - 1 + this.recipes.length) % this.recipes.length;
+    this.renderContent();
+  }
+
+  navigateDown(): void {
+    if (this.recipes.length < 2) return;
+    this.selectedIndex = (this.selectedIndex + 1) % this.recipes.length;
+    this.renderContent();
+  }
+
+  craftSelected(): boolean {
+    if (this.recipes.length === 0) {
+      this.showNoCraft();
+      return false;
+    }
+    const recipe = this.recipes[this.selectedIndex];
+    if (!gameState.crafting.canCraft(recipe.id)) {
+      this.showNoCraft();
+      return false;
+    }
+    gameState.crafting.craft(recipe.id);
+    this.refresh();
+    this.showCraftSuccess(recipe.id);
+    return true;
+  }
+
+  private renderContent(): void {
+    const discovered = gameState.crafting.getDiscoveredRecipes();
+
+    const lines: string[] = [];
+
+    for (let i = 0; i < discovered.length; i++) {
+      const r = discovered[i];
+      const canCraft = gameState.crafting.canCraft(r.id);
+      const ings = Object.entries(r.ingredients)
+        .map(([id, qty]) => {
+          const have = gameState.inventory.count(id);
+          return `${itemDisplayName(id)} ${have}/${qty}`;
+        })
+        .join(', ');
+      const marker = i === this.selectedIndex ? '▸' : ' ';
+      const name = itemDisplayName(r.result);
+      lines.push(`  ${marker} ${name.padEnd(20)} ${ings}${canCraft ? '  ✓' : ''}`);
+    }
+
+    const undiscovered = gameState.crafting.getUndiscoveredRecipes();
+    if (undiscovered.length > 0) {
+      if (lines.length > 0) lines.push('');
+      lines.push('     Unknown Recipes ???');
+      for (const r of undiscovered) {
+        lines.push(`       ${'?'.repeat(r.result.length)}  (undiscovered)`);
+      }
+    }
+
+    if (discovered.length === 0 && undiscovered.length === 0) {
+      lines.push('  (no recipes)');
+    }
+
+    this.contentText.setText(lines.join('\n'));
+  }
+
   refresh(): void {
     this.overlay.clear();
     this.overlay.fillStyle(0x0a0a1a, 0.88);
@@ -89,55 +153,13 @@ export class CraftingPanel {
     this.overlay.strokeRect(40, 65, 880, 530);
 
     const discovered = gameState.crafting.getDiscoveredRecipes();
-    const undiscovered = gameState.crafting.getUndiscoveredRecipes();
-
-    const lines: string[] = [];
-
-    if (discovered.length > 0) {
-      for (let i = 0; i < discovered.length; i++) {
-        const r = discovered[i];
-        const canCraft = gameState.crafting.canCraft(r.id);
-        const ings = Object.entries(r.ingredients)
-          .map(([id, qty]) => {
-            const have = gameState.inventory.count(id);
-            return `${itemDisplayName(id)} ${have}/${qty}`;
-          })
-          .join(', ');
-        const mark = canCraft ? '[CRAFT]' : '       ';
-        const name = itemDisplayName(r.result);
-        lines.push(`  ${mark}  ${name.padEnd(20)} ${ings}`);
-      }
-    }
-
-    if (undiscovered.length > 0) {
-      if (lines.length > 0) lines.push('');
-      lines.push('  ???  Unknown Recipes ???');
-      for (const r of undiscovered) {
-        lines.push(`        ${'?'.repeat(r.result.length)}  (undiscovered)`);
-      }
-    }
-
-    if (discovered.length === 0 && undiscovered.length === 0) {
-      lines.push('  (no recipes)');
-    }
-
-    this.contentText.setText(lines.join('\n'));
-
     this.recipes = discovered.map(r => ({ id: r.id, name: itemDisplayName(r.result) }));
-  }
 
-  tryCraftSelected(): boolean {
-    const discovered = gameState.crafting.getDiscoveredRecipes();
-    for (const r of discovered) {
-      if (gameState.crafting.canCraft(r.id)) {
-        gameState.crafting.craft(r.id);
-        this.refresh();
-        this.showCraftSuccess(r.result);
-        return true;
-      }
+    if (this.selectedIndex >= this.recipes.length) {
+      this.selectedIndex = 0;
     }
-    this.showNoCraft();
-    return false;
+
+    this.renderContent();
   }
 
   private showCraftSuccess(itemId: string): void {

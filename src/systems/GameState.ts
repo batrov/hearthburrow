@@ -1,6 +1,8 @@
 import { InventorySystem } from './InventorySystem';
 import { CraftingSystem } from './CraftingSystem';
 
+const SAVE_KEY = 'hearthburrow_save';
+
 export interface RunResult {
   itemsObtained: { id: string; quantity: number }[];
   itemsLost: { id: string; quantity: number }[];
@@ -85,6 +87,53 @@ class GameState {
       }
     }
     return result.sort((a, b) => a.tier - b.tier);
+  }
+
+  save(): void {
+    const data = {
+      inventory: this.inventory.getItems().map(s => s ? { itemId: s.itemId, quantity: s.quantity } : null),
+      restoredBuildings: Array.from(this.restoredBuildings),
+      currentPickaxeTier: this.currentPickaxeTier,
+      maxStaminaBonus: this.maxStaminaBonus,
+      inventorySlotBonus: this.inventorySlotBonus,
+      pickaxeRuns: { ...this.pickaxeRuns },
+      discovered: this.crafting.getDiscoveredIds(),
+    };
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    } catch {
+      // storage full or unavailable
+    }
+  }
+
+  load(): void {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+
+      this.inventory = new InventorySystem(32);
+      if (data.inventory) {
+        for (const slot of data.inventory) {
+          if (slot) this.inventory.addItem(slot.itemId, slot.quantity);
+        }
+      }
+
+      this.restoredBuildings = new Set(data.restoredBuildings ?? []);
+      this.currentPickaxeTier = data.currentPickaxeTier ?? 1;
+      this.maxStaminaBonus = data.maxStaminaBonus ?? 0;
+      this.inventorySlotBonus = data.inventorySlotBonus ?? 0;
+      this.pickaxeRuns = data.pickaxeRuns ?? {};
+
+      if (data.discovered) {
+        this.crafting = new CraftingSystem();
+        for (const id of data.discovered) {
+          this.crafting.discover(id);
+        }
+      }
+    } catch {
+      // corrupt save, start fresh
+    }
   }
 }
 

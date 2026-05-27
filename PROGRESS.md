@@ -33,8 +33,8 @@
 
 | NPC | Status | Notes |
 |-----|--------|-------|
-| Merchant | ❌ | `NPC` entity class exists but unused |
-| Researcher | ❌ | `NPC` entity class exists but unused |
+| Merchant | ❌ | Not implemented |
+| Researcher | ❌ | Not implemented |
 | Villagers | 🟡 | Rescue events exist but no persistent NPC system |
 
 ---
@@ -44,8 +44,8 @@
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Procedural rooms (3-5 per floor) | ✅ | Hand-carved room algorithm with L-corridors |
-| Room templates from data | 🗑️ | `rooms.json` loaded but not used by active generator |
-| 5 biomes | 🟡 | Only Forest; Cave partially defined in dead BiomeManager |
+| Room templates from data | 🗑️ | `rooms.json` loaded but not used |
+| 5 biomes | 🟡 | Only Forest implemented |
 | 8 room types | 🟡 | Only standard mining rooms; no puzzle/merchant/shrine/vault/boss/relic rooms |
 | Random events (5 types) | ✅ | All 5 hardcoded in `buildEventConfig()` |
 | Depth-scaled ore distribution | ✅ | `pickResource(depth)` with weighted probabilities |
@@ -66,8 +66,8 @@
 | Equipment: Rings (slots 1 & 2) | ❌ | Not implemented |
 | Equipment: Boots | ❌ | Not implemented |
 | Equipment: Lantern | ❌ | Not implemented |
-| Consumables in inventory | 🟡 | Items exist and can be crafted, but **no usage system** |
-| Turn-based grid movement | ✅ | 150ms delay, 4-direction |
+| Consumable usage | ✅ | [Q] Stamina Potion, [E] Teleport Scroll, [F] Mining Bomb |
+| Turn-based grid movement | ✅ | 150ms delay, 4-direction, no diagonals |
 
 ---
 
@@ -92,7 +92,7 @@
 | Optional combat | ❌ | Not implemented |
 | Timing-based interaction | ❌ | Not implemented |
 | Ring effects | ❌ | Data exists but unused |
-| Boss fights | ❌ | Boss IDs exist in dead BiomeManager |
+| Boss fights | ❌ | Not implemented |
 | Monster drops | 🟡 | `monster_drop` resource exists but no enemy to drop it |
 
 ---
@@ -116,12 +116,13 @@
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Discovery-based crafting | ✅ | Recipes unlock via events and milestones |
+| Recipe selection with W/S + SPACE | ✅ | Crafting panel now uses selectable list |
 | 6 resource types | ✅ | Stone, Copper, Silver, Gold, Crystal, Monster Essence |
 | 3 pickaxe recipes | ✅ | Common (default), Copper (craftable), Silver (discovered) |
 | 3 consumable recipes | ✅ | Stamina Potion, Teleport Scroll, Mining Bomb |
 | Farming system | ❌ | Farm building data exists, no production logic |
 | Trading/buying | 🟡 | Wandering Trader event trades resources; no persistent economy |
-| Consumable usage during expedition | ❌ | Items sit in inventory, no way to use them |
+| Consumable usage during expedition | ✅ | [Q] Potion (restore 30 stam), [E] Scroll (safe extract), [F] Bomb (damage 8 surrounding tiles) |
 
 ---
 
@@ -162,7 +163,7 @@
 | Seed-based generation | ❌ | Not implemented (no seed, no replays) |
 | Scene management | ✅ | Boot → Homeland → Expedition → Recap |
 | Singleton game state | ✅ | `GameState` persists across scenes |
-| Local storage persistence | ❌ | All progress lost on refresh |
+| Local storage persistence | ✅ | Auto-save on expedition finish, crafting, building restore; load on boot |
 
 ---
 
@@ -190,8 +191,4 @@ Limited recipes | ✅ | 5 recipes with discovery triggers
 ## Known Bugs & Issues
 
 1. **MiningSystem.requiredTier() bug** — checks `"copper"` / `"silver"` / `"gold"` (no `_ore` suffix), but DungeonGenerator uses `"copper_ore"` / `"silver_ore"` / `"gold_ore"`. Not currently triggered because `requiredTier()` is never called from ExpeditionScene.
-2. **Dual DungeonGenerator implementations** — `src/systems/DungeonGenerator.ts` (active) and `src/dungeon/DungeonGenerator.ts` (unused stub) with same class name.
-3. **Dead code** — `Player`, `NPC`, `HUD`, `InventoryUI`, `ExtractionSystem`, `BiomeManager`, `RoomManager`, all relic data are loaded but never used.
-4. **No consumable usage** — Stamina Potion, Teleport Scroll, Mining Bomb cannot be consumed during expeditions.
-5. **No persistence** — Page refresh wipes all progress.
-6. **DataRegistry loads files unused by gameplay** — `rooms.json`, `relics.json`, `events.json` are loaded but the active game code uses hardcoded data structures instead.
+2. **DataRegistry loads files unused by gameplay** — `rooms.json`, `relics.json`, `events.json` are loaded but the active game code uses hardcoded data structures instead.

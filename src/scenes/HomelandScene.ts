@@ -261,11 +261,17 @@ export class HomelandScene extends Phaser.Scene {
     }
 
     if (this.craftingPanel.isVisible()) {
-      if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
-        this.craftingPanel.hide();
+      if (Phaser.Input.Keyboard.JustDown(this.keys.W) || Phaser.Input.Keyboard.JustDown(this.keys.UP)) {
+        this.craftingPanel.navigateUp();
+      }
+      if (Phaser.Input.Keyboard.JustDown(this.keys.S) || Phaser.Input.Keyboard.JustDown(this.keys.DOWN)) {
+        this.craftingPanel.navigateDown();
       }
       if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
-        this.craftingPanel.tryCraftSelected();
+        this.craftingPanel.craftSelected();
+      }
+      if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
+        this.craftingPanel.hide();
       }
       return;
     }

@@ -23,6 +23,10 @@ export class CraftingSystem {
     return this.discovered.has(id);
   }
 
+  getDiscoveredIds(): string[] {
+    return Array.from(this.discovered);
+  }
+
   getDiscoveredRecipes(): RecipeData[] {
     return getAllRecipes().filter(r => this.discovered.has(r.id));
   }
@@ -60,6 +64,7 @@ export class CraftingSystem {
       gameState.equipPickaxe(Math.max(gameState.currentPickaxeTier, equip.tier));
     }
 
+    gameState.save();
     return true;
   }
 

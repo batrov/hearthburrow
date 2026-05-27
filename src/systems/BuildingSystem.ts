@@ -32,6 +32,7 @@ export function restoreBuilding(buildingId: string): boolean {
       break;
   }
 
+  gameState.save();
   return true;
 }
 

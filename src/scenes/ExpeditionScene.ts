@@ -37,8 +37,9 @@ export class ExpeditionScene extends Phaser.Scene {
     SPACE: Phaser.Input.Keyboard.Key;
     ESC: Phaser.Input.Keyboard.Key;
     TAB: Phaser.Input.Keyboard.Key;
-    ONE: Phaser.Input.Keyboard.Key;
-    TWO: Phaser.Input.Keyboard.Key;
+    Q: Phaser.Input.Keyboard.Key;
+    E: Phaser.Input.Keyboard.Key;
+    F: Phaser.Input.Keyboard.Key;
   };
   private moveTimer: number = 0;
   private moveDelay: number = 150;
@@ -79,6 +80,10 @@ export class ExpeditionScene extends Phaser.Scene {
     this.mining = new MiningSystem();
     this.mining.setPickaxeTier(gameState.currentPickaxeTier);
     this.inventory = new InventorySystem(16 + gameState.inventorySlotBonus);
+    if (this.debugMode) {
+      this.inventory.addItem('stamina_potion', 5);
+      this.inventory.addItem('mining_bomb', 5);
+    }
     this.expeditionState.reset();
     this.moveTimer = 0;
     this.tileSprites = this.add.graphics();
@@ -320,7 +325,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     const infoBg = this.add.graphics();
     infoBg.fillStyle(0x0a0a1a, 0.75);
-    infoBg.fillRoundedRect(camW - 228, 8, 220, 62, 6);
+    infoBg.fillRoundedRect(camW - 228, 8, 220, 84, 6);
     infoBg.setScrollFactor(0);
     infoBg.setDepth(50);
 
@@ -357,8 +362,12 @@ export class ExpeditionScene extends Phaser.Scene {
       }).setScrollFactor(0).setDepth(51);
     }
 
-    this.add.text(camW - 218, 38, '[ESC] Give Up  [SPACE] Mine', {
+    this.add.text(camW - 218, 40, '[ESC] Give Up  [SPACE] Mine', {
       fontSize: '11px', fontFamily: 'monospace', color: '#5a4a6a',
+    }).setScrollFactor(0).setDepth(51);
+
+    this.add.text(camW - 218, 56, '[Q] Potion  [E] Scroll  [F] Bomb', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#4a6a5a',
     }).setScrollFactor(0).setDepth(51);
   }
 
@@ -457,8 +466,9 @@ export class ExpeditionScene extends Phaser.Scene {
       SPACE: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
       ESC: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC),
       TAB: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.TAB),
-      ONE: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ONE),
-      TWO: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.TWO),
+      Q: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Q),
+      E: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E),
+      F: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F),
     };
   }
 
@@ -500,6 +510,10 @@ export class ExpeditionScene extends Phaser.Scene {
       return;
     }
 
+    if (Phaser.Input.Keyboard.JustDown(this.keys.Q)) { this.tryUseConsumable('stamina_potion'); return; }
+    if (Phaser.Input.Keyboard.JustDown(this.keys.E)) { this.tryUseConsumable('teleport_scroll'); return; }
+    if (Phaser.Input.Keyboard.JustDown(this.keys.F)) { this.tryUseConsumable('mining_bomb'); return; }
+
     if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
       this.emergencyExtract();
       return;
@@ -518,6 +532,8 @@ export class ExpeditionScene extends Phaser.Scene {
       else if (this.keys.D.isDown || this.keys.RIGHT.isDown) dx = 1;
       if (this.keys.W.isDown || this.keys.UP.isDown) dy = -1;
       else if (this.keys.S.isDown || this.keys.DOWN.isDown) dy = 1;
+
+      if (dx !== 0 && dy !== 0) dy = 0;
 
       if (dx !== 0 || dy !== 0) {
         this.facingX = dx;
@@ -950,6 +966,7 @@ export class ExpeditionScene extends Phaser.Scene {
     }
 
     gameState.consumePickaxeRun();
+    gameState.save();
 
     gameState.lastRunResult = { itemsObtained: obtained, itemsLost: lost, extractType, depth: this.expeditionState.depth };
 
@@ -1043,6 +1060,84 @@ export class ExpeditionScene extends Phaser.Scene {
       onComplete: () => {
         this.finishRun('emergency', 0.3);
       },
+    });
+  }
+
+  private tryUseConsumable(itemId: string): void {
+    if (this.exhausted) return;
+
+    if (this.inventory.count(itemId) <= 0) return;
+
+    switch (itemId) {
+      case 'stamina_potion': {
+        this.inventory.removeItem(itemId, 1);
+        this.stamina.refill(30);
+        this.showConsumableFeedback('+30 Stamina');
+        break;
+      }
+      case 'teleport_scroll': {
+        this.inventory.removeItem(itemId, 1);
+        this.safeExtract();
+        break;
+      }
+      case 'mining_bomb': {
+        this.inventory.removeItem(itemId, 1);
+        this.detonateMiningBomb();
+        break;
+      }
+    }
+  }
+
+  private detonateMiningBomb(): void {
+    const floor = this.currentFloor;
+    if (!floor) return;
+
+    const damage = this.mining.getDamage();
+    const dirs = [
+      { x: -1, y: -1 }, { x: 0, y: -1 }, { x: 1, y: -1 },
+      { x: -1, y: 0 },                     { x: 1, y: 0 },
+      { x: -1, y: 1 },  { x: 0, y: 1 },  { x: 1, y: 1 },
+    ];
+    let changed = false;
+
+    for (const d of dirs) {
+      const tx = this.playerX + d.x;
+      const ty = this.playerY + d.y;
+      if (tx < 0 || tx >= floor.cols || ty < 0 || ty >= floor.rows) continue;
+      const tile = floor.tiles[ty][tx];
+      if (tile.type !== 'mineable' || tile.broken) continue;
+      tile.durability -= damage;
+      this.createHitEffect(tx, ty);
+      if (tile.durability <= 0) {
+        tile.broken = true;
+        this.inventory.addItem(tile.resource, 1);
+        this.createMiningParticles(tx, ty, tile.resource);
+        this.createItemPopup(tx, ty, tile.resource);
+        this.checkRecipeDiscovery(tile.resource);
+      }
+      changed = true;
+    }
+
+    if (changed) {
+      this.tileSprites.clear();
+      this.drawFloor();
+      this.drawMinimap();
+    }
+  }
+
+  private showConsumableFeedback(text: string): void {
+    const cx = this.cameras.main.width / 2;
+    const popup = this.add.text(cx, 180, text, {
+      fontSize: '16px', fontFamily: 'monospace', color: '#44ff88', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(200).setScrollFactor(0);
+
+    this.tweens.add({
+      targets: popup,
+      y: popup.y - 30,
+      alpha: 0,
+      duration: 1200,
+      ease: 'Quad.easeOut',
+      onComplete: () => popup.destroy(),
     });
   }
 
