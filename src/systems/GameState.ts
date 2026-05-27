@@ -12,11 +12,12 @@ export interface RunResult {
 
 const ITEM_NAMES: Record<string, string> = {
   stone: 'Stone',
-  copper_ore: 'Copper Ore',
+  bronze_ore: 'Bronze Ore',
   silver_ore: 'Silver Ore',
   gold_ore: 'Gold Ore',
   crystal: 'Crystal',
   monster_drop: 'Monster Essence',
+  carrot: 'Carrot',
   stamina_potion: 'Stamina Potion',
   teleport_scroll: 'Teleport Scroll',
   mining_bomb: 'Mining Bomb',
@@ -25,7 +26,7 @@ const ITEM_NAMES: Record<string, string> = {
   ring_precision: 'Precision Ring',
   ring_hunter: 'Hunter Ring',
   pickaxe_1: 'Common Pickaxe',
-  pickaxe_2: 'Copper Pickaxe',
+  pickaxe_2: 'Bronze Pickaxe',
   pickaxe_3: 'Silver Pickaxe',
 };
 
@@ -45,6 +46,8 @@ class GameState {
   inventorySlotBonus: number;
   pickaxeRuns: Record<number, number>;
   equippedRings: { ring1: string | null; ring2: string | null };
+  farmPlanted: number;
+  farmHarvest: number;
 
   constructor() {
     this.inventory = new InventorySystem(32);
@@ -55,6 +58,8 @@ class GameState {
     this.inventorySlotBonus = 0;
     this.pickaxeRuns = {};
     this.equippedRings = { ring1: null, ring2: null };
+    this.farmPlanted = 0;
+    this.farmHarvest = 0;
   }
 
   remainingPickaxeRuns(tier?: number): number {
@@ -128,6 +133,8 @@ class GameState {
       inventorySlotBonus: this.inventorySlotBonus,
       pickaxeRuns: { ...this.pickaxeRuns },
       equippedRings: { ...this.equippedRings },
+      farmPlanted: this.farmPlanted,
+      farmHarvest: this.farmHarvest,
       discovered: this.crafting.getDiscoveredIds(),
     };
     try {
@@ -156,6 +163,8 @@ class GameState {
       this.inventorySlotBonus = data.inventorySlotBonus ?? 0;
       this.pickaxeRuns = data.pickaxeRuns ?? {};
       this.equippedRings = data.equippedRings ?? { ring1: null, ring2: null };
+      this.farmPlanted = data.farmPlanted ?? 0;
+      this.farmHarvest = data.farmHarvest ?? 0;
 
       if (data.discovered) {
         this.crafting = new CraftingSystem();

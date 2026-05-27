@@ -1,10 +1,10 @@
 {
   "buildings": [
     { "id": "crafting_station", "name": "Crafting Station", "description": "Craft tools and items", "cost": { "stone": 10 }, "unlocked": true },
-    { "id": "storage", "name": "Storage", "description": "Expand inventory capacity", "cost": { "stone": 15, "copper_ore": 5 }, "unlocked": true },
-    { "id": "trading_post", "name": "Trading Post", "description": "Unlock the merchant NPC", "cost": { "stone": 20, "copper_ore": 10 }, "unlocked": false },
+    { "id": "storage", "name": "Storage", "description": "Expand inventory capacity", "cost": { "stone": 15, "bronze_ore": 5 }, "unlocked": true },
+    { "id": "trading_post", "name": "Trading Post", "description": "Unlock the merchant NPC", "cost": { "stone": 20, "bronze_ore": 10 }, "unlocked": false },
     { "id": "laboratory", "name": "Laboratory", "description": "Unlock the researcher NPC", "cost": { "stone": 25, "silver_ore": 5 }, "unlocked": false },
-    { "id": "housing", "name": "Villager House", "description": "Increase villager capacity", "cost": { "stone": 30, "copper_ore": 15 }, "unlocked": false },
-    { "id": "farm", "name": "Farm", "description": "Generate monster drops", "cost": { "stone": 20, "copper_ore": 10 }, "unlocked": false }
+    { "id": "housing", "name": "Villager House", "description": "Increase villager capacity", "cost": { "stone": 30, "bronze_ore": 15 }, "unlocked": false },
+    { "id": "farm", "name": "Farm", "description": "Plant and grow carrots", "cost": { "stone": 20, "bronze_ore": 10 }, "unlocked": false }
   ]
 }

@@ -21,10 +21,10 @@
 |----------|--------|-------|
 | Crafting Station | ✅ | Operational; opens CraftingPanel |
 | Storage | ✅ | Operational; opens InventoryPanel |
-| Trading Post | 🟡 | Building zone exists, interaction stub, no NPC |
-| Laboratory | 🟡 | Building zone exists, interaction stub, no NPC |
+| Trading Post | ✅ | Restorable; opens TradePanel with buy/sell using gold_ore |
+| Laboratory | ✅ | Restorable; opens ResearchPanel with permanent upgrades |
 | Villager House (Housing) | ✅ | Restorable; grants +20 max stamina |
-| Farm | 🟡 | Building zone defined, restoration not wired |
+| Farm | ✅ | Restorable; plant carrots, harvest carrots after expeditions |
 | Decorative Structures | ❌ | Not planned for MVP |
 
 ---
@@ -33,8 +33,8 @@
 
 | NPC | Status | Notes |
 |-----|--------|-------|
-| Merchant | ❌ | Not implemented |
-| Researcher | ❌ | Not implemented |
+| Merchant | ✅ | Trading Post restored; buy consumables with gold, sell materials for gold |
+| Researcher | ✅ | Laboratory restored; spend crystals + ores for permanent stat upgrades |
 | Villagers | 🟡 | Rescue events exist but no persistent NPC system |
 
 ---
@@ -107,7 +107,7 @@
 | Recipe discovery | ✅ | 5 recipes, discovery triggers via events/milestones |
 | Rescued villagers | 🟡 | Event exists but no persistent tracking |
 | Relics | 🗑️ | Data file loaded but no gameplay integration |
-| Building unlocks | 🟡 | Crafting Station & Storage unlockable; others stubs |
+| Building unlocks | ✅ | All 4 buildings restorable (housing, trading_post, laboratory, farm); each unlocks distinct gameplay |
 | Permanent stat upgrades | ✅ | Max stamina (+20 from housing) and inventory slots (+8 from storage) |
 | Temporary run buffs | ✅ | Ring effects applied per run; consumables provide on-demand effects |
 
@@ -119,11 +119,12 @@
 |---------|--------|-------|
 | Discovery-based crafting | ✅ | Recipes unlock via events and milestones |
 | Recipe selection with W/S + SPACE | ✅ | Crafting panel now uses selectable list |
-| 6 resource types | ✅ | Stone, Copper, Silver, Gold, Crystal, Monster Essence |
-| 3 pickaxe recipes | ✅ | Common (default), Copper (craftable), Silver (discovered) |
+| 6 resource types | ✅ | Stone, Bronze, Silver, Gold, Crystal, Monster Essence |
+| 3 pickaxe recipes | ✅ | Common (default), Bronze (craftable), Silver (discovered) |
 | 3 consumable recipes | ✅ | Stamina Potion, Teleport Scroll, Mining Bomb |
-| Farming system | ❌ | Farm building data exists, no production logic |
-| Trading/buying | 🟡 | Wandering Trader event trades resources; no persistent economy |
+| Farming system | ✅ | Farm restorable; plant carrots, harvest more carrots after each expedition |
+| Trading/buying | ✅ | TradePanel at Trading Post: buy potions/scrolls/bombs with carrots, sell ore/essence for carrots |
+| Research upgrades | ✅ | ResearchPanel at Laboratory: spend crystals + ores for +stamina and +inventory slots |
 | Consumable usage during expedition | ✅ | [Q] Potion (restore 30 stam), [E] Scroll (safe extract), [F] Bomb (damage 8 surrounding tiles) |
 
 ---
@@ -185,7 +186,7 @@ Two random events | ✅ | Five events implemented (exceeds MVP)
 Crafting station | ✅ | Operational
 Storage | ✅ | Operational with trash support
 One villager house | ✅ | Restorable, grants stamina bonus
-Three pickaxe tiers | ✅ | Common, Copper, Silver
+Three pickaxe tiers | ✅ | Common, Bronze, Silver
 Stamina upgrades | ✅ | Via housing restoration
 Limited recipes | ✅ | 5 recipes with discovery triggers
 
@@ -193,6 +194,10 @@ Limited recipes | ✅ | 5 recipes with discovery triggers
 
 ## Known Bugs & Issues
 
-1. **MiningSystem.requiredTier() bug** — checks `"copper"` / `"silver"` / `"gold"` (no `_ore` suffix), but DungeonGenerator uses `"copper_ore"` / `"silver_ore"` / `"gold_ore"`. Not currently triggered because `requiredTier()` is never called from ExpeditionScene.
+1. **MiningSystem.requiredTier() bug** — checks `"bronze"` / `"silver"` / `"gold"` (no `_ore` suffix), but DungeonGenerator uses `"bronze_ore"` / `"silver_ore"` / `"gold_ore"`. Not currently triggered because `requiredTier()` is never called from ExpeditionScene.
 2. **DataRegistry loads files unused by gameplay** — `rooms.json`, `relics.json`, `events.json` are loaded but the active game code uses hardcoded data structures instead.
 3. **Over-capacity panel hint flicker** — When inventory is exactly at capacity and an item is added to overflow, the panel auto-shows with `show()` tween each frame (mitigated by `!isVisible()` guard).
+
+## Resolved Bugs
+
+1. **Farm panel ESC not working** — `this.keys.X` was missing from `setupInput()` in HomelandScene; the `else if` chain threw TypeError at `JustDown(this.keys.X)` before reaching the ESC check. Fixed by adding `X: kb.addKey(...)` (line 277).

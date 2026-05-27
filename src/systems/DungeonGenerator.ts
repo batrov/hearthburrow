@@ -185,15 +185,15 @@ export class DungeonGenerator {
     const roll = Math.random();
     if (depth === 0) {
       if (roll < 0.55) return { id: 'stone', durability: 2 };
-      if (roll < 0.85) return { id: 'copper_ore', durability: 3 };
+      if (roll < 0.85) return { id: 'bronze_ore', durability: 3 };
       return { id: 'stone', durability: 2 };
     } else if (depth === 1) {
       if (roll < 0.25) return { id: 'stone', durability: 2 };
-      if (roll < 0.65) return { id: 'copper_ore', durability: 3 };
+      if (roll < 0.65) return { id: 'bronze_ore', durability: 3 };
       return { id: 'silver_ore', durability: 4 };
     } else {
       if (roll < 0.05) return { id: 'stone', durability: 2 };
-      if (roll < 0.30) return { id: 'copper_ore', durability: 3 };
+      if (roll < 0.30) return { id: 'bronze_ore', durability: 3 };
       if (roll < 0.70) return { id: 'silver_ore', durability: 4 };
       return { id: 'gold_ore', durability: 5 };
     }

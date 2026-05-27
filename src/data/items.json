@@ -1,15 +1,16 @@
 {
   "materials": [
     { "id": "stone", "name": "Stone", "tier": 1, "rarity": "common", "maxStack": 99 },
-    { "id": "copper_ore", "name": "Copper Ore", "tier": 1, "rarity": "common", "maxStack": 99 },
+    { "id": "bronze_ore", "name": "Bronze Ore", "tier": 1, "rarity": "common", "maxStack": 99 },
     { "id": "silver_ore", "name": "Silver Ore", "tier": 2, "rarity": "uncommon", "maxStack": 99 },
     { "id": "gold_ore", "name": "Gold Ore", "tier": 3, "rarity": "rare", "maxStack": 99 },
     { "id": "crystal", "name": "Crystal", "tier": 3, "rarity": "rare", "maxStack": 99 },
-    { "id": "monster_drop", "name": "Monster Essence", "tier": 1, "rarity": "uncommon", "maxStack": 99 }
+    { "id": "monster_drop", "name": "Monster Essence", "tier": 1, "rarity": "uncommon", "maxStack": 99 },
+    { "id": "carrot", "name": "Carrot", "tier": 1, "rarity": "common", "maxStack": 99 }
   ],
   "equipment": [
     { "id": "pickaxe_1", "name": "Common Pickaxe", "tier": 1, "slot": "pickaxe", "mining_power": 1 },
-    { "id": "pickaxe_2", "name": "Copper Pickaxe", "tier": 2, "slot": "pickaxe", "mining_power": 2 },
+    { "id": "pickaxe_2", "name": "Bronze Pickaxe", "tier": 2, "slot": "pickaxe", "mining_power": 2 },
     { "id": "pickaxe_3", "name": "Silver Pickaxe", "tier": 3, "slot": "pickaxe", "mining_power": 3 },
     { "id": "ring_critical", "name": "Critical Ring", "tier": 1, "slot": "ring", "mining_power": 0 },
     { "id": "ring_damage", "name": "Damage Ring", "tier": 1, "slot": "ring", "mining_power": 0 },

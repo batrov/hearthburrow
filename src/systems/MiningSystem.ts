@@ -34,7 +34,7 @@ export class MiningSystem {
 
   private requiredTier(tile: TileData): number {
     if (tile.resource === 'stone') return 1;
-    if (tile.resource === 'copper') return 1;
+    if (tile.resource === 'bronze') return 1;
     if (tile.resource === 'silver') return 2;
     if (tile.resource === 'gold') return 3;
     return 1;

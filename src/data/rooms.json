@@ -10,7 +10,7 @@
         "0": "empty",
         "1": "wall",
         "2": "stone",
-        "3": "copper_ore"
+        "3": "bronze_ore"
       }
     },
     {
@@ -36,7 +36,7 @@
         "0": "empty",
         "1": "wall",
         "2": "stone",
-        "3": "copper_ore"
+        "3": "bronze_ore"
       }
     },
     {
@@ -49,7 +49,7 @@
         "0": "empty",
         "1": "wall",
         "2": "stone",
-        "3": "copper_ore"
+        "3": "bronze_ore"
       }
     },
     {

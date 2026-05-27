@@ -240,9 +240,11 @@ Endgame progression focuses on:
 
 | Biome    | Resource Focus                           |
 | -------- | ---------------------------------------- |
-| Forest   | Stone, low copper chance                 |
-| Cave     | Stone + copper, low silver chance        |
-| Ice Cave | Stone + copper + silver, low gold chance |
+| Forest   | Stone, low bronze chance                 |
+
+| Cave     | Stone + bronze, low silver chance        |
+
+| Ice Cave | Stone + bronze + silver, low gold chance |
 | Lava     | All ores, low relic chance               |
 | Ruins    | All ores, higher relic chance            |
 
@@ -601,13 +603,7 @@ This encourages:
 
 ## Purpose
 
-Farms generate:
-
-* desired monster drops.
-
-Higher rarity farms require:
-
-* deeper dungeon progression.
+Farms generate carrots used for trading.
 
 ---
 

@@ -70,6 +70,11 @@ export class ExpeditionRecapScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.input.keyboard!.once('keydown-SPACE', () => {
+      if (gameState.restoredBuildings.has('farm') && gameState.farmPlanted > 0) {
+        const yieldPer = Math.max(1, Math.floor(gameState.farmPlanted / 2));
+        gameState.farmHarvest += yieldPer;
+        gameState.save();
+      }
       this.cameras.main.fadeOut(300, 0, 0, 0);
       this.cameras.main.once('camerafadeoutcomplete', () => {
         this.scene.start('HomelandScene');

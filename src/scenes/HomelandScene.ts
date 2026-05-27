@@ -2,6 +2,9 @@ import Phaser from 'phaser';
 import { gameState } from '../systems/GameState';
 import { InventoryPanel } from '../ui/InventoryPanel';
 import { CraftingPanel } from '../ui/CraftingPanel';
+import { TradePanel } from '../ui/TradePanel';
+import { ResearchPanel } from '../ui/ResearchPanel';
+import { FarmPanel } from '../ui/FarmPanel';
 import { canRestore, restoreBuilding, isRestored } from '../systems/BuildingSystem';
 import { getBuilding } from '../systems/DataRegistry';
 
@@ -29,6 +32,7 @@ export class HomelandScene extends Phaser.Scene {
   private panelText!: Phaser.GameObjects.Text;
   private panelVisible: boolean = false;
   private restoreMode: boolean = false;
+  private restoreBuildingId: string = '';
   private gateMode: boolean = false;
   private pickaxeOptions: { id: string; tier: number }[] = [];
   private selectedPickaxeIdx: number = 0;
@@ -48,6 +52,9 @@ export class HomelandScene extends Phaser.Scene {
   private moveSpeed: number = 200;
   private inventoryPanel!: InventoryPanel;
   private craftingPanel!: CraftingPanel;
+  private tradePanel!: TradePanel;
+  private researchPanel!: ResearchPanel;
+  private farmPanel!: FarmPanel;
 
   constructor() {
     super({ key: 'HomelandScene' });
@@ -67,6 +74,9 @@ export class HomelandScene extends Phaser.Scene {
 
     this.inventoryPanel = new InventoryPanel(this, gameState.inventory, null, (id) => this.trashItem(id), 'Storage');
     this.craftingPanel = new CraftingPanel(this);
+    this.tradePanel = new TradePanel(this);
+    this.researchPanel = new ResearchPanel(this);
+    this.farmPanel = new FarmPanel(this);
   }
 
   private drawTerrain(): void {
@@ -117,15 +127,17 @@ export class HomelandScene extends Phaser.Scene {
         x: 80, y: 340, w: 160, h: 110,
         label: 'Trading Post',
         description: 'Trade resources with wandering merchants.',
-        action: 'Visit merchant',
-        unlocked: false, interactable: false, interactDistance: 60, solid: true,
+        action: isRestored('trading_post') ? 'Visit merchant' : 'Restore trading post',
+        unlocked: isRestored('trading_post'),
+        interactable: true, interactDistance: 60, solid: true,
       },
       {
         x: 720, y: 340, w: 160, h: 110,
         label: 'Laboratory',
         description: 'Research advanced upgrades and recipes.',
-        action: 'Enter laboratory',
-        unlocked: false, interactable: false, interactDistance: 60, solid: true,
+        action: isRestored('laboratory') ? 'Enter laboratory' : 'Restore laboratory',
+        unlocked: isRestored('laboratory'),
+        interactable: true, interactDistance: 60, solid: true,
       },
       {
         x: 400, y: 200, w: 160, h: 110,
@@ -133,6 +145,14 @@ export class HomelandScene extends Phaser.Scene {
         description: 'A cozy home. Increases max stamina when restored.',
         action: isRestored('housing') ? 'Visit house' : 'Restore house',
         unlocked: isRestored('housing'),
+        interactable: true, interactDistance: 60, solid: true,
+      },
+      {
+        x: 80, y: 520, w: 160, h: 110,
+        label: 'Farm',
+        description: 'Plant carrots and harvest more carrots.',
+        action: isRestored('farm') ? 'Visit farm' : 'Restore farm',
+        unlocked: isRestored('farm'),
         interactable: true, interactDistance: 60, solid: true,
       },
     ];
@@ -242,6 +262,7 @@ export class HomelandScene extends Phaser.Scene {
 
   private setupInput(): void {
     const kb = this.input.keyboard!;
+    kb.addCapture(Phaser.Input.Keyboard.KeyCodes.ESC);
     this.keys = {
       W: kb.addKey(Phaser.Input.Keyboard.KeyCodes.W),
       A: kb.addKey(Phaser.Input.Keyboard.KeyCodes.A),
@@ -254,13 +275,15 @@ export class HomelandScene extends Phaser.Scene {
       SPACE: kb.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
       ESC: kb.addKey(Phaser.Input.Keyboard.KeyCodes.ESC),
       TAB: kb.addKey(Phaser.Input.Keyboard.KeyCodes.TAB),
+      X: kb.addKey(Phaser.Input.Keyboard.KeyCodes.X),
       Z: kb.addKey(Phaser.Input.Keyboard.KeyCodes.Z),
     };
   }
 
   update(_time: number, delta: number): void {
     if (Phaser.Input.Keyboard.JustDown(this.keys.TAB)) {
-      if (this.panelVisible || this.restoreMode) return;
+      if (this.panelVisible || this.restoreMode ||
+          this.tradePanel.isVisible() || this.researchPanel.isVisible() || this.farmPanel.isVisible()) return;
       this.inventoryPanel.toggle();
       return;
     }
@@ -293,6 +316,46 @@ export class HomelandScene extends Phaser.Scene {
       }
       if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
         this.craftingPanel.hide();
+      }
+      return;
+    }
+
+    if (this.tradePanel.isVisible()) {
+      if (Phaser.Input.Keyboard.JustDown(this.keys.W) || Phaser.Input.Keyboard.JustDown(this.keys.UP)) {
+        this.tradePanel.navigateUp();
+      } else if (Phaser.Input.Keyboard.JustDown(this.keys.S) || Phaser.Input.Keyboard.JustDown(this.keys.DOWN)) {
+        this.tradePanel.navigateDown();
+      } else if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
+        this.tradePanel.confirm();
+      } else if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
+        this.tradePanel.hide();
+        this.closePanel();
+      }
+      return;
+    }
+
+    if (this.researchPanel.isVisible()) {
+      if (Phaser.Input.Keyboard.JustDown(this.keys.W) || Phaser.Input.Keyboard.JustDown(this.keys.UP)) {
+        this.researchPanel.navigateUp();
+      } else if (Phaser.Input.Keyboard.JustDown(this.keys.S) || Phaser.Input.Keyboard.JustDown(this.keys.DOWN)) {
+        this.researchPanel.navigateDown();
+      } else if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
+        this.researchPanel.confirm();
+      } else if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
+        this.researchPanel.hide();
+        this.closePanel();
+      }
+      return;
+    }
+
+    if (this.farmPanel.isVisible()) {
+      if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
+        this.farmPanel.hide();
+        this.closePanel();
+      } else if (Phaser.Input.Keyboard.JustDown(this.keys.Z)) {
+        this.farmPanel.plant();
+      } else if (Phaser.Input.Keyboard.JustDown(this.keys.X)) {
+        this.farmPanel.harvest();
       }
       return;
     }
@@ -378,7 +441,7 @@ export class HomelandScene extends Phaser.Scene {
       }
       if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
         if (this.restoreMode) {
-          this.tryRestore();
+          this.tryRestore(this.restoreBuildingId);
         } else if (this.gateMode) {
           this.startExpedition();
         } else {
@@ -496,6 +559,37 @@ export class HomelandScene extends Phaser.Scene {
         this.showBuildingPanel(this.currentBuilding);
       } else {
         this.showRestorePanel('housing');
+        this.restoreBuildingId = 'housing';
+      }
+      return;
+    }
+
+    if (this.currentBuilding.label === 'Trading Post') {
+      if (isRestored('trading_post')) {
+        this.showTradePanel();
+      } else {
+        this.showRestorePanel('trading_post');
+        this.restoreBuildingId = 'trading_post';
+      }
+      return;
+    }
+
+    if (this.currentBuilding.label === 'Laboratory') {
+      if (isRestored('laboratory')) {
+        this.showResearchPanel();
+      } else {
+        this.showRestorePanel('laboratory');
+        this.restoreBuildingId = 'laboratory';
+      }
+      return;
+    }
+
+    if (this.currentBuilding.label === 'Farm') {
+      if (isRestored('farm')) {
+        this.showFarmPanel();
+      } else {
+        this.showRestorePanel('farm');
+        this.restoreBuildingId = 'farm';
       }
       return;
     }
@@ -535,13 +629,15 @@ export class HomelandScene extends Phaser.Scene {
     this.panelText.setAlpha(1);
   }
 
-  private tryRestore(): void {
-    const success = restoreBuilding('housing');
+  private tryRestore(buildingId: string): void {
+    const building = getBuilding(buildingId);
+    const success = restoreBuilding(buildingId);
     this.restoreMode = false;
     this.closePanel();
 
     if (success) {
-      const popup = this.add.text(960 / 2, 640 / 2, 'Villager House Restored!\n+20 Max Stamina', {
+      const name = building?.name ?? buildingId.replace(/_/g, ' ');
+      const popup = this.add.text(960 / 2, 640 / 2, `${name} Restored!`, {
         fontSize: '18px', fontFamily: 'monospace', color: '#44cc66', fontStyle: 'bold', align: 'center',
       }).setOrigin(0.5).setDepth(250);
 
@@ -587,7 +683,7 @@ export class HomelandScene extends Phaser.Scene {
   private renderGatePanel(): void {
     const names: Record<number, string> = {
       1: 'Common Pickaxe',
-      2: 'Copper Pickaxe',
+      2: 'Bronze Pickaxe',
       3: 'Silver Pickaxe',
     };
     const maxStamina = this.debugMode ? 10000 : 100 + gameState.maxStaminaBonus;
@@ -696,8 +792,26 @@ export class HomelandScene extends Phaser.Scene {
     this.gateMode = false;
     this.gateTab = 0;
     this.consumableLoadout = {};
+    this.tradePanel.hide();
+    this.researchPanel.hide();
+    this.farmPanel.hide();
     this.panelBg.setAlpha(0);
     this.panelText.setAlpha(0);
+  }
+
+  private showTradePanel(): void {
+    this.panelVisible = true;
+    this.tradePanel.show();
+  }
+
+  private showResearchPanel(): void {
+    this.panelVisible = true;
+    this.researchPanel.show();
+  }
+
+  private showFarmPanel(): void {
+    this.panelVisible = true;
+    this.farmPanel.show();
   }
 
   private trashItem(itemId: string): void {

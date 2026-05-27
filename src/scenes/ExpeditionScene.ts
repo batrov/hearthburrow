@@ -309,7 +309,7 @@ export class ExpeditionScene extends Phaser.Scene {
         this.tileSprites.fillStyle(0x6a6a7a, 1);
         this.tileSprites.fillRoundedRect(px + 8, py + 6, 6, 6, 2);
         break;
-      case 'copper_ore':
+      case 'bronze_ore':
         this.tileSprites.fillStyle(0x8a6a3a, 1);
         this.tileSprites.fillRoundedRect(px + 4, py + 4, TILE - 8, TILE - 8, 4);
         this.tileSprites.fillStyle(0xaa8a4a, 1);
@@ -399,7 +399,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     const pickaxeNames: Record<number, string> = {
       1: 'Common Pickaxe',
-      2: 'Copper Pickaxe',
+      2: 'Bronze Pickaxe',
       3: 'Silver Pickaxe',
     };
     const pName = pickaxeNames[gameState.currentPickaxeTier] ?? `Tier ${gameState.currentPickaxeTier}`;
@@ -750,7 +750,7 @@ export class ExpeditionScene extends Phaser.Scene {
     switch (id) {
       case 'hidden_treasure': {
         const depth = this.expeditionState.depth;
-        const pool = ['stone', 'copper_ore', 'silver_ore', 'gold_ore'];
+        const pool = ['stone', 'bronze_ore', 'silver_ore', 'gold_ore'];
         const idx = Math.min(depth, pool.length - 1);
         const reward = pool[idx];
         return {
@@ -788,14 +788,14 @@ export class ExpeditionScene extends Phaser.Scene {
         const knowsScroll = gameState.crafting.isDiscovered('teleport_scroll');
         return {
           title: 'Wandering Trader',
-          description: 'A hooded figure offers to trade: 5 Stone for 3 Copper Ore.',
+          description: 'A hooded figure offers to trade: 5 Stone for 3 Bronze Ore.',
           choices: [
             {
-              label: `Trade 5 Stone → 3 Copper Ore ${canTrade ? '' : '(not enough stone)'}`,
+              label: `Trade 5 Stone → 3 Bronze Ore ${canTrade ? '' : '(not enough stone)'}`,
               action: () => {
                 if (stone() >= cost) {
                   removeStone(cost);
-                  addItem('copper_ore', 3);
+                  addItem('bronze_ore', 3);
                   if (!knowsScroll) {
                     gameState.crafting.discover('teleport_scroll');
                     this.showRecipeDiscovery('Teleport Scroll');
@@ -1011,7 +1011,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     const colors: Record<string, number> = {
       stone: 0x6a6a7a,
-      copper_ore: 0xaa8a4a,
+      bronze_ore: 0xaa8a4a,
       silver_ore: 0x9aaabc,
       gold_ore: 0xccaa44,
       crystal: 0x9a6acc,
