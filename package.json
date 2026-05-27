@@ -1,0 +1,19 @@
+{
+  "name": "hearthburrow",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A cozy top-down procedural mining roguelite",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "phaser": "^3.80.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11"
+  }
+}

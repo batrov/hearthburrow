@@ -1,0 +1,17 @@
+{
+  "room_templates": [
+    {
+      "id": "forest_standard_01",
+      "type": "standard",
+      "biome": "forest",
+      "width": 10,
+      "height": 8,
+      "tile_types": {
+        "0": "empty",
+        "1": "wall",
+        "2": "stone",
+        "3": "copper_ore"
+      }
+    }
+  ]
+}

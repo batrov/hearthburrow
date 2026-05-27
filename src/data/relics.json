@@ -1,0 +1,7 @@
+{
+  "relics": [
+    { "id": "relic_stamina", "name": "Heart of the Mountain", "description": "Permanently increases max stamina", "effect": "max_stamina", "value": 20 },
+    { "id": "relic_inventory", "name": "Pouch of Holding", "description": "Permanently expands inventory", "effect": "inventory_slots", "value": 4 },
+    { "id": "relic_luck", "name": "Four-Leaf Clover", "description": "Permanently increases luck", "effect": "luck", "value": 1 }
+  ]
+}

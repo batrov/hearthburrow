@@ -1,0 +1,9 @@
+{
+  "events": [
+    { "id": "wandering_trader", "name": "Wandering Trader", "description": "A temporary merchant appears", "type": "positive" },
+    { "id": "gambling_goblin", "name": "Gambling Goblin", "description": "Risk resources for a chance at rare items", "type": "neutral" },
+    { "id": "hidden_treasure", "name": "Hidden Treasure", "description": "Bonus resources in a secret room", "type": "positive" },
+    { "id": "trapped_villager", "name": "Trapped Villager", "description": "Free a villager to rescue them", "type": "positive" },
+    { "id": "blessing_fountain", "name": "Blessing Fountain", "description": "Temporary expedition buff", "type": "positive" }
+  ]
+}

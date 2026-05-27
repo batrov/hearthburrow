@@ -1,0 +1,9 @@
+{
+  "recipes": [
+    { "id": "pickaxe_2", "result": "pickaxe_2", "quantity": 1, "ingredients": { "stone": 10, "copper_ore": 5 }, "discovered": false },
+    { "id": "pickaxe_3", "result": "pickaxe_3", "quantity": 1, "ingredients": { "stone": 20, "silver_ore": 10 }, "discovered": false },
+    { "id": "stamina_potion", "result": "stamina_potion", "quantity": 1, "ingredients": { "crystal": 3, "monster_drop": 2 }, "discovered": false },
+    { "id": "teleport_scroll", "result": "teleport_scroll", "quantity": 1, "ingredients": { "crystal": 5 }, "discovered": false },
+    { "id": "mining_bomb", "result": "mining_bomb", "quantity": 1, "ingredients": { "stone": 5, "monster_drop": 3 }, "discovered": false }
+  ]
+}
