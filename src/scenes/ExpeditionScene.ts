@@ -61,9 +61,11 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#0a0a0a');
 
     this.exhausted = false;
-    this.stamina = new StaminaSystem(100);
+    this.hasFinished = false;
+    this.stamina = new StaminaSystem(100 + gameState.maxStaminaBonus);
     this.mining = new MiningSystem();
-    this.inventory = new InventorySystem(16);
+    this.mining.setPickaxeTier(gameState.currentPickaxeTier);
+    this.inventory = new InventorySystem(16 + gameState.inventorySlotBonus);
     this.playerX = 1;
     this.playerY = 1;
     this.moveTimer = 0;
@@ -206,16 +208,23 @@ export class ExpeditionScene extends Phaser.Scene {
 
     const infoBg = this.add.graphics();
     infoBg.fillStyle(0x0a0a1a, 0.75);
-    infoBg.fillRoundedRect(camW - 208, 8, 200, 44, 6);
+    infoBg.fillRoundedRect(camW - 208, 8, 200, 62, 6);
     infoBg.setScrollFactor(0);
     infoBg.setDepth(50);
 
-    this.add.text(camW - 198, 16, '[ESC] Extract & Return', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#5a4a6a',
+    const pickaxeNames: Record<number, string> = {
+      1: 'Common Pickaxe',
+      2: 'Copper Pickaxe',
+      3: 'Silver Pickaxe',
+    };
+    const pName = pickaxeNames[gameState.currentPickaxeTier] ?? `Tier ${gameState.currentPickaxeTier}`;
+
+    this.add.text(camW - 198, 14, `Pickaxe: ${pName}`, {
+      fontSize: '11px', fontFamily: 'monospace', color: '#6a8a6a',
     }).setScrollFactor(0).setDepth(51);
 
-    this.add.text(camW - 198, 34, '[SPACE] Mine', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#4a5a5a',
+    this.add.text(camW - 198, 32, '[ESC] Extract  [SPACE] Mine', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#5a4a6a',
     }).setScrollFactor(0).setDepth(51);
   }
 
@@ -443,7 +452,11 @@ export class ExpeditionScene extends Phaser.Scene {
     });
   }
 
+  private hasFinished: boolean = false;
+
   private finishRun(extractType: 'safe' | 'emergency'): void {
+    if (this.hasFinished) return;
+    this.hasFinished = true;
     this.exhausted = true;
 
     const slots = this.inventory.getItems();
@@ -467,6 +480,8 @@ export class ExpeditionScene extends Phaser.Scene {
       }
     }
 
+    gameState.consumePickaxeRun();
+
     gameState.lastRunResult = { itemsObtained: obtained, itemsLost: lost, extractType };
 
     this.time.delayedCall(800, () => {
@@ -475,6 +490,8 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private handleExhaustion(): void {
+    if (this.exhausted) return;
+    this.exhausted = true;
     this.cameras.main.shake(300, 0.01);
 
     const overlay = this.add.rectangle(
@@ -502,6 +519,8 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private extract(): void {
+    if (this.exhausted) return;
+    this.exhausted = true;
     this.add.text(
       this.cameras.main.scrollX + this.cameras.main.width / 2,
       this.cameras.main.scrollY + this.cameras.main.height / 2,

@@ -1,6 +1,9 @@
 import Phaser from 'phaser';
 import { gameState } from '../systems/GameState';
 import { InventoryPanel } from '../ui/InventoryPanel';
+import { CraftingPanel } from '../ui/CraftingPanel';
+import { canRestore, restoreBuilding, isRestored } from '../systems/BuildingSystem';
+import { getBuilding } from '../systems/DataRegistry';
 
 interface BuildingZone {
   x: number;
@@ -13,6 +16,7 @@ interface BuildingZone {
   unlocked: boolean;
   interactable: boolean;
   interactDistance: number;
+  solid: boolean;
 }
 
 export class HomelandScene extends Phaser.Scene {
@@ -24,9 +28,14 @@ export class HomelandScene extends Phaser.Scene {
   private panelBg!: Phaser.GameObjects.Graphics;
   private panelText!: Phaser.GameObjects.Text;
   private panelVisible: boolean = false;
+  private restoreMode: boolean = false;
+  private gateMode: boolean = false;
+  private pickaxeOptions: { id: string; tier: number }[] = [];
+  private selectedPickaxeIdx: number = 0;
   private currentBuilding: BuildingZone | null = null;
   private moveSpeed: number = 200;
   private inventoryPanel!: InventoryPanel;
+  private craftingPanel!: CraftingPanel;
 
   constructor() {
     super({ key: 'HomelandScene' });
@@ -45,6 +54,7 @@ export class HomelandScene extends Phaser.Scene {
     this.setupInput();
 
     this.inventoryPanel = new InventoryPanel(this, gameState.inventory, 'Storage');
+    this.craftingPanel = new CraftingPanel(this);
   }
 
   private drawTerrain(): void {
@@ -61,7 +71,18 @@ export class HomelandScene extends Phaser.Scene {
 
     const path = this.add.graphics();
     path.fillStyle(0x5a4a3a, 1);
-    path.fillRect(0, 320 - 12, 960, 24);
+    path.fillRect(960 / 2 - 22, 0, 44, 520);
+
+    path.fillStyle(0x4a3a2a, 0.4);
+    for (let y = 20; y < 520; y += 60) {
+      path.fillRect(960 / 2 - 18, y, 36, 8);
+    }
+
+    const platform = this.add.graphics();
+    platform.fillStyle(0x4a3a3a, 1);
+    platform.fillRoundedRect(960 / 2 - 80, 520, 160, 24, 4);
+    platform.fillStyle(0x3a2a2a, 0.6);
+    platform.fillRoundedRect(960 / 2 - 76, 524, 152, 16, 3);
   }
 
   private drawBuildings(): void {
@@ -71,28 +92,36 @@ export class HomelandScene extends Phaser.Scene {
         label: 'Crafting Station',
         description: 'Craft tools and equipment from mined materials.',
         action: 'Open crafting menu',
-        unlocked: true, interactable: true, interactDistance: 60,
+        unlocked: true, interactable: true, interactDistance: 60, solid: true,
       },
       {
         x: 720, y: 80, w: 160, h: 110,
         label: 'Storage',
         description: 'Store and manage your collected resources.',
         action: 'Open storage',
-        unlocked: true, interactable: true, interactDistance: 60,
+        unlocked: true, interactable: true, interactDistance: 60, solid: true,
       },
       {
-        x: 80, y: 450, w: 160, h: 110,
+        x: 80, y: 340, w: 160, h: 110,
         label: 'Trading Post',
         description: 'Trade resources with wandering merchants.',
         action: 'Visit merchant',
-        unlocked: false, interactable: false, interactDistance: 60,
+        unlocked: false, interactable: false, interactDistance: 60, solid: true,
       },
       {
-        x: 720, y: 450, w: 160, h: 110,
+        x: 720, y: 340, w: 160, h: 110,
         label: 'Laboratory',
         description: 'Research advanced upgrades and recipes.',
         action: 'Enter laboratory',
-        unlocked: false, interactable: false, interactDistance: 60,
+        unlocked: false, interactable: false, interactDistance: 60, solid: true,
+      },
+      {
+        x: 400, y: 200, w: 160, h: 110,
+        label: 'Villager House',
+        description: 'A cozy home. Increases max stamina when restored.',
+        action: isRestored('housing') ? 'Visit house' : 'Restore house',
+        unlocked: isRestored('housing'),
+        interactable: true, interactDistance: 60, solid: true,
       },
     ];
 
@@ -120,7 +149,8 @@ export class HomelandScene extends Phaser.Scene {
     }).setOrigin(0.5).setAlpha(alpha);
 
     if (!b.unlocked) {
-      this.add.text(b.x + b.w / 2, b.y + b.h / 2 + 18, 'locked', {
+      const label = b.label === 'Villager House' ? 'restore' : 'locked';
+      this.add.text(b.x + b.w / 2, b.y + b.h / 2 + 18, label, {
         fontSize: '11px', fontFamily: 'monospace', color: '#5a4a3a',
       }).setOrigin(0.5);
     }
@@ -128,39 +158,59 @@ export class HomelandScene extends Phaser.Scene {
 
   private drawExpeditionGate(): void {
     const gx = 960 / 2;
+    const gy = 544;
 
     const gate = this.add.graphics();
-    gate.fillStyle(0x4a3a6a, 0.5);
-    gate.fillRect(gx - 30, 0, 60, 640);
-    gate.fillStyle(0x6a5a8a, 0.3);
-    gate.fillRect(gx - 8, 0, 16, 640);
+    gate.fillStyle(0x1a1a2e, 1);
+    gate.fillRoundedRect(gx - 44, gy, 88, 96, 6);
 
-    this.add.text(gx, 40, 'FORGOTTEN DEPTHS', {
-      fontSize: '13px', fontFamily: 'monospace', color: '#6a5a8a',
+    gate.fillStyle(0x3a2a5a, 0.7);
+    gate.fillRoundedRect(gx - 36, gy + 8, 72, 80, 4);
+
+    gate.fillStyle(0x5a4a8a, 0.4);
+    gate.fillRect(gx - 28, gy + 16, 56, 64);
+
+    const glow = this.add.graphics();
+    glow.fillStyle(0x6a5a9a, 0.2);
+    glow.fillRoundedRect(gx - 52, gy - 4, 104, 104, 10);
+    glow.fillStyle(0x8a7aba, 0.1);
+    glow.fillRoundedRect(gx - 60, gy - 8, 120, 112, 12);
+
+    this.tweens.add({
+      targets: glow,
+      alpha: 0.6,
+      yoyo: true,
+      repeat: -1,
+      duration: 1200,
+      ease: 'Sine.easeInOut',
+    });
+
+    this.add.text(gx, gy - 16, 'FORGOTTEN DEPTHS', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#7a6a9a',
     }).setOrigin(0.5);
 
-    this.add.text(gx, 620, '⬇ Expedition Gate', {
-      fontSize: '15px', fontFamily: 'monospace', color: '#e8d5b7',
+    this.add.text(gx, gy + 112, '[SPACE] Descend', {
+      fontSize: '13px', fontFamily: 'monospace', color: '#8a7aba',
     }).setOrigin(0.5);
 
     this.buildings.push({
-      x: gx - 30, y: 0, w: 60, h: 640,
+      x: gx - 44, y: gy, w: 88, h: 96,
       label: 'Expedition Gate',
       description: 'Descend into the procedural dungeon to mine resources.',
       action: 'Begin expedition',
-      unlocked: true, interactable: true, interactDistance: 50,
+      unlocked: true, interactable: true, interactDistance: 60, solid: false,
     });
   }
 
   private drawPlayer(): void {
-    this.player = this.add.rectangle(960 / 2, 640 - 80, 20, 24, 0x88ccff);
-    this.playerLabel = this.add.text(960 / 2, 640 - 80 - 20, 'You', {
+    this.player = this.add.rectangle(960 / 2, 544 - 32, 20, 24, 0x88ccff);
+    this.playerLabel = this.add.text(960 / 2, 544 - 52, 'You', {
       fontSize: '11px', fontFamily: 'monospace', color: '#aaddff',
     }).setOrigin(0.5);
   }
 
   private createInteractionUI(): void {
-    this.add.text(960 / 2, 590, '[TAB] Inventory', {
+    this.add.text(960 / 2, 510, '[TAB] Inventory', {
       fontSize: '11px', fontFamily: 'monospace', color: '#4a5a4a',
     }).setOrigin(0.5);
 
@@ -197,7 +247,7 @@ export class HomelandScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     if (Phaser.Input.Keyboard.JustDown(this.keys.TAB)) {
-      if (this.panelVisible) return;
+      if (this.panelVisible || this.restoreMode) return;
       this.inventoryPanel.toggle();
       return;
     }
@@ -209,9 +259,39 @@ export class HomelandScene extends Phaser.Scene {
       return;
     }
 
+    if (this.craftingPanel.isVisible()) {
+      if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
+        this.craftingPanel.hide();
+      }
+      if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
+        this.craftingPanel.tryCraftSelected();
+      }
+      return;
+    }
+
     if (this.panelVisible) {
-      if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE) || Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
+      if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
         this.closePanel();
+        return;
+      }
+      if (this.gateMode) {
+        if (Phaser.Input.Keyboard.JustDown(this.keys.LEFT) && this.selectedPickaxeIdx > 0) {
+          this.selectedPickaxeIdx--;
+          this.renderGatePanel();
+        }
+        if (Phaser.Input.Keyboard.JustDown(this.keys.RIGHT) && this.selectedPickaxeIdx < this.pickaxeOptions.length - 1) {
+          this.selectedPickaxeIdx++;
+          this.renderGatePanel();
+        }
+      }
+      if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
+        if (this.restoreMode) {
+          this.tryRestore();
+        } else if (this.gateMode) {
+          this.startExpedition();
+        } else {
+          this.closePanel();
+        }
       }
       return;
     }
@@ -233,31 +313,42 @@ export class HomelandScene extends Phaser.Scene {
     if (dx === 0 && dy === 0) return;
 
     const speed = this.moveSpeed * (delta / 1000);
+    const pHw = 10;
+    const pHh = 12;
+
     let nx = this.player.x + dx * speed;
     let ny = this.player.y + dy * speed;
 
-    nx = Phaser.Math.Clamp(nx, 10, 950);
-    ny = Phaser.Math.Clamp(ny, 10, 630);
+    nx = Phaser.Math.Clamp(nx, pHw, 960 - pHw);
+    ny = Phaser.Math.Clamp(ny, pHh, 640 - pHh);
 
-    for (const b of this.buildings) {
-      const bx = b.x;
-      const by = b.y;
-      const bw = b.w;
-      const bh = b.h;
-
-      if (nx + 10 > bx && nx - 10 < bx + bw && ny + 12 > by && ny - 12 < by + bh) {
-        const overlapX = Math.min(nx + 10, bx + bw) - Math.max(nx - 10, bx);
-        const overlapY = Math.min(ny + 12, by + bh) - Math.max(ny - 12, by);
-        if (overlapX < overlapY) {
-          nx = dx > 0 ? bx - 10 : bx + bw + 10;
-        } else {
-          ny = dy > 0 ? by - 12 : by + bh + 12;
+    const collides = (cx: number, cy: number): boolean => {
+      for (const b of this.buildings) {
+        if (!b.solid) continue;
+        if (cx + pHw > b.x && cx - pHw < b.x + b.w &&
+            cy + pHh > b.y && cy - pHh < b.y + b.h) {
+          return true;
         }
       }
+      return false;
+    };
+
+    if (!collides(nx, ny)) {
+      this.player.setPosition(nx, ny);
+      this.playerLabel.setPosition(nx, ny - 20);
+      return;
     }
 
-    this.player.setPosition(nx, ny);
-    this.playerLabel.setPosition(nx, ny - 20);
+    const tryX = this.player.x + dx * speed;
+    const tryY = this.player.y + dy * speed;
+
+    if (dx !== 0 && !collides(tryX, this.player.y)) {
+      this.player.x = tryX;
+    }
+    if (dy !== 0 && !collides(this.player.x, tryY)) {
+      this.player.y = tryY;
+    }
+    this.playerLabel.setPosition(this.player.x, this.player.y - 20);
   }
 
   private checkProximity(): void {
@@ -266,9 +357,9 @@ export class HomelandScene extends Phaser.Scene {
 
     for (const b of this.buildings) {
       if (!b.interactable) continue;
-      const cx = b.x + b.w / 2;
-      const cy = b.y + b.h / 2;
-      const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, cx, cy);
+      const nearX = Phaser.Math.Clamp(this.player.x, b.x, b.x + b.w);
+      const nearY = Phaser.Math.Clamp(this.player.y, b.y, b.y + b.h);
+      const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, nearX, nearY);
 
       if (dist < b.interactDistance && dist < closestDist) {
         closest = b;
@@ -292,10 +383,13 @@ export class HomelandScene extends Phaser.Scene {
     if (!this.currentBuilding || !this.currentBuilding.interactable) return;
 
     if (this.currentBuilding.label === 'Expedition Gate') {
-      this.cameras.main.fadeOut(500, 0, 0, 0);
-      this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start('ExpeditionScene');
-      });
+      this.showGatePanel();
+      return;
+    }
+
+    if (this.currentBuilding.label === 'Crafting Station') {
+      this.craftingPanel.refresh();
+      this.craftingPanel.show();
       return;
     }
 
@@ -305,11 +399,140 @@ export class HomelandScene extends Phaser.Scene {
       return;
     }
 
+    if (this.currentBuilding.label === 'Villager House') {
+      if (isRestored('housing')) {
+        this.showBuildingPanel(this.currentBuilding);
+      } else {
+        this.showRestorePanel('housing');
+      }
+      return;
+    }
+
     this.showBuildingPanel(this.currentBuilding);
+  }
+
+  private showRestorePanel(buildingId: string): void {
+    const building = getBuilding(buildingId);
+    if (!building) return;
+
+    this.restoreMode = true;
+    this.panelVisible = true;
+
+    const costLines = Object.entries(building.cost)
+      .map(([id, qty]) => {
+        const have = gameState.inventory.count(id);
+        const color = have >= qty ? '#88dd88' : '#dd6666';
+        return `  ${id.replace(/_/g, ' ')}: ${have}/${qty}`;
+      })
+      .join('\n');
+
+    const canAfford = canRestore(buildingId);
+
+    this.panelBg.clear();
+    this.panelBg.fillStyle(0x0a0a1a, 0.85);
+    this.panelBg.fillRoundedRect(960 / 2 - 200, 640 / 2 - 110, 400, 220, 10);
+    this.panelBg.lineStyle(2, 0x6a5a8a, 1);
+    this.panelBg.strokeRoundedRect(960 / 2 - 200, 640 / 2 - 110, 400, 220, 10);
+    this.panelBg.setAlpha(1);
+
+    this.panelText.setText(
+      `${building.name}\n\nRequired Materials:\n${costLines}\n\n${
+        canAfford ? '[SPACE] Restore  |  [ESC] cancel' : '[ESC] close'
+      }`
+    );
+    this.panelText.setAlpha(1);
+  }
+
+  private tryRestore(): void {
+    const success = restoreBuilding('housing');
+    this.restoreMode = false;
+    this.closePanel();
+
+    if (success) {
+      const popup = this.add.text(960 / 2, 640 / 2, 'Villager House Restored!\n+20 Max Stamina', {
+        fontSize: '18px', fontFamily: 'monospace', color: '#44cc66', fontStyle: 'bold', align: 'center',
+      }).setOrigin(0.5).setDepth(250);
+
+      this.tweens.add({
+        targets: popup,
+        y: popup.y - 50,
+        alpha: 0,
+        duration: 1500,
+        ease: 'Quad.easeOut',
+        onComplete: () => {
+          popup.destroy();
+          this.scene.restart();
+        },
+      });
+    }
+  }
+
+  private showGatePanel(): void {
+    this.gateMode = true;
+    this.panelVisible = true;
+    this.pickaxeOptions = gameState.getAvailablePickaxes();
+
+    const currentTier = gameState.currentPickaxeTier;
+    this.selectedPickaxeIdx = this.pickaxeOptions.findIndex(o => o.tier === currentTier);
+    if (this.selectedPickaxeIdx < 0) this.selectedPickaxeIdx = 0;
+
+    this.renderGatePanel();
+  }
+
+  private renderGatePanel(): void {
+    const names: Record<number, string> = {
+      1: 'Common Pickaxe',
+      2: 'Copper Pickaxe',
+      3: 'Silver Pickaxe',
+    };
+    const maxStamina = 100 + gameState.maxStaminaBonus;
+    const invSlots = 16 + gameState.inventorySlotBonus;
+
+    const optionsText = this.pickaxeOptions
+      .map((o, i) => {
+        const marker = i === this.selectedPickaxeIdx ? ' ▶' : '  ';
+        if (o.tier === 1) {
+          return `${marker} ${names[o.tier]}`;
+        }
+        const remaining = gameState.remainingPickaxeRuns(o.tier);
+        const qty = gameState.inventory.count(`pickaxe_${o.tier}`);
+        return `${marker} ${names[o.tier]} (${remaining}/5) [x${qty}]`;
+      })
+      .join('\n');
+
+    this.panelBg.clear();
+    this.panelBg.fillStyle(0x0a0a1a, 0.85);
+    this.panelBg.fillRoundedRect(960 / 2 - 200, 640 / 2 - 120, 400, 240, 10);
+    this.panelBg.lineStyle(2, 0x6a5a8a, 1);
+    this.panelBg.strokeRoundedRect(960 / 2 - 200, 640 / 2 - 120, 400, 240, 10);
+    this.panelBg.setAlpha(1);
+
+    this.panelText.setText(
+      `Expedition Loadout\n\n` +
+      `${optionsText}\n` +
+      `   [←/→] to switch\n\n` +
+      `Max Stamina: ${maxStamina}\n` +
+      `Inventory: ${invSlots} slots\n\n` +
+      `[SPACE] Descend  |  [ESC] cancel`
+    );
+    this.panelText.setAlpha(1);
+  }
+
+  private startExpedition(): void {
+    const selected = this.pickaxeOptions[this.selectedPickaxeIdx];
+    if (selected) {
+      gameState.equipPickaxe(selected.tier);
+    }
+    this.closePanel();
+    this.cameras.main.fadeOut(500, 0, 0, 0);
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      this.scene.start('ExpeditionScene');
+    });
   }
 
   private showBuildingPanel(building: BuildingZone): void {
     this.panelVisible = true;
+    this.restoreMode = false;
 
     this.panelBg.clear();
     this.panelBg.fillStyle(0x0a0a1a, 0.85);
@@ -326,6 +549,8 @@ export class HomelandScene extends Phaser.Scene {
 
   private closePanel(): void {
     this.panelVisible = false;
+    this.restoreMode = false;
+    this.gateMode = false;
     this.panelBg.setAlpha(0);
     this.panelText.setAlpha(0);
   }

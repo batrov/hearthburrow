@@ -8,7 +8,7 @@
     { "id": "monster_drop", "name": "Monster Essence", "tier": 1, "rarity": "uncommon", "maxStack": 99 }
   ],
   "equipment": [
-    { "id": "pickaxe_1", "name": "Stone Pickaxe", "tier": 1, "slot": "pickaxe", "mining_power": 1 },
+    { "id": "pickaxe_1", "name": "Common Pickaxe", "tier": 1, "slot": "pickaxe", "mining_power": 1 },
     { "id": "pickaxe_2", "name": "Copper Pickaxe", "tier": 2, "slot": "pickaxe", "mining_power": 2 },
     { "id": "pickaxe_3", "name": "Silver Pickaxe", "tier": 3, "slot": "pickaxe", "mining_power": 3 }
   ],
