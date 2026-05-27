@@ -10,7 +10,11 @@
   "equipment": [
     { "id": "pickaxe_1", "name": "Common Pickaxe", "tier": 1, "slot": "pickaxe", "mining_power": 1 },
     { "id": "pickaxe_2", "name": "Copper Pickaxe", "tier": 2, "slot": "pickaxe", "mining_power": 2 },
-    { "id": "pickaxe_3", "name": "Silver Pickaxe", "tier": 3, "slot": "pickaxe", "mining_power": 3 }
+    { "id": "pickaxe_3", "name": "Silver Pickaxe", "tier": 3, "slot": "pickaxe", "mining_power": 3 },
+    { "id": "ring_critical", "name": "Critical Ring", "tier": 1, "slot": "ring", "mining_power": 0 },
+    { "id": "ring_damage", "name": "Damage Ring", "tier": 1, "slot": "ring", "mining_power": 0 },
+    { "id": "ring_precision", "name": "Precision Ring", "tier": 1, "slot": "ring", "mining_power": 0 },
+    { "id": "ring_hunter", "name": "Hunter Ring", "tier": 1, "slot": "ring", "mining_power": 0 }
   ],
   "consumables": [
     { "id": "stamina_potion", "name": "Stamina Potion", "effect": "restore_stamina", "value": 30 },

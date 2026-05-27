@@ -1,5 +1,6 @@
 export type TileType = 'wall' | 'floor' | 'mineable' | 'stairs_up' | 'stairs_down' | 'corridor'
-  | 'event_chest' | 'event_merchant' | 'event_goblin' | 'event_villager' | 'event_fountain';
+  | 'event_chest' | 'event_merchant' | 'event_goblin' | 'event_villager' | 'event_fountain'
+  | 'enemy' | 'event_boss';
 
 export interface DungeonTile {
   type: TileType;
@@ -36,6 +37,12 @@ const EVENT_POOL: { type: TileType; eventId: string }[] = [
   { type: 'event_goblin', eventId: 'gambling_goblin' },
 ];
 
+const ENEMY_POOL: { type: string; weight: number }[] = [
+  { type: 'slime', weight: 4 },
+  { type: 'rat', weight: 3 },
+  { type: 'bat', weight: 2 },
+];
+
 export class DungeonGenerator {
   private minRooms = 3;
   private maxRooms = 5;
@@ -54,28 +61,61 @@ export class DungeonGenerator {
       }
     }
 
-    const rooms = this.placeRooms(cols, rows);
+    const isBossFloor = depth > 0 && depth % 4 === 3;
 
-    for (const room of rooms) {
-      this.carveRoom(tiles, room, depth);
+    let rooms: RoomRect[];
+    let entryX: number;
+    let entryY: number;
+    let exitX: number;
+    let exitY: number;
+
+    if (isBossFloor) {
+      rooms = this.placeBossRoom(cols, rows);
+      this.carveRoom(tiles, rooms[0], depth);
+
+      const centerX = Math.floor(rooms[0].x + rooms[0].w / 2);
+      const centerY = Math.floor(rooms[0].y + rooms[0].h / 2);
+
+      entryX = centerX;
+      entryY = centerY + 3;
+      tiles[entryY][entryX] = this.makeTile('stairs_up');
+
+      tiles[centerY][centerX] = {
+        type: 'event_boss',
+        resource: 'boss',
+        durability: 0,
+        maxDurability: 0,
+        broken: false,
+        eventId: 'boss',
+      };
+
+      exitX = centerX;
+      exitY = centerY;
+    } else {
+      rooms = this.placeRooms(cols, rows);
+
+      for (const room of rooms) {
+        this.carveRoom(tiles, room, depth);
+      }
+
+      for (let i = 0; i < rooms.length - 1; i++) {
+        this.carveCorridor(tiles, rooms[i], rooms[i + 1]);
+      }
+
+      this.placeEventTiles(tiles, rooms);
+      this.placeEnemyTiles(tiles, rooms);
+
+      const entryRoom = rooms[0];
+      const exitRoom = rooms[rooms.length - 1];
+
+      entryX = Math.floor(entryRoom.x + entryRoom.w / 2);
+      entryY = Math.floor(entryRoom.y + entryRoom.h / 2);
+      exitX = Math.floor(exitRoom.x + exitRoom.w / 2);
+      exitY = Math.floor(exitRoom.y + exitRoom.h / 2);
+
+      tiles[entryY][entryX] = this.makeTile('stairs_up');
+      tiles[exitY][exitX] = this.makeTile('stairs_down');
     }
-
-    for (let i = 0; i < rooms.length - 1; i++) {
-      this.carveCorridor(tiles, rooms[i], rooms[i + 1]);
-    }
-
-    this.placeEventTiles(tiles, rooms);
-
-    const entryRoom = rooms[0];
-    const exitRoom = rooms[rooms.length - 1];
-
-    const entryX = Math.floor(entryRoom.x + entryRoom.w / 2);
-    const entryY = Math.floor(entryRoom.y + entryRoom.h / 2);
-    const exitX = Math.floor(exitRoom.x + exitRoom.w / 2);
-    const exitY = Math.floor(exitRoom.y + exitRoom.h / 2);
-
-    tiles[entryY][entryX] = this.makeTile('stairs_up');
-    tiles[exitY][exitX] = this.makeTile('stairs_down');
 
     return {
       tiles,
@@ -207,6 +247,53 @@ export class DungeonGenerator {
 
       const pos = floorPositions[Math.floor(Math.random() * floorPositions.length)];
       tiles[pos.y][pos.x] = this.makeTile(ev.type, ev.eventId);
+    }
+  }
+
+  private placeBossRoom(cols: number, rows: number): RoomRect[] {
+    const w = 16;
+    const h = 12;
+    const x = Math.floor((cols - w) / 2);
+    const y = Math.floor((rows - h) / 2);
+    return [{ x, y, w, h }];
+  }
+
+  private placeEnemyTiles(tiles: DungeonTile[][], rooms: RoomRect[]): void {
+    const count = 2 + Math.floor(Math.random() * 2);
+    const totalWeight = ENEMY_POOL.reduce((s, e) => s + e.weight, 0);
+
+    for (let n = 0; n < count; n++) {
+      const roll = Math.random() * totalWeight;
+      let cumulative = 0;
+      let chosen = 'slime';
+      for (const e of ENEMY_POOL) {
+        cumulative += e.weight;
+        if (roll < cumulative) { chosen = e.type; break; }
+      }
+
+      const room = rooms[Math.floor(Math.random() * rooms.length)];
+
+      const floorPositions: { x: number; y: number }[] = [];
+      for (let y = room.y + 1; y < room.y + room.h - 1; y++) {
+        for (let x = room.x + 1; x < room.x + room.w - 1; x++) {
+          const tile = tiles[y][x];
+          if (tile.type === 'floor' && !tile.broken) {
+            floorPositions.push({ x, y });
+          }
+        }
+      }
+
+      if (floorPositions.length === 0) continue;
+
+      const pos = floorPositions[Math.floor(Math.random() * floorPositions.length)];
+      tiles[pos.y][pos.x] = {
+        type: 'enemy',
+        resource: chosen,
+        durability: 0,
+        maxDurability: 0,
+        broken: false,
+        eventId: chosen,
+      };
     }
   }
 

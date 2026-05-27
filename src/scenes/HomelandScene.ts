@@ -32,8 +32,19 @@ export class HomelandScene extends Phaser.Scene {
   private gateMode: boolean = false;
   private pickaxeOptions: { id: string; tier: number }[] = [];
   private selectedPickaxeIdx: number = 0;
+  private ringOptions: { id: string; name: string }[] = [];
+  private selectedRing1Idx: number = -1;
+  private selectedRing2Idx: number = -1;
+  private gateTab: number = 0;
   private currentBuilding: BuildingZone | null = null;
   private debugMode: boolean = false;
+  private consumableTypes: { id: string; name: string }[] = [
+    { id: 'stamina_potion', name: 'Stamina Potion' },
+    { id: 'teleport_scroll', name: 'Teleport Scroll' },
+    { id: 'mining_bomb', name: 'Mining Bomb' },
+  ];
+  private consumableLoadout: Record<string, number> = {};
+  private consumableSelectionIdx: number = 0;
   private moveSpeed: number = 200;
   private inventoryPanel!: InventoryPanel;
   private craftingPanel!: CraftingPanel;
@@ -54,7 +65,7 @@ export class HomelandScene extends Phaser.Scene {
     this.createInteractionUI();
     this.setupInput();
 
-    this.inventoryPanel = new InventoryPanel(this, gameState.inventory, 'Storage');
+    this.inventoryPanel = new InventoryPanel(this, gameState.inventory, null, (id) => this.trashItem(id), 'Storage');
     this.craftingPanel = new CraftingPanel(this);
   }
 
@@ -243,6 +254,7 @@ export class HomelandScene extends Phaser.Scene {
       SPACE: kb.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
       ESC: kb.addKey(Phaser.Input.Keyboard.KeyCodes.ESC),
       TAB: kb.addKey(Phaser.Input.Keyboard.KeyCodes.TAB),
+      Z: kb.addKey(Phaser.Input.Keyboard.KeyCodes.Z),
     };
   }
 
@@ -254,7 +266,16 @@ export class HomelandScene extends Phaser.Scene {
     }
 
     if (this.inventoryPanel.isVisible()) {
-      if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
+      this.inventoryPanel.draw();
+      if (Phaser.Input.Keyboard.JustDown(this.keys.W) || Phaser.Input.Keyboard.JustDown(this.keys.UP)) {
+        this.inventoryPanel.handleInput('UP');
+      } else if (Phaser.Input.Keyboard.JustDown(this.keys.S) || Phaser.Input.Keyboard.JustDown(this.keys.DOWN)) {
+        this.inventoryPanel.handleInput('DOWN');
+      } else if (Phaser.Input.Keyboard.JustDown(this.keys.Z)) {
+        this.inventoryPanel.handleInput('Z');
+      } else if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
+        this.inventoryPanel.handleInput('SPACE');
+      } else if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
         this.inventoryPanel.hide();
       }
       return;
@@ -282,17 +303,77 @@ export class HomelandScene extends Phaser.Scene {
         return;
       }
       if (this.gateMode) {
-        if (Phaser.Input.Keyboard.JustDown(this.keys.LEFT) && this.selectedPickaxeIdx > 0) {
-          this.selectedPickaxeIdx--;
-          this.renderGatePanel();
-        }
-        if (Phaser.Input.Keyboard.JustDown(this.keys.RIGHT) && this.selectedPickaxeIdx < this.pickaxeOptions.length - 1) {
-          this.selectedPickaxeIdx++;
-          this.renderGatePanel();
-        }
-        if (Phaser.Input.Keyboard.JustDown(this.keys.D)) {
-          this.debugMode = !this.debugMode;
-          this.renderGatePanel();
+        const up = Phaser.Input.Keyboard.JustDown(this.keys.UP) || Phaser.Input.Keyboard.JustDown(this.keys.W);
+        const down = Phaser.Input.Keyboard.JustDown(this.keys.DOWN) || Phaser.Input.Keyboard.JustDown(this.keys.S);
+        const left = Phaser.Input.Keyboard.JustDown(this.keys.LEFT) || Phaser.Input.Keyboard.JustDown(this.keys.A);
+        const right = Phaser.Input.Keyboard.JustDown(this.keys.RIGHT) || Phaser.Input.Keyboard.JustDown(this.keys.D);
+
+        if (this.gateTab === 3) {
+          if (up) {
+            if (this.consumableSelectionIdx > 0) {
+              this.consumableSelectionIdx--;
+            } else {
+              this.gateTab = 2;
+            }
+            this.renderGatePanel();
+          } else if (down) {
+            if (this.consumableSelectionIdx < this.consumableTypes.length - 1) {
+              this.consumableSelectionIdx++;
+            } else {
+              this.gateTab = 4;
+            }
+            this.renderGatePanel();
+          } else if (left) {
+            const ct = this.consumableTypes[this.consumableSelectionIdx];
+            this.consumableLoadout[ct.id] = Math.max(0, this.consumableLoadout[ct.id] - 1);
+            this.renderGatePanel();
+          } else if (right) {
+            const ct = this.consumableTypes[this.consumableSelectionIdx];
+            const available = gameState.inventory.count(ct.id);
+            if (this.consumableLoadout[ct.id] < available) {
+              this.consumableLoadout[ct.id]++;
+              this.renderGatePanel();
+            }
+          }
+        } else {
+          if (up) {
+            this.gateTab = Math.max(0, this.gateTab - 1);
+            this.renderGatePanel();
+          }
+          if (down) {
+            this.gateTab = Math.min(4, this.gateTab + 1);
+            this.renderGatePanel();
+          }
+          if (left) {
+            if (this.gateTab === 0 && this.selectedPickaxeIdx > 0) {
+              this.selectedPickaxeIdx--;
+              this.renderGatePanel();
+            } else if (this.gateTab === 1 && this.selectedRing1Idx > -1) {
+              this.selectedRing1Idx--;
+              this.renderGatePanel();
+            } else if (this.gateTab === 2 && this.selectedRing2Idx > -1) {
+              this.selectedRing2Idx--;
+              this.renderGatePanel();
+            } else if (this.gateTab === 4) {
+              this.debugMode = !this.debugMode;
+              this.renderGatePanel();
+            }
+          }
+          if (right) {
+            if (this.gateTab === 0 && this.selectedPickaxeIdx < this.pickaxeOptions.length - 1) {
+              this.selectedPickaxeIdx++;
+              this.renderGatePanel();
+            } else if (this.gateTab === 1 && this.selectedRing1Idx < this.ringOptions.length - 1) {
+              this.selectedRing1Idx++;
+              this.renderGatePanel();
+            } else if (this.gateTab === 2 && this.selectedRing2Idx < this.ringOptions.length - 1) {
+              this.selectedRing2Idx++;
+              this.renderGatePanel();
+            } else if (this.gateTab === 4) {
+              this.debugMode = !this.debugMode;
+              this.renderGatePanel();
+            }
+          }
         }
       }
       if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
@@ -483,10 +564,22 @@ export class HomelandScene extends Phaser.Scene {
     this.panelVisible = true;
     this.debugMode = false;
     this.pickaxeOptions = gameState.getAvailablePickaxes();
+    this.ringOptions = gameState.getAvailableRings();
 
     const currentTier = gameState.currentPickaxeTier;
     this.selectedPickaxeIdx = this.pickaxeOptions.findIndex(o => o.tier === currentTier);
     if (this.selectedPickaxeIdx < 0) this.selectedPickaxeIdx = 0;
+
+    this.selectedRing1Idx = this.ringOptions.findIndex(r => r.id === gameState.equippedRings.ring1);
+    this.selectedRing2Idx = this.ringOptions.findIndex(r => r.id === gameState.equippedRings.ring2);
+
+    this.consumableLoadout = {};
+    for (const ct of this.consumableTypes) {
+      this.consumableLoadout[ct.id] = 0;
+    }
+    this.consumableSelectionIdx = 0;
+
+    this.gateTab = 0;
 
     this.renderGatePanel();
   }
@@ -500,34 +593,56 @@ export class HomelandScene extends Phaser.Scene {
     const maxStamina = this.debugMode ? 10000 : 100 + gameState.maxStaminaBonus;
     const invSlots = 16 + gameState.inventorySlotBonus;
 
-    const optionsText = this.pickaxeOptions
+    const pickaxeLines = this.pickaxeOptions
       .map((o, i) => {
-        const marker = i === this.selectedPickaxeIdx ? ' ▶' : '  ';
+        const marker = i === this.selectedPickaxeIdx && this.gateTab === 0 ? '▶' : ' ';
         if (o.tier === 1) {
-          return `${marker} ${names[o.tier]}`;
+          return `  ${marker} ${names[o.tier]}`;
         }
         const remaining = gameState.remainingPickaxeRuns(o.tier);
         const qty = gameState.inventory.count(`pickaxe_${o.tier}`);
-        return `${marker} ${names[o.tier]} (${remaining}/5) [x${qty}]`;
+        return `  ${marker} ${names[o.tier]} (${remaining}/5) [x${qty}]`;
       })
       .join('\n');
 
+    const ring1Marker = this.gateTab === 1 ? '▶' : ' ';
+    const ring2Marker = this.gateTab === 2 ? '▶' : ' ';
+    const ring1Name = this.selectedRing1Idx >= 0 ? this.ringOptions[this.selectedRing1Idx]?.name ?? '(none)' : '(none)';
+    const ring2Name = this.selectedRing2Idx >= 0 ? this.ringOptions[this.selectedRing2Idx]?.name ?? '(none)' : '(none)';
+
+    const ringLines = [
+      `  ${ring1Marker} Ring 1: ${ring1Name}`,
+      `  ${ring2Marker} Ring 2: ${ring2Name}`,
+    ].join('\n');
+
+    const consumableLines = this.consumableTypes
+      .map((ct, i) => {
+        const marker = this.gateTab === 3 && i === this.consumableSelectionIdx ? '▶' : ' ';
+        const qty = this.consumableLoadout[ct.id];
+        const available = gameState.inventory.count(ct.id);
+        return `  ${marker} ${ct.name.padEnd(18)} ${qty} (have ${available})`;
+      })
+      .join('\n');
+
+    const dbgMarker = this.gateTab === 4 ? '▶' : ' ';
+    const dbgLine = `  ${dbgMarker} Debug Mode: ${this.debugMode ? 'ON' : 'OFF'}`;
+
     this.panelBg.clear();
     this.panelBg.fillStyle(0x0a0a1a, 0.85);
-    this.panelBg.fillRoundedRect(960 / 2 - 200, 640 / 2 - 130, 400, 270, 10);
+    this.panelBg.fillRoundedRect(960 / 2 - 220, 640 / 2 - 170, 440, 350, 10);
     this.panelBg.lineStyle(2, 0x6a5a8a, 1);
-    this.panelBg.strokeRoundedRect(960 / 2 - 200, 640 / 2 - 130, 400, 270, 10);
+    this.panelBg.strokeRoundedRect(960 / 2 - 220, 640 / 2 - 170, 440, 350, 10);
     this.panelBg.setAlpha(1);
-
-    const debugLine = `   Debug Mode: ${this.debugMode ? 'ON' : 'OFF'}  [D] toggle\n\n`;
 
     this.panelText.setText(
       `Expedition Loadout\n\n` +
-      `${optionsText}\n` +
-      `   [←/→] to switch\n\n` +
+      `${pickaxeLines}\n\n` +
+      `${ringLines}\n\n` +
+      `Consumables:\n${consumableLines}\n\n` +
+      `${dbgLine}\n\n` +
+      `   [↑/↓] select slot  [←/→] change\n\n` +
       `Max Stamina: ${maxStamina}\n` +
       `Inventory: ${invSlots} slots\n\n` +
-      `${debugLine}` +
       `[SPACE] Descend  |  [ESC] cancel`
     );
     this.panelText.setAlpha(1);
@@ -538,10 +653,23 @@ export class HomelandScene extends Phaser.Scene {
     if (selected) {
       gameState.equipPickaxe(selected.tier);
     }
+    gameState.equippedRings.ring1 = this.selectedRing1Idx >= 0 ? this.ringOptions[this.selectedRing1Idx]?.id ?? null : null;
+    gameState.equippedRings.ring2 = this.selectedRing2Idx >= 0 ? this.ringOptions[this.selectedRing2Idx]?.id ?? null : null;
+
+    const consumables: Record<string, number> = {};
+    for (const ct of this.consumableTypes) {
+      const qty = this.consumableLoadout[ct.id];
+      if (qty > 0) {
+        consumables[ct.id] = qty;
+        gameState.inventory.removeItem(ct.id, qty);
+      }
+    }
+    gameState.save();
+
     this.closePanel();
     this.cameras.main.fadeOut(500, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.start('ExpeditionScene', { debug: this.debugMode });
+      this.scene.start('ExpeditionScene', { debug: this.debugMode, consumables });
     });
   }
 
@@ -566,7 +694,15 @@ export class HomelandScene extends Phaser.Scene {
     this.panelVisible = false;
     this.restoreMode = false;
     this.gateMode = false;
+    this.gateTab = 0;
+    this.consumableLoadout = {};
     this.panelBg.setAlpha(0);
     this.panelText.setAlpha(0);
+  }
+
+  private trashItem(itemId: string): void {
+    if (gameState.inventory.count(itemId) <= 0) return;
+    gameState.inventory.removeItem(itemId, 1);
+    this.inventoryPanel.refresh();
   }
 }

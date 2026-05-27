@@ -20,6 +20,10 @@ const ITEM_NAMES: Record<string, string> = {
   stamina_potion: 'Stamina Potion',
   teleport_scroll: 'Teleport Scroll',
   mining_bomb: 'Mining Bomb',
+  ring_critical: 'Critical Ring',
+  ring_damage: 'Damage Ring',
+  ring_precision: 'Precision Ring',
+  ring_hunter: 'Hunter Ring',
   pickaxe_1: 'Common Pickaxe',
   pickaxe_2: 'Copper Pickaxe',
   pickaxe_3: 'Silver Pickaxe',
@@ -40,6 +44,7 @@ class GameState {
   maxStaminaBonus: number;
   inventorySlotBonus: number;
   pickaxeRuns: Record<number, number>;
+  equippedRings: { ring1: string | null; ring2: string | null };
 
   constructor() {
     this.inventory = new InventorySystem(32);
@@ -49,6 +54,7 @@ class GameState {
     this.maxStaminaBonus = 0;
     this.inventorySlotBonus = 0;
     this.pickaxeRuns = {};
+    this.equippedRings = { ring1: null, ring2: null };
   }
 
   remainingPickaxeRuns(tier?: number): number {
@@ -89,6 +95,30 @@ class GameState {
     return result.sort((a, b) => a.tier - b.tier);
   }
 
+  getAvailableRings(): { id: string; name: string }[] {
+    const ringIds = ['ring_critical', 'ring_damage', 'ring_precision', 'ring_hunter'];
+    const result: { id: string; name: string }[] = [];
+    for (const id of ringIds) {
+      if (this.inventory.count(id) > 0 || this.equippedRings.ring1 === id || this.equippedRings.ring2 === id) {
+        result.push({ id, name: itemDisplayName(id) });
+      }
+    }
+    return result;
+  }
+
+  getRingEffects(): { critChance: number; bonusDamage: number; precisionMult: number; doubleLoot: boolean } {
+    const effects = { critChance: 0, bonusDamage: 0, precisionMult: 1, doubleLoot: false };
+    for (const slot of [this.equippedRings.ring1, this.equippedRings.ring2]) {
+      switch (slot) {
+        case 'ring_critical': effects.critChance += 0.2; break;
+        case 'ring_damage': effects.bonusDamage += 1; break;
+        case 'ring_precision': effects.precisionMult *= 1.3; break;
+        case 'ring_hunter': effects.doubleLoot = true; break;
+      }
+    }
+    return effects;
+  }
+
   save(): void {
     const data = {
       inventory: this.inventory.getItems().map(s => s ? { itemId: s.itemId, quantity: s.quantity } : null),
@@ -97,6 +127,7 @@ class GameState {
       maxStaminaBonus: this.maxStaminaBonus,
       inventorySlotBonus: this.inventorySlotBonus,
       pickaxeRuns: { ...this.pickaxeRuns },
+      equippedRings: { ...this.equippedRings },
       discovered: this.crafting.getDiscoveredIds(),
     };
     try {
@@ -124,6 +155,7 @@ class GameState {
       this.maxStaminaBonus = data.maxStaminaBonus ?? 0;
       this.inventorySlotBonus = data.inventorySlotBonus ?? 0;
       this.pickaxeRuns = data.pickaxeRuns ?? {};
+      this.equippedRings = data.equippedRings ?? { ring1: null, ring2: null };
 
       if (data.discovered) {
         this.crafting = new CraftingSystem();

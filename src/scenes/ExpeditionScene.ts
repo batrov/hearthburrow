@@ -7,6 +7,7 @@ import { ExpeditionState } from '../systems/ExpeditionState';
 import { gameState, itemDisplayName } from '../systems/GameState';
 import { InventoryPanel } from '../ui/InventoryPanel';
 import { EventPanel, EventChoice, EventConfig } from '../ui/EventPanel';
+import { CombatPanel, CombatResult, EnemyConfig } from '../ui/CombatPanel';
 
 const TILE = 40;
 
@@ -40,6 +41,7 @@ export class ExpeditionScene extends Phaser.Scene {
     Q: Phaser.Input.Keyboard.Key;
     E: Phaser.Input.Keyboard.Key;
     F: Phaser.Input.Keyboard.Key;
+    Z: Phaser.Input.Keyboard.Key;
   };
   private moveTimer: number = 0;
   private moveDelay: number = 150;
@@ -47,9 +49,12 @@ export class ExpeditionScene extends Phaser.Scene {
   private facingX: number = 0;
   private facingY: number = -1;
   private debugMode: boolean = false;
+  private loadoutConsumables: Record<string, number> = {};
   private inventoryPanel!: InventoryPanel;
   private eventPanel!: EventPanel;
   private eventActive: boolean = false;
+  private combatPanel!: CombatPanel;
+  private combatActive: boolean = false;
   private minimapBg!: Phaser.GameObjects.Graphics;
   private minimapGfx!: Phaser.GameObjects.Graphics;
   private minimapDot!: Phaser.GameObjects.Rectangle;
@@ -60,13 +65,14 @@ export class ExpeditionScene extends Phaser.Scene {
     super({ key: 'ExpeditionScene' });
     this.stamina = new StaminaSystem(100);
     this.mining = new MiningSystem();
-    this.inventory = new InventorySystem(16);
+    this.inventory = new InventorySystem(16, false);
     this.dungeonGen = new DungeonGenerator();
     this.expeditionState = new ExpeditionState();
   }
 
-  init(data: { debug?: boolean }): void {
+  init(data: { debug?: boolean; consumables?: Record<string, number> }): void {
     this.debugMode = data?.debug ?? false;
+    this.loadoutConsumables = data?.consumables ?? {};
   }
 
   create(): void {
@@ -79,7 +85,10 @@ export class ExpeditionScene extends Phaser.Scene {
     this.stamina = new StaminaSystem(staminaMax);
     this.mining = new MiningSystem();
     this.mining.setPickaxeTier(gameState.currentPickaxeTier);
-    this.inventory = new InventorySystem(16 + gameState.inventorySlotBonus);
+    this.inventory = new InventorySystem(16 + gameState.inventorySlotBonus, false);
+    for (const [id, qty] of Object.entries(this.loadoutConsumables)) {
+      if (qty > 0) this.inventory.addItem(id, qty);
+    }
     if (this.debugMode) {
       this.inventory.addItem('stamina_potion', 5);
       this.inventory.addItem('mining_bomb', 5);
@@ -88,9 +97,16 @@ export class ExpeditionScene extends Phaser.Scene {
     this.moveTimer = 0;
     this.tileSprites = this.add.graphics();
 
-    this.inventoryPanel = new InventoryPanel(this, this.inventory, 'Run Inventory');
+    this.inventoryPanel = new InventoryPanel(
+      this, this.inventory,
+      (id) => this.tryUseConsumable(id),
+      (id) => this.trashItem(id),
+      'Run Inventory',
+    );
     this.eventPanel = new EventPanel(this);
     this.eventActive = false;
+    this.combatPanel = new CombatPanel(this);
+    this.combatActive = false;
     this.interactTarget = null;
 
     this.minimapBg = this.add.graphics().setScrollFactor(0).setDepth(50);
@@ -184,6 +200,17 @@ export class ExpeditionScene extends Phaser.Scene {
           default:
             if (tile.type.startsWith('event_')) {
               this.drawEventTile(px, py, tile.type, tile.broken);
+            } else if (tile.type === 'enemy' && !tile.broken) {
+              this.drawEnemyTile(px, py, tile.resource);
+            } else if (tile.type === 'event_boss' && !tile.broken) {
+              this.drawBossTile(px, py);
+            } else if ((tile.type === 'enemy' || tile.type === 'event_boss') && tile.broken) {
+              this.tileSprites.fillStyle(0x1a1a2a, 1);
+              this.tileSprites.fillRect(px, py, TILE, TILE);
+              if ((x + y) % 2 === 0) {
+                this.tileSprites.fillStyle(0x1e1e30, 0.5);
+                this.tileSprites.fillRect(px, py, TILE, TILE);
+              }
             }
             break;
         }
@@ -229,6 +256,47 @@ export class ExpeditionScene extends Phaser.Scene {
         this.tileSprites.fillRoundedRect(px + 10, py + 14, TILE - 20, TILE - 22, 4);
         break;
     }
+  }
+
+  private drawEnemyTile(px: number, py: number, type: string): void {
+    this.tileSprites.fillStyle(0x1a1a2a, 1);
+    this.tileSprites.fillRect(px, py, TILE, TILE);
+
+    const colors: Record<string, number> = {
+      slime: 0x44aa44,
+      rat: 0x8a6a3a,
+      bat: 0x6a4a7a,
+    };
+    const color = colors[type] ?? 0xaa4444;
+
+    this.tileSprites.fillStyle(color, 1);
+    this.tileSprites.fillCircle(px + TILE / 2, py + TILE / 2, 10);
+
+    this.tileSprites.fillStyle(0x000000, 0.3);
+    this.tileSprites.fillCircle(px + TILE / 2 - 3, py + TILE / 2 + 3, 10);
+
+    this.tileSprites.fillStyle(color, 0.7);
+    this.tileSprites.fillCircle(px + TILE / 2 - 3, py + TILE / 2 - 3, 8);
+  }
+
+  private drawBossTile(px: number, py: number): void {
+    this.tileSprites.fillStyle(0x1a1a2a, 1);
+    this.tileSprites.fillRect(px, py, TILE, TILE);
+
+    const cx = px + TILE / 2;
+    const cy = py + TILE / 2;
+
+    this.tileSprites.fillStyle(0xcc4444, 1);
+    this.tileSprites.fillCircle(cx, cy, 14);
+
+    this.tileSprites.fillStyle(0xaa2222, 0.5);
+    this.tileSprites.fillCircle(cx, cy, 10);
+
+    this.tileSprites.lineStyle(2, 0xff6644, 0.8);
+    this.tileSprites.strokeCircle(cx, cy, 14);
+
+    this.tileSprites.fillStyle(0xffff00, 0.6);
+    this.tileSprites.fillTriangle(cx - 4, cy - 8, cx, cy - 14, cx + 4, cy - 8);
   }
 
   private drawOre(px: number, py: number, resource: string, durability: number, maxDurability: number): void {
@@ -315,7 +383,7 @@ export class ExpeditionScene extends Phaser.Scene {
       fontSize: '12px', fontFamily: 'monospace', color: '#7a8a9a',
     }).setScrollFactor(0).setDepth(51);
 
-    this.inventoryText = this.add.text(20, 56, 'Items: 0', {
+    this.inventoryText = this.add.text(20, 56, 'Slots: 0/0', {
       fontSize: '12px', fontFamily: 'monospace', color: '#6a5a4a',
     }).setScrollFactor(0).setDepth(51);
 
@@ -411,7 +479,9 @@ export class ExpeditionScene extends Phaser.Scene {
             this.minimapGfx.fillStyle(0x8866cc, 1);
             break;
           default:
-            if (tile.type.startsWith('event_') && !tile.broken) {
+            if ((tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken) {
+              this.minimapGfx.fillStyle(0xcc4444, 1);
+            } else if (tile.type.startsWith('event_') && !tile.broken) {
               this.minimapGfx.fillStyle(0xccaa44, 1);
             } else {
               this.minimapGfx.fillStyle(0x1a1a2a, 1);
@@ -469,19 +539,62 @@ export class ExpeditionScene extends Phaser.Scene {
       Q: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Q),
       E: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E),
       F: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F),
+      Z: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Z),
     };
   }
 
   update(_time: number, delta: number): void {
     if (Phaser.Input.Keyboard.JustDown(this.keys.TAB)) {
       this.inventoryPanel.refresh();
-      this.inventoryPanel.toggle();
+      if (this.inventoryPanel.isVisible()) {
+        this.inventoryPanel.hide();
+      } else {
+        this.inventoryPanel.show();
+      }
       return;
     }
 
     if (this.inventoryPanel.isVisible()) {
+      this.inventoryPanel.draw();
+      if (Phaser.Input.Keyboard.JustDown(this.keys.W) || Phaser.Input.Keyboard.JustDown(this.keys.UP)) {
+        this.inventoryPanel.handleInput('UP');
+      } else if (Phaser.Input.Keyboard.JustDown(this.keys.S) || Phaser.Input.Keyboard.JustDown(this.keys.DOWN)) {
+        this.inventoryPanel.handleInput('DOWN');
+      } else if (Phaser.Input.Keyboard.JustDown(this.keys.Z)) {
+        this.inventoryPanel.handleInput('Z');
+      } else if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
+        this.inventoryPanel.handleInput('SPACE');
+      } else if (Phaser.Input.Keyboard.JustDown(this.keys.ESC) || Phaser.Input.Keyboard.JustDown(this.keys.TAB)) {
+        if (!this.inventory.overCapacity()) {
+          this.inventoryPanel.hide();
+        }
+      }
+      return;
+    }
+
+    if (this.inventory.overCapacity()) {
+      this.inventoryPanel.refresh();
+      if (!this.inventoryPanel.isVisible()) {
+        this.inventoryPanel.show();
+      }
+      return;
+    }
+
+    if (this.combatActive) {
+      if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
+        if (this.combatPanel.getResult() === 'victory') {
+          this.combatPanel.handleCollect();
+        } else {
+          const result = this.combatPanel.handleStrike();
+          if (result === 'miss') {
+            if (!this.stamina.consume(10)) {
+              this.handleExhaustion();
+            }
+          }
+        }
+      }
       if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
-        this.inventoryPanel.hide();
+        this.combatPanel.handleRetreat();
       }
       return;
     }
@@ -506,7 +619,12 @@ export class ExpeditionScene extends Phaser.Scene {
     this.checkEventProximity();
 
     if (this.interactTarget && Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
-      this.triggerTileEvent(this.interactTarget.x, this.interactTarget.y, this.interactTarget.id);
+      const tile = this.currentFloor?.tiles[this.interactTarget.y]?.[this.interactTarget.x];
+      if (tile && (tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken) {
+        this.startCombat(this.interactTarget.x, this.interactTarget.y, tile);
+      } else {
+        this.triggerTileEvent(this.interactTarget.x, this.interactTarget.y, this.interactTarget.id);
+      }
       return;
     }
 
@@ -544,7 +662,9 @@ export class ExpeditionScene extends Phaser.Scene {
     }
 
     this.drawStaminaBar();
-    this.inventoryText.setText(`Items: ${this.countItems()}`);
+    const slots = this.inventory.getItems();
+    const used = slots.filter(s => s !== null).length;
+    this.inventoryText.setText(`Slots: ${used}/${slots.length}`);
   }
 
   private checkEventProximity(): void {
@@ -562,6 +682,20 @@ export class ExpeditionScene extends Phaser.Scene {
     for (const pos of checkPositions) {
       if (pos.x < 0 || pos.x >= floor.cols || pos.y < 0 || pos.y >= floor.rows) continue;
       const tile = floor.tiles[pos.y][pos.x];
+      if (tile.type === 'enemy' && !tile.broken) {
+        this.interactTarget = { x: pos.x, y: pos.y, id: tile.eventId };
+        this.interactPrompt.setText('[SPACE] Fight!');
+        this.interactPrompt.setPosition(this.player.x, this.player.y - 30);
+        this.interactPrompt.setAlpha(1);
+        return;
+      }
+      if (tile.type === 'event_boss' && !tile.broken) {
+        this.interactTarget = { x: pos.x, y: pos.y, id: 'boss' };
+        this.interactPrompt.setText('[SPACE] Face the Boss!');
+        this.interactPrompt.setPosition(this.player.x, this.player.y - 30);
+        this.interactPrompt.setAlpha(1);
+        return;
+      }
       if (tile.type.startsWith('event_') && !tile.broken) {
         this.interactTarget = { x: pos.x, y: pos.y, id: tile.eventId };
         const labels: Record<string, string> = {
@@ -817,6 +951,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const tile = floor.tiles[ny][nx];
     if (tile.type === 'wall') return;
     if (tile.type === 'mineable' && !tile.broken) return;
+    if ((tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken) return;
     if (tile.type.startsWith('event_') && !tile.broken) return;
 
     this.playerX = nx;
@@ -948,21 +1083,31 @@ export class ExpeditionScene extends Phaser.Scene {
     const obtained: { id: string; quantity: number }[] = [];
     const lost: { id: string; quantity: number }[] = [];
 
+    const itemList: { id: string }[] = [];
     for (const slot of slots) {
       if (!slot) continue;
       obtained.push({ id: slot.itemId, quantity: slot.quantity });
-
-      if (extractType === 'emergency' && lossRate > 0) {
-        const lostQty = Math.round(slot.quantity * lossRate);
-        if (lostQty > 0) {
-          lost.push({ id: slot.itemId, quantity: lostQty });
-          gameState.inventory.addItem(slot.itemId, slot.quantity - lostQty);
-        } else {
-          gameState.inventory.addItem(slot.itemId, slot.quantity);
-        }
-      } else {
-        gameState.inventory.addItem(slot.itemId, slot.quantity);
+      for (let n = 0; n < slot.quantity; n++) {
+        itemList.push({ id: slot.itemId });
       }
+    }
+
+    let toLose = extractType === 'emergency' && lossRate > 0 ? Math.round(itemList.length * lossRate) : 0;
+    const lostMap = new Map<string, number>();
+
+    while (toLose > 0 && itemList.length > 0) {
+      const idx = Math.floor(Math.random() * itemList.length);
+      const item = itemList.splice(idx, 1)[0];
+      lostMap.set(item.id, (lostMap.get(item.id) ?? 0) + 1);
+      toLose--;
+    }
+
+    for (const item of itemList) {
+      gameState.inventory.addItem(item.id, 1);
+    }
+
+    for (const [id, qty] of lostMap) {
+      lost.push({ id, quantity: qty });
     }
 
     gameState.consumePickaxeRun();
@@ -1063,6 +1208,66 @@ export class ExpeditionScene extends Phaser.Scene {
     });
   }
 
+  private startCombat(tx: number, ty: number, tile: any): void {
+    const isBoss = tile.type === 'event_boss';
+    const enemyType = tile.eventId || 'slime';
+
+    const enemyData: Record<string, { name: string; hp: number; speed: number; zoneWidth: number; rewards: { id: string; quantity: number }[] }> = {
+      slime: { name: 'Slime', hp: 1, speed: 800, zoneWidth: 80, rewards: [{ id: 'monster_drop', quantity: 1 }] },
+      rat: { name: 'Giant Rat', hp: 2, speed: 600, zoneWidth: 60, rewards: [{ id: 'monster_drop', quantity: 1 }, { id: 'stone', quantity: 1 }] },
+      bat: { name: 'Cave Bat', hp: 1, speed: 400, zoneWidth: 50, rewards: [{ id: 'monster_drop', quantity: 1 }, { id: 'crystal', quantity: 1 }] },
+      boss: { name: 'Forest Guardian', hp: 5, speed: 700, zoneWidth: 60, rewards: [{ id: 'gold_ore', quantity: 3 }, { id: 'crystal', quantity: 2 }] },
+    };
+
+    const data = enemyData[enemyType] ?? enemyData.slime;
+    const ringEffects = gameState.getRingEffects();
+
+    const config: EnemyConfig = {
+      name: data.name,
+      hp: data.hp,
+      timingSpeed: data.speed,
+      hitZoneWidth: Math.round(data.zoneWidth * ringEffects.precisionMult),
+      rewards: data.rewards,
+      ringBonusDamage: ringEffects.bonusDamage,
+      ringCritChance: ringEffects.critChance,
+    };
+
+    this.combatActive = true;
+    this.interactPrompt.setAlpha(0);
+    this.interactTarget = null;
+
+    this.combatPanel.show(config, (result: CombatResult, rewards: { id: string; quantity: number }[]) => {
+      this.combatActive = false;
+
+      if (result === 'victory') {
+        const lootMult = ringEffects.doubleLoot ? 2 : 1;
+        for (const r of rewards) {
+          this.inventory.addItem(r.id, r.quantity * lootMult);
+          this.createItemPopup(tx, ty, r.id);
+        }
+
+        if (isBoss) {
+          tile.type = 'stairs_down';
+          tile.resource = '';
+          tile.broken = false;
+          this.tileSprites.clear();
+          this.drawFloor();
+          this.drawMinimap();
+
+          if (!gameState.crafting.isDiscovered('stamina_potion')) {
+            gameState.crafting.discover('stamina_potion');
+            this.showRecipeDiscovery('Stamina Potion');
+          }
+        } else {
+          tile.broken = true;
+          this.tileSprites.clear();
+          this.drawFloor();
+          this.drawMinimap();
+        }
+      }
+    });
+  }
+
   private tryUseConsumable(itemId: string): void {
     if (this.exhausted) return;
 
@@ -1086,6 +1291,8 @@ export class ExpeditionScene extends Phaser.Scene {
         break;
       }
     }
+
+    this.inventoryPanel.refresh();
   }
 
   private detonateMiningBomb(): void {
@@ -1139,6 +1346,12 @@ export class ExpeditionScene extends Phaser.Scene {
       ease: 'Quad.easeOut',
       onComplete: () => popup.destroy(),
     });
+  }
+
+  private trashItem(itemId: string): void {
+    if (this.inventory.count(itemId) <= 0) return;
+    this.inventory.removeItem(itemId, 1);
+    this.inventoryPanel.refresh();
   }
 
   private countItems(): number {

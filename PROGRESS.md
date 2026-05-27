@@ -61,12 +61,14 @@
 | Exhaustion = emergency extract | ✅ | 30% loss, red shake overlay |
 | Emergency Escape (ESC) | ✅ | "Give Up", 30% loss, orange overlay |
 | Safe extraction via stairs_up | ✅ | Automatically at depth 0; 0% loss |
-| Inventory (slot-based, 16 base) | ✅ | Expandable to 24 via Storage building |
+| Inventory (slot-based, 16 base) | ✅ | Per-unit-per-slot in dungeon, stacked in homeland; over-capacity overflow with forced management |
 | Equipment: Pickaxe (3 tiers) | ✅ | Run-based durability (tier 1 infinite, tiers 2-3 = 5 runs) |
-| Equipment: Rings (slots 1 & 2) | ❌ | Not implemented |
+| Equipment: Rings (slots 1 & 2) | ✅ | 4 ring types (Critical, Damage, Precision, Hunter); effects applied in combat |
 | Equipment: Boots | ❌ | Not implemented |
 | Equipment: Lantern | ❌ | Not implemented |
-| Consumable usage | ✅ | [Q] Stamina Potion, [E] Teleport Scroll, [F] Mining Bomb |
+| Consumable usage | ✅ | [Q] Stamina Potion, [E] Teleport Scroll, [F] Mining Bomb; also via inventory panel [SPACE] |
+| Inventory management | ✅ | Interactive panel with W/S select, [Z] trash, [SPACE] use; available in dungeon and homeland storage |
+| Consumable loadout | ✅ | Gate panel tab 3: select potions/scrolls/bombs from storage before descending |
 | Turn-based grid movement | ✅ | 150ms delay, 4-direction, no diagonals |
 
 ---
@@ -89,11 +91,11 @@
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Optional combat | ❌ | Not implemented |
-| Timing-based interaction | ❌ | Not implemented |
-| Ring effects | ❌ | Data exists but unused |
-| Boss fights | ❌ | Not implemented |
-| Monster drops | 🟡 | `monster_drop` resource exists but no enemy to drop it |
+| Optional combat | ✅ | Enemy tiles placed on floors; triggered via SPACE when adjacent; non-blocking to exploration |
+| Timing-based interaction | ✅ | Oscillating marker with green hit zone; SPACE to strike; ESC to retreat |
+| Ring effects | ✅ | Critical (double damage), Damage (+1), Precision (wider zone), Hunter (double loot) |
+| Boss fights | ✅ | Floor 3, 7, 11, ... (every 4 floors); single large room; Forest Guardian (5 HP); no stairs_down until defeated |
+| Monster drops | ✅ | Slime, Rat, Bat enemies drop `monster_drop` + ore; boss drops gold_ore + crystal |
 
 ---
 
@@ -103,11 +105,11 @@
 |---------|--------|-------|
 | Homeland restoration | ✅ | Building restoration with material costs |
 | Recipe discovery | ✅ | 5 recipes, discovery triggers via events/milestones |
-| Rescued villagers | ❌ | Event exists but no persistent tracking |
+| Rescued villagers | 🟡 | Event exists but no persistent tracking |
 | Relics | 🗑️ | Data file loaded but no gameplay integration |
 | Building unlocks | 🟡 | Crafting Station & Storage unlockable; others stubs |
 | Permanent stat upgrades | ✅ | Max stamina (+20 from housing) and inventory slots (+8 from storage) |
-| Temporary run buffs | ❌ | No shrine/consumable buff system |
+| Temporary run buffs | ✅ | Ring effects applied per run; consumables provide on-demand effects |
 
 ---
 
@@ -148,6 +150,7 @@
 | Player sprite | ❌ | Blue rectangle |
 | Item/event sprites | ❌ | Drawn via Graphics primitives |
 | Audio / music | ❌ | Not started |
+| Broken tile rendering | ✅ | Enemy and boss tiles revert to floor style when broken (no more black voids) |
 
 ---
 
@@ -174,13 +177,13 @@ Requirement | Status | Notes
 Procedural rooms | ✅ | Handles 3-5 rooms per floor
 Mining | ✅ | Complete with 3-tier progression
 Stamina | ✅ | Movement + mining costs
-Inventory | ✅ | Slot-based, expandable
+Inventory | ✅ | Per-unit-per-slot in dungeon, over-capacity management, interactive panel
 Extraction | ✅ | Safe (0%) and emergency (30%)
-One boss | ❌ | Not implemented
+One boss | ✅ | Forest Guardian every 4 floors (depth 3, 7, 11, ...)
 One puzzle type | ❌ | Not implemented
 Two random events | ✅ | Five events implemented (exceeds MVP)
 Crafting station | ✅ | Operational
-Storage | ✅ | Operational
+Storage | ✅ | Operational with trash support
 One villager house | ✅ | Restorable, grants stamina bonus
 Three pickaxe tiers | ✅ | Common, Copper, Silver
 Stamina upgrades | ✅ | Via housing restoration
@@ -192,3 +195,4 @@ Limited recipes | ✅ | 5 recipes with discovery triggers
 
 1. **MiningSystem.requiredTier() bug** — checks `"copper"` / `"silver"` / `"gold"` (no `_ore` suffix), but DungeonGenerator uses `"copper_ore"` / `"silver_ore"` / `"gold_ore"`. Not currently triggered because `requiredTier()` is never called from ExpeditionScene.
 2. **DataRegistry loads files unused by gameplay** — `rooms.json`, `relics.json`, `events.json` are loaded but the active game code uses hardcoded data structures instead.
+3. **Over-capacity panel hint flicker** — When inventory is exactly at capacity and an item is added to overflow, the panel auto-shows with `show()` tween each frame (mitigated by `!isVisible()` guard).
