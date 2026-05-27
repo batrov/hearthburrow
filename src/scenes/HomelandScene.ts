@@ -33,6 +33,7 @@ export class HomelandScene extends Phaser.Scene {
   private pickaxeOptions: { id: string; tier: number }[] = [];
   private selectedPickaxeIdx: number = 0;
   private currentBuilding: BuildingZone | null = null;
+  private debugMode: boolean = false;
   private moveSpeed: number = 200;
   private inventoryPanel!: InventoryPanel;
   private craftingPanel!: CraftingPanel;
@@ -283,6 +284,10 @@ export class HomelandScene extends Phaser.Scene {
           this.selectedPickaxeIdx++;
           this.renderGatePanel();
         }
+        if (Phaser.Input.Keyboard.JustDown(this.keys.D)) {
+          this.debugMode = !this.debugMode;
+          this.renderGatePanel();
+        }
       }
       if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
         if (this.restoreMode) {
@@ -470,6 +475,7 @@ export class HomelandScene extends Phaser.Scene {
   private showGatePanel(): void {
     this.gateMode = true;
     this.panelVisible = true;
+    this.debugMode = false;
     this.pickaxeOptions = gameState.getAvailablePickaxes();
 
     const currentTier = gameState.currentPickaxeTier;
@@ -485,7 +491,7 @@ export class HomelandScene extends Phaser.Scene {
       2: 'Copper Pickaxe',
       3: 'Silver Pickaxe',
     };
-    const maxStamina = 100 + gameState.maxStaminaBonus;
+    const maxStamina = this.debugMode ? 10000 : 100 + gameState.maxStaminaBonus;
     const invSlots = 16 + gameState.inventorySlotBonus;
 
     const optionsText = this.pickaxeOptions
@@ -502,10 +508,12 @@ export class HomelandScene extends Phaser.Scene {
 
     this.panelBg.clear();
     this.panelBg.fillStyle(0x0a0a1a, 0.85);
-    this.panelBg.fillRoundedRect(960 / 2 - 200, 640 / 2 - 120, 400, 240, 10);
+    this.panelBg.fillRoundedRect(960 / 2 - 200, 640 / 2 - 130, 400, 270, 10);
     this.panelBg.lineStyle(2, 0x6a5a8a, 1);
-    this.panelBg.strokeRoundedRect(960 / 2 - 200, 640 / 2 - 120, 400, 240, 10);
+    this.panelBg.strokeRoundedRect(960 / 2 - 200, 640 / 2 - 130, 400, 270, 10);
     this.panelBg.setAlpha(1);
+
+    const debugLine = `   Debug Mode: ${this.debugMode ? 'ON' : 'OFF'}  [D] toggle\n\n`;
 
     this.panelText.setText(
       `Expedition Loadout\n\n` +
@@ -513,6 +521,7 @@ export class HomelandScene extends Phaser.Scene {
       `   [←/→] to switch\n\n` +
       `Max Stamina: ${maxStamina}\n` +
       `Inventory: ${invSlots} slots\n\n` +
+      `${debugLine}` +
       `[SPACE] Descend  |  [ESC] cancel`
     );
     this.panelText.setAlpha(1);
@@ -526,7 +535,7 @@ export class HomelandScene extends Phaser.Scene {
     this.closePanel();
     this.cameras.main.fadeOut(500, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.start('ExpeditionScene');
+      this.scene.start('ExpeditionScene', { debug: this.debugMode });
     });
   }
 

@@ -1,12 +1,6 @@
 import Phaser from 'phaser';
 import { gameState, itemDisplayName } from '../systems/GameState';
 
-interface NetItem {
-  id: string;
-  net: number;
-  lost: number;
-}
-
 export class ExpeditionRecapScene extends Phaser.Scene {
   constructor() {
     super({ key: 'ExpeditionRecapScene' });
@@ -25,21 +19,29 @@ export class ExpeditionRecapScene extends Phaser.Scene {
     const cx = 960 / 2;
     const isEmergency = result.extractType === 'emergency';
 
-    const netItems = this.computeNet(result.itemsObtained, result.itemsLost);
-    const totalLost = result.itemsLost.reduce((s, i) => s + i.quantity, 0);
-
-    this.add.text(cx, 40, 'Expedition Results', {
-      fontSize: '26px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
+    this.add.text(cx, 35, 'Expedition Results', {
+      fontSize: '24px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    this.add.text(cx, 72, isEmergency ? 'Emergency Extraction' : 'Safe Return', {
+    this.add.text(cx, 63, isEmergency ? 'Emergency Extraction' : 'Safe Return', {
       fontSize: '14px', fontFamily: 'monospace', color: isEmergency ? '#cc4444' : '#44cc66',
+    }).setOrigin(0.5);
+
+    this.add.text(cx, 82, `Depth Reached: ${result.depth}`, {
+      fontSize: '12px', fontFamily: 'monospace', color: '#7a8a9a',
     }).setOrigin(0.5);
 
     const panelX = 120;
     const panelW = 720;
     const panelY = 100;
     const panelH = 460;
+    const colGap = 40;
+    const colW = (panelW - colGap * 3) / 2;
+    const leftX = panelX + colGap;
+    const rightX = leftX + colW + colGap * 2;
+    const headerY = panelY + 20;
+    const itemStartY = headerY + 30;
+    const lineH = 24;
 
     const bg = this.add.graphics();
     bg.fillStyle(0x12121e, 0.8);
@@ -47,47 +49,24 @@ export class ExpeditionRecapScene extends Phaser.Scene {
     bg.lineStyle(1, 0x2a2a3a, 0.6);
     bg.strokeRoundedRect(panelX, panelY, panelW, panelH, 8);
 
-    const colX = panelX + 40;
-    const headerY = panelY + 30;
-    const lineH = 26;
-
-    this.add.text(colX, headerY, 'Items Collected', {
-      fontSize: '16px', fontFamily: 'monospace', color: '#88dd88', fontStyle: 'bold',
+    this.add.text(leftX, headerY, 'Items Collected', {
+      fontSize: '15px', fontFamily: 'monospace', color: '#88dd88', fontStyle: 'bold',
     });
 
-    for (let i = 0; i < netItems.length && i < 14; i++) {
-      const item = netItems[i];
-      const y = headerY + 34 + i * lineH;
+    this.add.text(rightX, headerY, 'Items Lost', {
+      fontSize: '15px', fontFamily: 'monospace', color: '#dd6666', fontStyle: 'bold',
+    });
 
-      this.add.text(colX, y, itemDisplayName(item.id), {
-        fontSize: '13px', fontFamily: 'monospace', color: '#c8b898',
-      });
+    const maxItemsPerCol = Math.floor((panelY + panelH - itemStartY - 10) / lineH);
 
-      this.add.text(colX + 300, y, `x${item.net}`, {
-        fontSize: '13px', fontFamily: 'monospace', color: '#88dd88',
-      });
+    const netItems = this.computeNetItems(result.itemsObtained, result.itemsLost);
 
-      if (item.lost > 0) {
-        this.add.text(colX + 380, y, `(-${item.lost} lost)`, {
-          fontSize: '11px', fontFamily: 'monospace', color: '#dd6666',
-        });
-      }
-    }
+    this.renderList(leftX, itemStartY, lineH, netItems, maxItemsPerCol, '#c8b898', '#88dd88');
 
-    if (netItems.length === 0) {
-      this.add.text(colX, headerY + 34, '( nothing collected )', {
-        fontSize: '13px', fontFamily: 'monospace', color: '#5a5a5a',
-      });
-    }
-
-    if (totalLost > 0) {
-      this.add.text(colX, panelY + panelH - 50, `Total lost: ${totalLost}`, {
-        fontSize: '14px', fontFamily: 'monospace', color: '#dd6666',
-      });
-    }
+    this.renderList(rightX, itemStartY, lineH, result.itemsLost, maxItemsPerCol, '#c8b898', '#dd6666');
 
     this.add.text(cx, 590, '[SPACE] Return to Homeland', {
-      fontSize: '15px', fontFamily: 'monospace', color: '#6a5a8a',
+      fontSize: '14px', fontFamily: 'monospace', color: '#6a5a8a',
     }).setOrigin(0.5);
 
     this.input.keyboard!.once('keydown-SPACE', () => {
@@ -98,24 +77,56 @@ export class ExpeditionRecapScene extends Phaser.Scene {
     });
   }
 
-  private computeNet(
+  private computeNetItems(
     obtained: { id: string; quantity: number }[],
     lost: { id: string; quantity: number }[]
-  ): NetItem[] {
-    const map = new Map<string, NetItem>();
-
+  ): { id: string; quantity: number }[] {
+    const map = new Map<string, number>();
     for (const item of obtained) {
-      map.set(item.id, { id: item.id, net: item.quantity, lost: 0 });
+      map.set(item.id, (map.get(item.id) ?? 0) + item.quantity);
     }
-
     for (const item of lost) {
-      const entry = map.get(item.id);
-      if (entry) {
-        entry.net -= item.quantity;
-        entry.lost = item.quantity;
-      }
+      map.set(item.id, Math.max(0, (map.get(item.id) ?? 0) - item.quantity));
+    }
+    return Array.from(map.entries())
+      .filter(([_, qty]) => qty > 0)
+      .map(([id, quantity]) => ({ id, quantity }));
+  }
+
+  private renderList(
+    x: number, startY: number, lineH: number,
+    items: { id: string; quantity: number }[],
+    maxItems: number,
+    nameColor: string, qtyColor: string
+  ): void {
+    if (items.length === 0) {
+      this.add.text(x, startY, '(none)', {
+        fontSize: '13px', fontFamily: 'monospace', color: '#5a5a5a',
+      });
+      return;
     }
 
-    return Array.from(map.values()).filter(i => i.net > 0);
+    const sorted = [...items].sort((a, b) => a.id.localeCompare(b.id));
+    const shown = sorted.slice(0, maxItems);
+    const labelW = 140;
+
+    for (let i = 0; i < shown.length; i++) {
+      const item = shown[i];
+      const y = startY + i * lineH;
+
+      this.add.text(x, y, itemDisplayName(item.id), {
+        fontSize: '13px', fontFamily: 'monospace', color: nameColor,
+      });
+
+      this.add.text(x + labelW, y, `x${item.quantity}`, {
+        fontSize: '13px', fontFamily: 'monospace', color: qtyColor,
+      });
+    }
+
+    if (sorted.length > maxItems) {
+      this.add.text(x, startY + maxItems * lineH, '...', {
+        fontSize: '13px', fontFamily: 'monospace', color: '#5a5a5a',
+      });
+    }
   }
 }

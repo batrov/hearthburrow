@@ -5,6 +5,7 @@ export interface RunResult {
   itemsObtained: { id: string; quantity: number }[];
   itemsLost: { id: string; quantity: number }[];
   extractType: 'safe' | 'emergency';
+  depth: number;
 }
 
 const ITEM_NAMES: Record<string, string> = {

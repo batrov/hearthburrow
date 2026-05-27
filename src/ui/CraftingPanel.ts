@@ -16,7 +16,7 @@ export class CraftingPanel {
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
 
-    this.container = scene.add.container(0, 0).setDepth(200);
+    this.container = scene.add.container(0, 0).setDepth(200).setScrollFactor(0);
 
     this.overlay = scene.add.graphics();
     this.overlay.setInteractive(new Phaser.Geom.Rectangle(0, 0, 960, 640), Phaser.Geom.Rectangle.Contains);

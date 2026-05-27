@@ -4,13 +4,65 @@
       "id": "forest_standard_01",
       "type": "standard",
       "biome": "forest",
+      "width": 12,
+      "height": 9,
+      "tile_types": {
+        "0": "empty",
+        "1": "wall",
+        "2": "stone",
+        "3": "copper_ore"
+      }
+    },
+    {
+      "id": "forest_narrow_01",
+      "type": "standard",
+      "biome": "forest",
       "width": 10,
+      "height": 11,
+      "tile_types": {
+        "0": "empty",
+        "1": "wall",
+        "2": "stone",
+        "3": "silver_ore"
+      }
+    },
+    {
+      "id": "forest_wide_01",
+      "type": "standard",
+      "biome": "forest",
+      "width": 14,
       "height": 8,
       "tile_types": {
         "0": "empty",
         "1": "wall",
         "2": "stone",
         "3": "copper_ore"
+      }
+    },
+    {
+      "id": "forest_cross_01",
+      "type": "junction",
+      "biome": "forest",
+      "width": 11,
+      "height": 11,
+      "tile_types": {
+        "0": "empty",
+        "1": "wall",
+        "2": "stone",
+        "3": "copper_ore"
+      }
+    },
+    {
+      "id": "forest_treasure_01",
+      "type": "treasure",
+      "biome": "forest",
+      "width": 9,
+      "height": 8,
+      "tile_types": {
+        "0": "empty",
+        "1": "wall",
+        "2": "stone",
+        "3": "crystal"
       }
     }
   ]
