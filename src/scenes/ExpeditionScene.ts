@@ -10,9 +10,51 @@ import { EventPanel, EventChoice, EventConfig } from '../ui/EventPanel';
 import { CombatPanel, CombatResult, EnemyConfig } from '../ui/CombatPanel';
 import {
   gridToIso, tileSortKey, drawDiamond, drawDiamondAt,
-  drawExtrudedAt, drawExtrudedTile,
+  drawExtrudedAt,
   HALF_W, HALF_H, WALL_HEIGHT, worldWidth, worldHeight,
 } from '../systems/IsoUtils';
+
+interface Palette {
+  wall: [number, number, number];
+  floor: [number, number];
+  corridor: number;
+}
+
+function getDepthPalette(depth: number): Palette {
+  if (depth <= 4) {
+    return {
+      wall: [0x3a3a4a, 0x2a2a3a, 0x222230],
+      floor: [0x1a1a2a, 0x1e1e30],
+      corridor: 0x151520,
+    };
+  }
+  if (depth <= 9) {
+    return {
+      wall: [0x4a3a2a, 0x3a2a1a, 0x302218],
+      floor: [0x2a1a12, 0x30201a],
+      corridor: 0x221510,
+    };
+  }
+  if (depth <= 14) {
+    return {
+      wall: [0x4a6a8a, 0x3a5a7a, 0x2a4a6a],
+      floor: [0x8a9aaa, 0x7a8a9a],
+      corridor: 0x6a7a8a,
+    };
+  }
+  if (depth <= 19) {
+    return {
+      wall: [0x5a2a1a, 0x4a1a12, 0x3a120a],
+      floor: [0x2a1a0a, 0x3a2010],
+      corridor: 0x1a0a08,
+    };
+  }
+  return {
+    wall: [0x3a2a4a, 0x2a1a3a, 0x20122a],
+    floor: [0x1a0e22, 0x22122a],
+    corridor: 0x140a1a,
+  };
+}
 
 export class ExpeditionScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Container;
@@ -49,6 +91,10 @@ export class ExpeditionScene extends Phaser.Scene {
   private moveTimer: number = 0;
   private moveDelay: number = 150;
   private isMoving: boolean = false;
+  private stairTargetX: number = -1;
+  private stairTargetY: number = -1;
+  private stairAction: 'ascend' | 'descend' | null = null;
+  private stairPrompt: Phaser.GameObjects.Container | null = null;
   private exhausted: boolean = false;
   private facingX: number = 0;
   private facingY: number = -1;
@@ -132,9 +178,10 @@ export class ExpeditionScene extends Phaser.Scene {
     this.createHUD();
     this.setupInput();
 
-    const xMin = -(floor.rows - 1) * HALF_W;
+    const xMin = -floor.rows * HALF_W;
+    const yMin = -HALF_H;
     this.cameras.main.startFollow(this.player, true, 0.5, 0.5);
-    this.cameras.main.setBounds(xMin, 0, worldWidth(floor.cols, floor.rows), worldHeight(floor.cols, floor.rows));
+    this.cameras.main.setBounds(xMin, yMin, worldWidth(floor.cols, floor.rows), worldHeight(floor.cols, floor.rows));
 
     this.drawMinimap();
   }
@@ -144,6 +191,8 @@ export class ExpeditionScene extends Phaser.Scene {
 
     const floor = this.currentFloor;
     if (!floor) return;
+
+    const pal = getDepthPalette(floor.depth);
 
     const tiles: { x: number; y: number }[] = [];
     for (let y = 0; y < floor.rows; y++) {
@@ -160,18 +209,18 @@ export class ExpeditionScene extends Phaser.Scene {
 
       switch (tile.type) {
         case 'wall':
-          drawExtrudedAt(this.tileSprites, x, y, 0x3a3a4a, 0x2a2a3a, 0x222230, 12);
+          drawExtrudedAt(this.tileSprites, x, y, pal.wall[0], pal.wall[1], pal.wall[2], 12);
           break;
         case 'floor':
-          drawDiamondAt(this.tileSprites, x, y, 0x1a1a2a);
-          if (checker) drawDiamondAt(this.tileSprites, x, y, 0x1e1e30, 0.5);
+          drawDiamondAt(this.tileSprites, x, y, pal.floor[0]);
+          if (checker) drawDiamondAt(this.tileSprites, x, y, pal.floor[1], 0.5);
           break;
         case 'corridor':
-          drawDiamondAt(this.tileSprites, x, y, 0x151520);
+          drawDiamondAt(this.tileSprites, x, y, pal.corridor);
           break;
         case 'mineable':
-          drawDiamondAt(this.tileSprites, x, y, 0x1a1a2a);
-          if (checker) drawDiamondAt(this.tileSprites, x, y, 0x1e1e30, 0.5);
+          drawDiamondAt(this.tileSprites, x, y, pal.floor[0]);
+          if (checker) drawDiamondAt(this.tileSprites, x, y, pal.floor[1], 0.5);
           if (!tile.broken) {
             this.drawOreIso(p.x, p.y, tile.resource, tile.durability, tile.maxDurability);
           }
@@ -194,8 +243,8 @@ export class ExpeditionScene extends Phaser.Scene {
           } else if (tile.type === 'event_boss' && !tile.broken) {
             this.drawBossTileIso(p.x, p.y);
           } else if ((tile.type === 'enemy' || tile.type === 'event_boss') && tile.broken) {
-            drawDiamondAt(this.tileSprites, x, y, 0x1a1a2a);
-            if (checker) drawDiamondAt(this.tileSprites, x, y, 0x1e1e30, 0.5);
+            drawDiamondAt(this.tileSprites, x, y, pal.floor[0]);
+            if (checker) drawDiamondAt(this.tileSprites, x, y, pal.floor[1], 0.5);
           }
           break;
       }
@@ -233,6 +282,20 @@ export class ExpeditionScene extends Phaser.Scene {
         this.tileSprites.fillRoundedRect(cx - 14, cy - 12, 28, 20, 6);
         this.tileSprites.fillStyle(0x5a8acc, 0.6);
         this.tileSprites.fillRoundedRect(cx - 10, cy - 8, 20, 12, 4);
+        break;
+      case 'event_shop':
+        this.tileSprites.fillStyle(0x8a6a3a, 1);
+        this.tileSprites.fillRect(cx - 14, cy - 4, 28, 16);
+        this.tileSprites.fillStyle(0xccaa44, 1);
+        this.tileSprites.fillTriangle(cx - 6, cy + 8, cx + 6, cy + 8, cx, cy - 8);
+        break;
+      case 'event_treasure_vault':
+        this.tileSprites.fillStyle(0xccaa44, 1);
+        this.tileSprites.fillRoundedRect(cx - 14, cy - 10, 28, 20, 4);
+        this.tileSprites.fillStyle(0xffdd66, 1);
+        this.tileSprites.fillRect(cx - 4, cy - 4, 8, 8);
+        this.tileSprites.fillStyle(0x88ccff, 0.7);
+        this.tileSprites.fillRect(cx - 2, cy - 2, 4, 4);
         break;
     }
   }
@@ -364,11 +427,12 @@ export class ExpeditionScene extends Phaser.Scene {
     this.staminaBar = this.add.graphics();
     this.staminaBar.setScrollFactor(0);
     this.staminaBar.setDepth(51);
-    this.drawStaminaBar();
 
     this.staminaText = this.add.text(20, 14, 'Stamina', {
       fontSize: '12px', fontFamily: 'monospace', color: '#8a7a6a',
     }).setScrollFactor(0).setDepth(51);
+
+    this.drawStaminaBar();
 
     this.depthText = this.add.text(20, 76, 'Floor: 0', {
       fontSize: '12px', fontFamily: 'monospace', color: '#7a8a9a',
@@ -512,6 +576,8 @@ export class ExpeditionScene extends Phaser.Scene {
     const color = ratio > 0.5 ? 0x44cc66 : ratio > 0.25 ? 0xccaa44 : 0xcc4444;
     this.staminaBar.fillStyle(color, 1);
     this.staminaBar.fillRoundedRect(x + 1, y + 1, (w - 2) * ratio, h - 2, 2);
+
+    this.staminaText.setText(`${this.stamina.remaining}/${this.stamina.maxStamina}`);
   }
 
   private setupInput(): void {
@@ -564,23 +630,28 @@ export class ExpeditionScene extends Phaser.Scene {
     }
 
     if (this.inventory.overCapacity()) {
-      this.inventoryPanel.refresh();
       if (!this.inventoryPanel.isVisible()) {
+        this.inventoryPanel.refresh();
         this.inventoryPanel.show();
       }
       return;
     }
 
     if (this.combatActive) {
+      this.combatPanel.updateStamina(this.stamina.remaining, this.stamina.maxStamina);
+
+      if (this.stamina.remaining <= 10 && this.combatPanel.getResult() !== 'victory') {
+        this.combatPanel.handleRetreat();
+        return;
+      }
+
       if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
         if (this.combatPanel.getResult() === 'victory') {
           this.combatPanel.handleCollect();
         } else {
           const result = this.combatPanel.handleStrike();
           if (result === 'miss') {
-            if (!this.stamina.consume(10)) {
-              this.handleExhaustion();
-            }
+            this.stamina.consume(10);
           }
         }
       }
@@ -603,6 +674,25 @@ export class ExpeditionScene extends Phaser.Scene {
       return;
     }
 
+    if (this.stairAction) {
+      if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
+        const action = this.stairAction;
+        this.hideStairPrompt();
+        this.stairAction = null;
+        this.playerX = this.stairTargetX;
+        this.playerY = this.stairTargetY;
+        if (action === 'ascend') {
+          this.handleAscend();
+        } else {
+          this.handleDescend();
+        }
+      } else if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
+        this.hideStairPrompt();
+        this.stairAction = null;
+      }
+      return;
+    }
+
     this.moveTimer += delta;
 
     if (this.exhausted) return;
@@ -612,7 +702,9 @@ export class ExpeditionScene extends Phaser.Scene {
     if (this.interactTarget && Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
       const tile = this.currentFloor?.tiles[this.interactTarget.y]?.[this.interactTarget.x];
       if (tile && (tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken) {
-        this.startCombat(this.interactTarget.x, this.interactTarget.y, tile);
+        if (this.stamina.remaining > 10) {
+          this.startCombat(this.interactTarget.x, this.interactTarget.y, tile);
+        }
       } else {
         this.triggerTileEvent(this.interactTarget.x, this.interactTarget.y, this.interactTarget.id);
       }
@@ -675,14 +767,22 @@ export class ExpeditionScene extends Phaser.Scene {
       const tile = floor.tiles[pos.y][pos.x];
       if (tile.type === 'enemy' && !tile.broken) {
         this.interactTarget = { x: pos.x, y: pos.y, id: tile.eventId };
-        this.interactPrompt.setText('[SPACE] Fight!');
+        if (this.stamina.remaining <= 10) {
+          this.interactPrompt.setText('Not enough stamina!');
+        } else {
+          this.interactPrompt.setText('[SPACE] Fight!');
+        }
         this.interactPrompt.setPosition(this.player.x, this.player.y - 30);
         this.interactPrompt.setAlpha(1);
         return;
       }
       if (tile.type === 'event_boss' && !tile.broken) {
         this.interactTarget = { x: pos.x, y: pos.y, id: 'boss' };
-        this.interactPrompt.setText('[SPACE] Face the Boss!');
+        if (this.stamina.remaining <= 10) {
+          this.interactPrompt.setText('Not enough stamina!');
+        } else {
+          this.interactPrompt.setText('[SPACE] Face the Boss!');
+        }
         this.interactPrompt.setPosition(this.player.x, this.player.y - 30);
         this.interactPrompt.setAlpha(1);
         return;
@@ -695,6 +795,8 @@ export class ExpeditionScene extends Phaser.Scene {
           event_goblin: '[SPACE] Talk to goblin',
           event_villager: '[SPACE] Rescue villager',
           event_fountain: '[SPACE] Drink from fountain',
+          event_shop: '[SPACE] Browse wares',
+          event_treasure_vault: '[SPACE] Open vault',
         };
         this.interactPrompt.setText(labels[tile.type] ?? '[SPACE] Interact');
         this.interactPrompt.setPosition(this.player.x, this.player.y - 30);
@@ -815,6 +917,9 @@ export class ExpeditionScene extends Phaser.Scene {
                   gameState.crafting.discover('stamina_potion');
                   this.showRecipeDiscovery('Stamina Potion');
                 }
+                gameState.villagersRescued++;
+                gameState.maxStaminaBonus += 2;
+                gameState.save();
               },
             },
             {
@@ -851,8 +956,96 @@ export class ExpeditionScene extends Phaser.Scene {
         };
       }
 
+      case 'midrun_shop': {
+        const hasCarrots = (n: number) => gameState.inventory.count('carrot') >= n;
+        return {
+          title: 'Wandering Shop',
+          description: 'A merchant has set up shop mid-dungeon. What catches your eye?',
+          choices: [
+            {
+              label: `Stamina Potion — 5 carrots ${hasCarrots(5) ? '' : '(not enough)'}`,
+              action: () => this.buyAtShop('stamina_potion', 5),
+            },
+            {
+              label: `Teleport Scroll — 8 carrots ${hasCarrots(8) ? '' : '(not enough)'}`,
+              action: () => this.buyAtShop('teleport_scroll', 8),
+            },
+            {
+              label: `Mining Bomb — 6 carrots ${hasCarrots(6) ? '' : '(not enough)'}`,
+              action: () => this.buyAtShop('mining_bomb', 6),
+            },
+            {
+              label: 'Leave',
+              action: () => {},
+            },
+          ],
+        };
+      }
+
+      case 'treasure_vault': {
+        const depth = this.expeditionState.depth;
+        const goldAmt = 3 + Math.floor(depth / 3);
+        const crystalAmt = 3 + Math.floor(depth / 4);
+        return {
+          title: 'Treasure Vault',
+          description: 'A glittering stash of precious resources!',
+          choices: [
+            {
+              label: `Claim +${goldAmt} Gold Ore, +${crystalAmt} Crystal`,
+              action: () => {
+                addItem('gold_ore', goldAmt);
+                addItem('crystal', crystalAmt);
+              },
+            },
+          ],
+        };
+      }
+
       default:
         return null;
+    }
+  }
+
+  private buyAtShop(itemId: string, cost: number): void {
+    if (gameState.inventory.count('carrot') >= cost) {
+      gameState.inventory.removeItem('carrot', cost);
+      gameState.inventory.addItem(itemId, 1);
+    }
+  }
+
+  private showStairPrompt(): void {
+    const cx = this.cameras.main.width / 2;
+    const cy = this.cameras.main.height / 2;
+
+    const bg = this.add.graphics().setScrollFactor(0).setDepth(100);
+    bg.fillStyle(0x0a0a1a, 0.85);
+    bg.fillRoundedRect(cx - 160, cy - 50, 320, 100, 8);
+    bg.lineStyle(1, 0x5a4a7a, 0.5);
+    bg.strokeRoundedRect(cx - 160, cy - 50, 320, 100, 8);
+
+    let label: string;
+    if (this.stairAction === 'ascend' && this.expeditionState.depth % 5 === 0) {
+      label = 'Return to homeland?';
+    } else {
+      const dir = this.stairAction === 'ascend' ? 'Ascend' : 'Descend';
+      const next = this.stairAction === 'ascend' ? this.expeditionState.depth - 1 : this.expeditionState.depth + 1;
+      label = `${dir} to floor ${next}?`;
+    }
+    const text = this.add.text(cx, cy - 20, label, {
+      fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+
+    const hint = this.add.text(cx, cy + 15, '[SPACE] Confirm  |  [ESC] Cancel', {
+      fontSize: '12px', fontFamily: 'monospace', color: '#7a6a5a',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+
+    this.stairPrompt = this.add.container(0, 0, [bg, text, hint]).setDepth(100).setScrollFactor(0);
+  }
+
+  private hideStairPrompt(): void {
+    if (this.stairPrompt) {
+      this.stairPrompt.destroy();
+      this.stairPrompt = null;
     }
   }
 
@@ -872,7 +1065,7 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private handleAscend(): void {
-    if (this.expeditionState.depth === 0) {
+    if (this.expeditionState.depth % 5 === 0) {
       this.safeExtract();
     } else {
       this.expeditionState.ascend();
@@ -888,6 +1081,26 @@ export class ExpeditionScene extends Phaser.Scene {
     if (resource === 'silver_ore' && !gameState.crafting.isDiscovered('pickaxe_3')) {
       gameState.crafting.discover('pickaxe_3');
       this.showRecipeDiscovery('Silver Pickaxe');
+    }
+  }
+
+  private checkRingDiscovery(): void {
+    const k = gameState.monsterKills;
+    if (k.slime >= 3 && !gameState.crafting.isDiscovered('ring_critical')) {
+      gameState.crafting.discover('ring_critical');
+      this.showRecipeDiscovery('Critical Ring');
+    }
+    if (k.rat >= 3 && !gameState.crafting.isDiscovered('ring_damage')) {
+      gameState.crafting.discover('ring_damage');
+      this.showRecipeDiscovery('Damage Ring');
+    }
+    if (k.bat >= 3 && !gameState.crafting.isDiscovered('ring_precision')) {
+      gameState.crafting.discover('ring_precision');
+      this.showRecipeDiscovery('Precision Ring');
+    }
+    if (k.slime >= 3 && k.rat >= 3 && k.bat >= 3 && !gameState.crafting.isDiscovered('ring_hunter')) {
+      gameState.crafting.discover('ring_hunter');
+      this.showRecipeDiscovery('Hunter Ring');
     }
   }
 
@@ -922,9 +1135,10 @@ export class ExpeditionScene extends Phaser.Scene {
     this.drawFloor();
     this.repositionPlayer();
     this.cameras.main.stopFollow();
-    const xMin = -(floor.rows - 1) * HALF_W;
+    const xMin = -floor.rows * HALF_W;
+    const yMin = -HALF_H;
     this.cameras.main.startFollow(this.player, true, 0.5, 0.5);
-    this.cameras.main.setBounds(xMin, 0, worldWidth(floor.cols, floor.rows), worldHeight(floor.cols, floor.rows));
+    this.cameras.main.setBounds(xMin, yMin, worldWidth(floor.cols, floor.rows), worldHeight(floor.cols, floor.rows));
 
     this.depthText.setText(`Floor: ${this.expeditionState.depth}`);
 
@@ -947,6 +1161,19 @@ export class ExpeditionScene extends Phaser.Scene {
     if (tile.type === 'mineable' && !tile.broken) return;
     if ((tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken) return;
     if (tile.type.startsWith('event_') && !tile.broken) return;
+    if (tile.type === 'stairs_up') {
+      this.stairTargetX = nx;
+      this.stairTargetY = ny;
+      this.stairAction = 'ascend';
+      this.showStairPrompt();
+      return;
+    } else if (tile.type === 'stairs_down') {
+      this.stairTargetX = nx;
+      this.stairTargetY = ny;
+      this.stairAction = 'descend';
+      this.showStairPrompt();
+      return;
+    }
 
     this.playerX = nx;
     this.playerY = ny;
@@ -966,12 +1193,6 @@ export class ExpeditionScene extends Phaser.Scene {
 
     if (!this.stamina.consume(2)) {
       this.handleExhaustion();
-    }
-
-    if (tile.type === 'stairs_up') {
-      this.handleAscend();
-    } else if (tile.type === 'stairs_down') {
-      this.handleDescend();
     }
   }
 
@@ -1244,14 +1465,22 @@ export class ExpeditionScene extends Phaser.Scene {
     this.interactPrompt.setAlpha(0);
     this.interactTarget = null;
 
-    this.combatPanel.show(config, (result: CombatResult, rewards: { id: string; quantity: number }[]) => {
-      this.combatActive = false;
+    this.combatPanel.show(
+      config,
+      (result: CombatResult, rewards: { id: string; quantity: number }[]) => {
+        this.combatActive = false;
+        this.drawStaminaBar();
 
-      if (result === 'victory') {
-        const lootMult = ringEffects.doubleLoot ? 2 : 1;
+        if (result === 'victory') {
+          const lootMult = ringEffects.doubleLoot ? 2 : 1;
         for (const r of rewards) {
           this.inventory.addItem(r.id, r.quantity * lootMult);
           this.createItemPopup(tx, ty, r.id);
+        }
+
+        if (!isBoss && (enemyType === 'slime' || enemyType === 'rat' || enemyType === 'bat')) {
+          gameState.monsterKills[enemyType as 'slime' | 'rat' | 'bat']++;
+          this.checkRingDiscovery();
         }
 
         if (isBoss) {
@@ -1273,7 +1502,10 @@ export class ExpeditionScene extends Phaser.Scene {
           this.drawMinimap();
         }
       }
-    });
+    },
+    this.stamina.remaining,
+    this.stamina.maxStamina,
+  );
   }
 
   private tryUseConsumable(itemId: string): void {

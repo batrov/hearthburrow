@@ -48,6 +48,9 @@ class GameState {
   equippedRings: { ring1: string | null; ring2: string | null };
   farmPlanted: number;
   farmHarvest: number;
+  researchedUpgrades: string[];
+  monsterKills: { slime: number; rat: number; bat: number };
+  villagersRescued: number;
 
   constructor() {
     this.inventory = new InventorySystem(32);
@@ -60,6 +63,9 @@ class GameState {
     this.equippedRings = { ring1: null, ring2: null };
     this.farmPlanted = 0;
     this.farmHarvest = 0;
+    this.researchedUpgrades = [];
+    this.monsterKills = { slime: 0, rat: 0, bat: 0 };
+    this.villagersRescued = 0;
   }
 
   remainingPickaxeRuns(tier?: number): number {
@@ -136,6 +142,9 @@ class GameState {
       farmPlanted: this.farmPlanted,
       farmHarvest: this.farmHarvest,
       discovered: this.crafting.getDiscoveredIds(),
+      researchedUpgrades: this.researchedUpgrades,
+      monsterKills: { ...this.monsterKills },
+      villagersRescued: this.villagersRescued,
     };
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -165,6 +174,25 @@ class GameState {
       this.equippedRings = data.equippedRings ?? { ring1: null, ring2: null };
       this.farmPlanted = data.farmPlanted ?? 0;
       this.farmHarvest = data.farmHarvest ?? 0;
+      this.researchedUpgrades = data.researchedUpgrades ?? [];
+      this.monsterKills = data.monsterKills ?? { slime: 0, rat: 0, bat: 0 };
+      this.villagersRescued = data.villagersRescued ?? 0;
+
+      const oldKey = 'researched_upgrades';
+      const oldRaw = localStorage.getItem(oldKey);
+      if (oldRaw) {
+        try {
+          const oldSet = JSON.parse(oldRaw);
+          if (Array.isArray(oldSet)) {
+            for (const id of oldSet) {
+              if (!this.researchedUpgrades.includes(id)) {
+                this.researchedUpgrades.push(id);
+              }
+            }
+          }
+          localStorage.removeItem(oldKey);
+        } catch { /* ignore corrupt old data */ }
+      }
 
       if (data.discovered) {
         this.crafting = new CraftingSystem();

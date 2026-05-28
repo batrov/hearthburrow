@@ -99,9 +99,10 @@ export class HomelandScene extends Phaser.Scene {
     this.createInteractionUI();
     this.setupInput();
 
-    const xMin = -(HUB_ROWS - 1) * HALF_W;
+    const xMin = -HUB_ROWS * HALF_W;
+    const yMin = -HALF_H;
     this.cameras.main.startFollow(this.player, true, 0.5, 0.5);
-    this.cameras.main.setBounds(xMin, 0, worldWidth(HUB_COLS, HUB_ROWS), worldHeight(HUB_COLS, HUB_ROWS));
+    this.cameras.main.setBounds(xMin, yMin, worldWidth(HUB_COLS, HUB_ROWS), worldHeight(HUB_COLS, HUB_ROWS));
 
     this.inventoryPanel = new InventoryPanel(this, gameState.inventory, null, (id) => this.trashItem(id), 'Storage');
     this.craftingPanel = new CraftingPanel(this);
@@ -155,6 +156,21 @@ export class HomelandScene extends Phaser.Scene {
       this.add.text(c.x, c.y - 40, b.label, {
         fontSize: '11px', fontFamily: 'monospace', color: ul ? '#e8d5b7' : '#6a5a4a',
       }).setOrigin(0.5).setAlpha(alpha);
+    }
+
+    const rescued = gameState.villagersRescued;
+    if (rescued > 0) {
+      for (let i = 0; i < Math.min(rescued, 10); i++) {
+        const nx = 12 + Math.floor(i / 3);
+        const ny = 3 + (i % 3);
+        const pp = gridToIso(nx, ny);
+        const npc = this.add.graphics();
+        npc.fillStyle(0x66bbee, 1);
+        npc.fillCircle(pp.x, pp.y, 6);
+        npc.fillStyle(0x88ddff, 1);
+        npc.fillRect(pp.x - 3, pp.y - 8, 6, 3);
+        npc.setDepth(9);
+      }
     }
   }
 
@@ -531,6 +547,7 @@ export class HomelandScene extends Phaser.Scene {
       if (closest.id === 'gate') action = 'Begin expedition';
       else if (closest.id === 'crafting') action = 'Open crafting menu';
       else if (closest.id === 'storage') action = 'Open storage';
+      else if (closest.id === 'villager_house') action = `Visit (${gameState.villagersRescued} rescued)`;
       else if (!closest.buildingId || isRestored(closest.buildingId)) action = `Visit ${closest.label.split(' ')[0].toLowerCase()}`;
       else action = `Restore ${closest.label.split(' ')[0].toLowerCase()}`;
 

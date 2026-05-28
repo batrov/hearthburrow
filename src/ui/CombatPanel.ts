@@ -25,6 +25,7 @@ export class CombatPanel {
   private hitZoneGfx: Phaser.GameObjects.Graphics;
   private feedbackText: Phaser.GameObjects.Text;
   private hintText: Phaser.GameObjects.Text;
+  private staminaText: Phaser.GameObjects.Text;
   private instructionText: Phaser.GameObjects.Text;
 
   private visible: boolean = false;
@@ -94,12 +95,19 @@ export class CombatPanel {
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
+    this.staminaText = scene.add.text(960 / 2, 555, '', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#6aaa6a',
+    }).setOrigin(0.5);
+    this.container.add(this.staminaText);
+
     this.container.setVisible(false);
   }
 
   show(
     config: EnemyConfig,
-    onComplete: (result: CombatResult, rewards: { id: string; quantity: number }[]) => void
+    onComplete: (result: CombatResult, rewards: { id: string; quantity: number }[]) => void,
+    staminaRemaining?: number,
+    staminaMax?: number,
   ): void {
     this.result = null;
     this.visible = true;
@@ -118,6 +126,7 @@ export class CombatPanel {
     this.instructionText.setText('Watch the marker — strike when it\'s in the green zone!');
     this.feedbackText.setText('');
 
+    this.updateStamina(staminaRemaining, staminaMax);
     this.drawHP();
     this.drawTimingBar(config.hitZoneWidth);
     this.startMarker(config.timingSpeed);
@@ -130,6 +139,15 @@ export class CombatPanel {
       duration: 200,
       ease: 'Quad.easeOut',
     });
+  }
+
+  updateStamina(current?: number, max?: number): void {
+    if (current !== undefined && max !== undefined) {
+      this.staminaText.setText(`Stamina: ${current}/${max}`);
+      this.staminaText.setColor(current >= 10 ? '#6aaa6a' : '#cc6644');
+    } else {
+      this.staminaText.setText('');
+    }
   }
 
   hide(): void {

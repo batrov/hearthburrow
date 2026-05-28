@@ -11,6 +11,10 @@ export class StaminaSystem {
     return this.current;
   }
 
+  get maxStamina(): number {
+    return this.max;
+  }
+
   get ratio(): number {
     return this.current / this.max;
   }

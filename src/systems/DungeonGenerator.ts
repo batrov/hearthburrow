@@ -1,5 +1,7 @@
 export type TileType = 'wall' | 'floor' | 'mineable' | 'stairs_up' | 'stairs_down' | 'corridor'
   | 'event_chest' | 'event_merchant' | 'event_goblin' | 'event_villager' | 'event_fountain'
+  | 'event_shop'
+  | 'event_treasure_vault'
   | 'enemy' | 'event_boss';
 
 export interface DungeonTile {
@@ -35,6 +37,7 @@ const EVENT_POOL: { type: TileType; eventId: string }[] = [
   { type: 'event_merchant', eventId: 'wandering_trader' },
   { type: 'event_villager', eventId: 'trapped_villager' },
   { type: 'event_goblin', eventId: 'gambling_goblin' },
+  { type: 'event_shop', eventId: 'midrun_shop' },
 ];
 
 const ENEMY_POOL: { type: string; weight: number }[] = [
@@ -61,7 +64,7 @@ export class DungeonGenerator {
       }
     }
 
-    const isBossFloor = depth > 0 && depth % 4 === 3;
+    const isBossFloor = depth > 0 && depth % 5 === 4;
 
     let rooms: RoomRect[];
     let entryX: number;
@@ -78,7 +81,7 @@ export class DungeonGenerator {
 
       entryX = centerX;
       entryY = centerY + 3;
-      tiles[entryY][entryX] = this.makeTile('stairs_up');
+      tiles[entryY][entryX] = this.makeTile('floor');
 
       tiles[centerY][centerX] = {
         type: 'event_boss',
@@ -89,8 +92,8 @@ export class DungeonGenerator {
         eventId: 'boss',
       };
 
-      exitX = centerX;
-      exitY = centerY;
+      exitX = entryX;
+      exitY = entryY;
     } else {
       rooms = this.placeRooms(cols, rows);
 
@@ -105,15 +108,25 @@ export class DungeonGenerator {
       this.placeEventTiles(tiles, rooms);
       this.placeEnemyTiles(tiles, rooms);
 
+      const exitRoomIndex = rooms.length - 1;
+
+      if (depth >= 2) {
+        this.placeShopTile(tiles, rooms);
+      }
+
+      if (depth >= 1 && Math.random() < 0.4) {
+        this.placeTreasureVault(tiles, rooms);
+      }
+
       const entryRoom = rooms[0];
-      const exitRoom = rooms[rooms.length - 1];
+      const exitRoom = rooms[exitRoomIndex];
 
       entryX = Math.floor(entryRoom.x + entryRoom.w / 2);
       entryY = Math.floor(entryRoom.y + entryRoom.h / 2);
       exitX = Math.floor(exitRoom.x + exitRoom.w / 2);
       exitY = Math.floor(exitRoom.y + exitRoom.h / 2);
 
-      tiles[entryY][entryX] = this.makeTile('stairs_up');
+      tiles[entryY][entryX] = this.makeTile(depth % 5 === 0 ? 'stairs_up' : 'floor');
       tiles[exitY][exitX] = this.makeTile('stairs_down');
     }
 
@@ -183,20 +196,34 @@ export class DungeonGenerator {
 
   private pickResource(depth: number): { id: string; durability: number } {
     const roll = Math.random();
-    if (depth === 0) {
-      if (roll < 0.55) return { id: 'stone', durability: 2 };
-      if (roll < 0.85) return { id: 'bronze_ore', durability: 3 };
+    const biomeFloor = depth % 5;
+    if (depth <= 4) {
+      if (roll < 0.65 - biomeFloor * 0.03) return { id: 'stone', durability: 2 };
+      if (roll < 0.95 - biomeFloor * 0.02) return { id: 'bronze_ore', durability: 3 };
+      if (biomeFloor >= 2 && roll < 0.98 - biomeFloor * 0.01) return { id: 'silver_ore', durability: 4 };
       return { id: 'stone', durability: 2 };
-    } else if (depth === 1) {
-      if (roll < 0.25) return { id: 'stone', durability: 2 };
-      if (roll < 0.65) return { id: 'bronze_ore', durability: 3 };
+    }
+    if (depth <= 9) {
+      if (roll < 0.30 - biomeFloor * 0.02) return { id: 'stone', durability: 2 };
+      if (roll < 0.80 - biomeFloor * 0.03) return { id: 'bronze_ore', durability: 3 };
       return { id: 'silver_ore', durability: 4 };
-    } else {
-      if (roll < 0.05) return { id: 'stone', durability: 2 };
-      if (roll < 0.30) return { id: 'bronze_ore', durability: 3 };
-      if (roll < 0.70) return { id: 'silver_ore', durability: 4 };
+    }
+    if (depth <= 14) {
+      if (roll < 0.15 - biomeFloor * 0.01) return { id: 'stone', durability: 2 };
+      if (roll < 0.45 - biomeFloor * 0.02) return { id: 'bronze_ore', durability: 3 };
+      if (roll < 0.85 - biomeFloor * 0.02) return { id: 'silver_ore', durability: 4 };
       return { id: 'gold_ore', durability: 5 };
     }
+    if (depth <= 19) {
+      if (roll < 0.10 - biomeFloor * 0.01) return { id: 'stone', durability: 2 };
+      if (roll < 0.25 - biomeFloor * 0.01) return { id: 'bronze_ore', durability: 3 };
+      if (roll < 0.55 - biomeFloor * 0.02) return { id: 'silver_ore', durability: 4 };
+      return { id: 'gold_ore', durability: 5 };
+    }
+    if (roll < 0.05) return { id: 'stone', durability: 2 };
+    if (roll < 0.10) return { id: 'bronze_ore', durability: 3 };
+    if (roll < 0.30) return { id: 'silver_ore', durability: 4 };
+    return { id: 'gold_ore', durability: 5 };
   }
 
   private carveRoom(tiles: DungeonTile[][], room: RoomRect, depth: number): void {
@@ -248,6 +275,94 @@ export class DungeonGenerator {
       const pos = floorPositions[Math.floor(Math.random() * floorPositions.length)];
       tiles[pos.y][pos.x] = this.makeTile(ev.type, ev.eventId);
     }
+  }
+
+  private placeShopTile(tiles: DungeonTile[][], rooms: RoomRect[]): void {
+    const room = rooms[Math.floor(Math.random() * rooms.length)];
+
+    const floorPositions: { x: number; y: number }[] = [];
+    for (let y = room.y + 1; y < room.y + room.h - 1; y++) {
+      for (let x = room.x + 1; x < room.x + room.w - 1; x++) {
+        const tile = tiles[y][x];
+        if (tile.type === 'floor' && !tile.broken) {
+          floorPositions.push({ x, y });
+        }
+      }
+    }
+
+    if (floorPositions.length === 0) return;
+
+    const pos = floorPositions[Math.floor(Math.random() * floorPositions.length)];
+    tiles[pos.y][pos.x] = this.makeTile('event_shop' as TileType, 'midrun_shop');
+  }
+
+  private placeTreasureVault(tiles: DungeonTile[][], rooms: RoomRect[]): void {
+    const vw = 6;
+    const vh = 6;
+
+    for (let attempt = 0; attempt < 50; attempt++) {
+      const vx = 1 + Math.floor(Math.random() * (50 - vw - 1));
+      const vy = 1 + Math.floor(Math.random() * (40 - vh - 1));
+
+      const overlaps = rooms.some(r =>
+        vx < r.x + r.w + 3 && vx + vw + 3 > r.x &&
+        vy < r.y + r.h + 3 && vy + vh + 3 > r.y
+      );
+      if (overlaps) continue;
+
+      for (let y = vy; y < vy + vh; y++) {
+        for (let x = vx; x < vx + vw; x++) {
+          if (x === vx || x === vx + vw - 1 || y === vy || y === vy + vh - 1) {
+            tiles[y][x] = this.makeTile('wall');
+          } else {
+            tiles[y][x] = this.makeTile('floor');
+          }
+        }
+      }
+
+      const vaultRoom: RoomRect = { x: vx, y: vy, w: vw, h: vh };
+
+      for (let n = 0; n < 2; n++) {
+        const ef = this.getFloorTiles(tiles, vaultRoom);
+        if (ef.length === 0) break;
+        const p = ef[Math.floor(Math.random() * ef.length)];
+        const totalWeight = 9;
+        const roll = Math.random() * totalWeight;
+        let chosen = 'slime';
+        if (roll < 4) chosen = 'slime';
+        else if (roll < 7) chosen = 'rat';
+        else chosen = 'bat';
+        tiles[p.y][p.x] = {
+          type: 'enemy', resource: chosen, durability: 0, maxDurability: 0, broken: false, eventId: chosen,
+        };
+      }
+
+      const cf = this.getFloorTiles(tiles, vaultRoom);
+      if (cf.length > 0) {
+        const cp = cf[Math.floor(Math.random() * cf.length)];
+        tiles[cp.y][cp.x] = this.makeTile('event_treasure_vault' as TileType, 'treasure_vault');
+      }
+
+      const nearest = rooms.reduce((best, r) => {
+        const dc = Math.abs(r.x - vx) + Math.abs(r.y - vy);
+        return dc < best.dist ? { room: r, dist: dc } : best;
+      }, { room: rooms[0], dist: Infinity }).room;
+      this.carveCorridor(tiles, nearest, vaultRoom);
+      rooms.push(vaultRoom);
+      return;
+    }
+  }
+
+  private getFloorTiles(tiles: DungeonTile[][], room: RoomRect): { x: number; y: number }[] {
+    const result: { x: number; y: number }[] = [];
+    for (let y = room.y + 1; y < room.y + room.h - 1; y++) {
+      for (let x = room.x + 1; x < room.x + room.w - 1; x++) {
+        if (tiles[y][x].type === 'floor') {
+          result.push({ x, y });
+        }
+      }
+    }
+    return result;
   }
 
   private placeBossRoom(cols: number, rows: number): RoomRect[] {
@@ -303,20 +418,14 @@ export class DungeonGenerator {
     const bx = Math.floor(b.x + b.w / 2);
     const by = Math.floor(b.y + b.h / 2);
 
-    const midX = bx;
-    const startX = Math.min(ax, midX);
-    const endX = Math.max(ax, midX);
-    for (let x = startX; x <= endX; x++) {
+    for (let x = Math.min(ax, bx); x <= Math.max(ax, bx); x++) {
       if (this.inBounds(tiles, x, ay)) {
         this.carveCorridorTile(tiles, x, ay);
       }
     }
-
-    const startY = Math.min(ay, by);
-    const endY = Math.max(ay, by);
-    for (let y = startY; y <= endY; y++) {
-      if (this.inBounds(tiles, midX, y)) {
-        this.carveCorridorTile(tiles, midX, y);
+    for (let y = Math.min(ay, by); y <= Math.max(ay, by); y++) {
+      if (this.inBounds(tiles, bx, y)) {
+        this.carveCorridorTile(tiles, bx, y);
       }
     }
   }

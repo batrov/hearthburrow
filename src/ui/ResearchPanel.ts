@@ -14,19 +14,6 @@ const PROJECTS: ResearchProject[] = [
   { id: 'inventory_up', label: 'Inventory Expansion', description: '+2 inventory slots', cost: { crystal: 3, silver_ore: 5 }, effect: 'inventory' },
 ];
 
-const RESEARCHED_KEY = 'researched_upgrades';
-
-function getResearched(): Set<string> {
-  const raw = localStorage.getItem(RESEARCHED_KEY);
-  return new Set(raw ? JSON.parse(raw) : []);
-}
-
-function setResearched(id: string): void {
-  const set = getResearched();
-  set.add(id);
-  localStorage.setItem(RESEARCHED_KEY, JSON.stringify([...set]));
-}
-
 export class ResearchPanel {
   private scene: Phaser.Scene;
   private container: Phaser.GameObjects.Container;
@@ -85,8 +72,7 @@ export class ResearchPanel {
     const project = PROJECTS[this.selectionIndex];
     if (!project) return;
 
-    const researched = getResearched();
-    if (researched.has(project.id)) return;
+    if (gameState.researchedUpgrades.includes(project.id)) return;
 
     for (const [id, qty] of Object.entries(project.cost)) {
       if (gameState.inventory.count(id) < qty) return;
@@ -96,7 +82,7 @@ export class ResearchPanel {
       gameState.inventory.removeItem(id, qty);
     }
 
-    setResearched(project.id);
+    gameState.researchedUpgrades.push(project.id);
 
     switch (project.effect) {
       case 'stamina':
@@ -119,7 +105,6 @@ export class ResearchPanel {
     this.bg.lineStyle(1, 0x3a3a4a, 0.5);
     this.bg.strokeRect(40, 40, 880, 560);
 
-    const researched = getResearched();
     const lines: string[] = [
       '--- Laboratory ---',
       '',
@@ -132,7 +117,7 @@ export class ResearchPanel {
     for (let i = 0; i < PROJECTS.length; i++) {
       const p = PROJECTS[i];
       const cursor = i === this.selectionIndex ? '▸' : ' ';
-      const done = researched.has(p.id);
+      const done = gameState.researchedUpgrades.includes(p.id);
       const status = done ? '[DONE]' : '';
       const costStr = Object.entries(p.cost)
         .map(([id, qty]) => {
