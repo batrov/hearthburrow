@@ -70,6 +70,7 @@
 | Inventory management | ✅ | Interactive panel with W/S select, [Z] trash, [SPACE] use; available in dungeon and homeland storage |
 | Consumable loadout | ✅ | Gate panel tab 3: select potions/scrolls/bombs from storage before descending |
 | Turn-based grid movement | ✅ | 150ms delay, 4-direction, no diagonals |
+| Smooth movement tween | ✅ | Player tweens to target tile over 100ms (Linear ease) instead of instant snap |
 
 ---
 
@@ -148,10 +149,13 @@
 | Placeholder graphics (rectangles/shapes) | ✅ | Functional but placeholder |
 | HD-2D pixel art | ❌ | Not started |
 | Biome-specific tilesets | ❌ | Single dark dungeon aesthetic |
-| Player sprite | ❌ | Blue rectangle |
+| Player sprite (isometric diamond+body) | ✅ | Diamond base + body rectangle |
 | Item/event sprites | ❌ | Drawn via Graphics primitives |
 | Audio / music | ❌ | Not started |
 | Broken tile rendering | ✅ | Enemy and boss tiles revert to floor style when broken (no more black voids) |
+| Isometric viewport | ✅ | Dungeon and hub both use 80×40 isometric diamond projection |
+| 3D extruded walls | ✅ | Walls render as 3D blocks with visible height (top + left + right faces), reduced to height 12 to keep objects visible behind them |
+| Depth sorting (painter's algorithm) | ✅ | Tiles sorted by `x + y` (back-to-front) for correct overlap |
 
 ---
 
@@ -168,6 +172,9 @@
 | Scene management | ✅ | Boot → Homeland → Expedition → Recap |
 | Singleton game state | ✅ | `GameState` persists across scenes |
 | Local storage persistence | ✅ | Auto-save on expedition finish, crafting, building restore; load on boot |
+| Isometric projection system | ✅ | `IsoUtils.ts` with `gridToIso()`, diamond/extruded drawing, world bounds |
+| Hub grid-based movement | ✅ | Homeland converted from pixel-free to turn-based grid movement (150ms) |
+| Free-form to grid movement | ✅ | Homeland movement changed from delta-based to tile-based (matching dungeon) |
 
 ---
 
@@ -197,7 +204,10 @@ Limited recipes | ✅ | 5 recipes with discovery triggers
 1. **MiningSystem.requiredTier() bug** — checks `"bronze"` / `"silver"` / `"gold"` (no `_ore` suffix), but DungeonGenerator uses `"bronze_ore"` / `"silver_ore"` / `"gold_ore"`. Not currently triggered because `requiredTier()` is never called from ExpeditionScene.
 2. **DataRegistry loads files unused by gameplay** — `rooms.json`, `relics.json`, `events.json` are loaded but the active game code uses hardcoded data structures instead.
 3. **Over-capacity panel hint flicker** — When inventory is exactly at capacity and an item is added to overflow, the panel auto-shows with `show()` tween each frame (mitigated by `!isVisible()` guard).
+4. **Isometric depth sorting is per-tile only** — Player, enemies, events are NOT Y-sorted against each other; fixed depth layers (10 for player, 0 for tiles) may cause visual layering artifacts. Not critical for MVP since enemies are drawn on the tile Graphics before the player.
+5. **Building label positioning** — Labels are positioned at building footprint center, but with 3D extrusion the text may overlap the block visual. Needs per-building pixel offset tuning.
 
 ## Resolved Bugs
 
 1. **Farm panel ESC not working** — `this.keys.X` was missing from `setupInput()` in HomelandScene; the `else if` chain threw TypeError at `JustDown(this.keys.X)` before reaching the ESC check. Fixed by adding `X: kb.addKey(...)` (line 277).
+2. **Isometric camera bounds clipping (homeland + dungeon)** — Both scenes used `setBounds(0, 0, ...)` but the isometric grid projects to negative x when x < y (e.g. player spawn at grid (7,8) → iso (-40,300)). The camera couldn't scroll far enough left to show the player. Fixed by offsetting `setBounds(xMin, 0, ...)` where `xMin = -(rows - 1) * HALF_W`. Lerp also bumped from 0.1 → 0.5 for snappier follow.

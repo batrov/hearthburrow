@@ -8,11 +8,14 @@ import { gameState, itemDisplayName } from '../systems/GameState';
 import { InventoryPanel } from '../ui/InventoryPanel';
 import { EventPanel, EventChoice, EventConfig } from '../ui/EventPanel';
 import { CombatPanel, CombatResult, EnemyConfig } from '../ui/CombatPanel';
-
-const TILE = 40;
+import {
+  gridToIso, tileSortKey, drawDiamond, drawDiamondAt,
+  drawExtrudedAt, drawExtrudedTile,
+  HALF_W, HALF_H, WALL_HEIGHT, worldWidth, worldHeight,
+} from '../systems/IsoUtils';
 
 export class ExpeditionScene extends Phaser.Scene {
-  private player!: Phaser.GameObjects.Rectangle;
+  private player!: Phaser.GameObjects.Container;
   private playerX: number = 1;
   private playerY: number = 1;
   private stamina: StaminaSystem;
@@ -45,6 +48,7 @@ export class ExpeditionScene extends Phaser.Scene {
   };
   private moveTimer: number = 0;
   private moveDelay: number = 150;
+  private isMoving: boolean = false;
   private exhausted: boolean = false;
   private facingX: number = 0;
   private facingY: number = -1;
@@ -128,8 +132,9 @@ export class ExpeditionScene extends Phaser.Scene {
     this.createHUD();
     this.setupInput();
 
-    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-    this.cameras.main.setBounds(0, 0, floor.cols * TILE, floor.rows * TILE);
+    const xMin = -(floor.rows - 1) * HALF_W;
+    this.cameras.main.startFollow(this.player, true, 0.5, 0.5);
+    this.cameras.main.setBounds(xMin, 0, worldWidth(floor.cols, floor.rows), worldHeight(floor.cols, floor.rows));
 
     this.drawMinimap();
   }
@@ -140,127 +145,100 @@ export class ExpeditionScene extends Phaser.Scene {
     const floor = this.currentFloor;
     if (!floor) return;
 
+    const tiles: { x: number; y: number }[] = [];
     for (let y = 0; y < floor.rows; y++) {
       for (let x = 0; x < floor.cols; x++) {
-        const tile = floor.tiles[y][x];
-        const px = x * TILE;
-        const py = y * TILE;
+        tiles.push({ x, y });
+      }
+    }
+    tiles.sort((a, b) => (a.x + a.y) - (b.x + b.y) || a.x - b.x);
 
-        switch (tile.type) {
-          case 'wall':
-            this.tileSprites.fillStyle(0x2a2a3a, 1);
-            this.tileSprites.fillRect(px, py, TILE, TILE);
-            this.tileSprites.lineStyle(1, 0x3a3a4a, 0.5);
-            this.tileSprites.strokeRect(px, py, TILE, TILE);
-            break;
-          case 'floor':
-            this.tileSprites.fillStyle(0x1a1a2a, 1);
-            this.tileSprites.fillRect(px, py, TILE, TILE);
-            if ((x + y) % 2 === 0) {
-              this.tileSprites.fillStyle(0x1e1e30, 0.5);
-              this.tileSprites.fillRect(px, py, TILE, TILE);
-            }
-            break;
-          case 'corridor':
-            this.tileSprites.fillStyle(0x151520, 1);
-            this.tileSprites.fillRect(px, py, TILE, TILE);
-            this.tileSprites.lineStyle(1, 0x252535, 0.3);
-            this.tileSprites.strokeRect(px, py, TILE, TILE);
-            break;
-          case 'mineable':
-            this.tileSprites.fillStyle(0x1a1a2a, 1);
-            this.tileSprites.fillRect(px, py, TILE, TILE);
-            if (!tile.broken) {
-              this.drawOre(px, py, tile.resource, tile.durability, tile.maxDurability);
-              this.tileSprites.lineStyle(1, 0x3a3a4a, 0.5);
-              this.tileSprites.strokeRect(px, py, TILE, TILE);
-            } else {
-              if ((x + y) % 2 === 0) {
-                this.tileSprites.fillStyle(0x1e1e30, 0.5);
-                this.tileSprites.fillRect(px, py, TILE, TILE);
-              }
-            }
-            break;
-          case 'stairs_up':
-            this.tileSprites.fillStyle(0x1a2a1a, 1);
-            this.tileSprites.fillRect(px, py, TILE, TILE);
-            this.tileSprites.fillStyle(0x44cc66, 0.4);
-            this.tileSprites.fillTriangle(px + 4, py + TILE - 4, px + TILE / 2, py + 4, px + TILE - 4, py + TILE - 4);
-            this.tileSprites.fillStyle(0x44cc66, 0.7);
-            this.tileSprites.fillTriangle(px + 10, py + TILE - 8, px + TILE / 2, py + 10, px + TILE - 10, py + TILE - 8);
-            break;
-          case 'stairs_down':
-            this.tileSprites.fillStyle(0x1a1a2e, 1);
-            this.tileSprites.fillRect(px, py, TILE, TILE);
-            this.tileSprites.fillStyle(0x8866cc, 0.4);
-            this.tileSprites.fillTriangle(px + 4, py + 4, px + TILE / 2, py + TILE - 4, px + TILE - 4, py + 4);
-            this.tileSprites.fillStyle(0x8866cc, 0.7);
-            this.tileSprites.fillTriangle(px + 10, py + 10, px + TILE / 2, py + TILE - 8, px + TILE - 10, py + 10);
-            break;
-          default:
-            if (tile.type.startsWith('event_')) {
-              this.drawEventTile(px, py, tile.type, tile.broken);
-            } else if (tile.type === 'enemy' && !tile.broken) {
-              this.drawEnemyTile(px, py, tile.resource);
-            } else if (tile.type === 'event_boss' && !tile.broken) {
-              this.drawBossTile(px, py);
-            } else if ((tile.type === 'enemy' || tile.type === 'event_boss') && tile.broken) {
-              this.tileSprites.fillStyle(0x1a1a2a, 1);
-              this.tileSprites.fillRect(px, py, TILE, TILE);
-              if ((x + y) % 2 === 0) {
-                this.tileSprites.fillStyle(0x1e1e30, 0.5);
-                this.tileSprites.fillRect(px, py, TILE, TILE);
-              }
-            }
-            break;
-        }
+    for (const { x, y } of tiles) {
+      const tile = floor.tiles[y][x];
+      const p = gridToIso(x, y);
+      const checker = (x + y) % 2 === 0;
+
+      switch (tile.type) {
+        case 'wall':
+          drawExtrudedAt(this.tileSprites, x, y, 0x3a3a4a, 0x2a2a3a, 0x222230, 12);
+          break;
+        case 'floor':
+          drawDiamondAt(this.tileSprites, x, y, 0x1a1a2a);
+          if (checker) drawDiamondAt(this.tileSprites, x, y, 0x1e1e30, 0.5);
+          break;
+        case 'corridor':
+          drawDiamondAt(this.tileSprites, x, y, 0x151520);
+          break;
+        case 'mineable':
+          drawDiamondAt(this.tileSprites, x, y, 0x1a1a2a);
+          if (checker) drawDiamondAt(this.tileSprites, x, y, 0x1e1e30, 0.5);
+          if (!tile.broken) {
+            this.drawOreIso(p.x, p.y, tile.resource, tile.durability, tile.maxDurability);
+          }
+          break;
+        case 'stairs_up':
+          drawDiamondAt(this.tileSprites, x, y, 0x1a2a1a);
+          this.tileSprites.fillStyle(0x44cc66, 0.7);
+          this.tileSprites.fillTriangle(p.x - 10, p.y + 8, p.x, p.y - 12, p.x + 10, p.y + 8);
+          break;
+        case 'stairs_down':
+          drawDiamondAt(this.tileSprites, x, y, 0x1a1a2e);
+          this.tileSprites.fillStyle(0x8866cc, 0.7);
+          this.tileSprites.fillTriangle(p.x - 10, p.y - 8, p.x, p.y + 12, p.x + 10, p.y - 8);
+          break;
+        default:
+          if (tile.type.startsWith('event_')) {
+            this.drawEventTileIso(p.x, p.y, tile.type, tile.broken);
+          } else if (tile.type === 'enemy' && !tile.broken) {
+            this.drawEnemyTileIso(p.x, p.y, tile.resource);
+          } else if (tile.type === 'event_boss' && !tile.broken) {
+            this.drawBossTileIso(p.x, p.y);
+          } else if ((tile.type === 'enemy' || tile.type === 'event_boss') && tile.broken) {
+            drawDiamondAt(this.tileSprites, x, y, 0x1a1a2a);
+            if (checker) drawDiamondAt(this.tileSprites, x, y, 0x1e1e30, 0.5);
+          }
+          break;
       }
     }
   }
 
-  private drawEventTile(px: number, py: number, type: string, used: boolean): void {
-    this.tileSprites.fillStyle(0x1a1a2a, 1);
-    this.tileSprites.fillRect(px, py, TILE, TILE);
-    if ((px / TILE + py / TILE) % 2 === 0) {
-      this.tileSprites.fillStyle(0x1e1e30, 0.5);
-      this.tileSprites.fillRect(px, py, TILE, TILE);
-    }
+  private drawEventTileIso(cx: number, cy: number, type: string, used: boolean): void {
+    drawDiamond(this.tileSprites, cx, cy, 0x1a1a2a);
     if (used) return;
 
     switch (type) {
       case 'event_chest':
         this.tileSprites.fillStyle(0x8a6a3a, 1);
-        this.tileSprites.fillRoundedRect(px + 6, py + 10, TILE - 12, TILE - 14, 3);
+        this.tileSprites.fillRoundedRect(cx - 14, cy - 12, 28, 20, 3);
         this.tileSprites.fillStyle(0xccaa44, 1);
-        this.tileSprites.fillRect(px + TILE / 2 - 4, py + 16, 8, 4);
+        this.tileSprites.fillRect(cx - 4, cy - 6, 8, 4);
         break;
       case 'event_merchant':
         this.tileSprites.fillStyle(0x3a5a8a, 1);
-        this.tileSprites.fillCircle(px + TILE / 2, py + 10, 6);
-        this.tileSprites.fillRect(px + 8, py + 16, TILE - 16, TILE - 20);
+        this.tileSprites.fillCircle(cx, cy - 10, 6);
+        this.tileSprites.fillRect(cx - 10, cy - 4, 20, 16);
         break;
       case 'event_goblin':
         this.tileSprites.fillStyle(0x5a8a3a, 1);
-        this.tileSprites.fillCircle(px + TILE / 2, py + 10, 6);
-        this.tileSprites.fillRect(px + 8, py + 16, TILE - 16, TILE - 20);
+        this.tileSprites.fillCircle(cx, cy - 10, 6);
+        this.tileSprites.fillRect(cx - 10, cy - 4, 20, 16);
         break;
       case 'event_villager':
         this.tileSprites.fillStyle(0xcc8844, 1);
-        this.tileSprites.fillCircle(px + TILE / 2, py + 10, 6);
-        this.tileSprites.fillRect(px + 8, py + 16, TILE - 16, TILE - 20);
+        this.tileSprites.fillCircle(cx, cy - 10, 6);
+        this.tileSprites.fillRect(cx - 10, cy - 4, 20, 16);
         break;
       case 'event_fountain':
         this.tileSprites.fillStyle(0x3a5a8a, 1);
-        this.tileSprites.fillRoundedRect(px + 6, py + 10, TILE - 12, TILE - 14, 6);
+        this.tileSprites.fillRoundedRect(cx - 14, cy - 12, 28, 20, 6);
         this.tileSprites.fillStyle(0x5a8acc, 0.6);
-        this.tileSprites.fillRoundedRect(px + 10, py + 14, TILE - 20, TILE - 22, 4);
+        this.tileSprites.fillRoundedRect(cx - 10, cy - 8, 20, 12, 4);
         break;
     }
   }
 
-  private drawEnemyTile(px: number, py: number, type: string): void {
-    this.tileSprites.fillStyle(0x1a1a2a, 1);
-    this.tileSprites.fillRect(px, py, TILE, TILE);
+  private drawEnemyTileIso(cx: number, cy: number, type: string): void {
+    drawDiamond(this.tileSprites, cx, cy, 0x1a1a2a);
 
     const colors: Record<string, number> = {
       slime: 0x44aa44,
@@ -269,22 +247,15 @@ export class ExpeditionScene extends Phaser.Scene {
     };
     const color = colors[type] ?? 0xaa4444;
 
-    this.tileSprites.fillStyle(color, 1);
-    this.tileSprites.fillCircle(px + TILE / 2, py + TILE / 2, 10);
-
     this.tileSprites.fillStyle(0x000000, 0.3);
-    this.tileSprites.fillCircle(px + TILE / 2 - 3, py + TILE / 2 + 3, 10);
+    this.tileSprites.fillCircle(cx - 3, cy + 5, 10);
 
     this.tileSprites.fillStyle(color, 0.7);
-    this.tileSprites.fillCircle(px + TILE / 2 - 3, py + TILE / 2 - 3, 8);
+    this.tileSprites.fillCircle(cx - 3, cy - 3, 9);
   }
 
-  private drawBossTile(px: number, py: number): void {
-    this.tileSprites.fillStyle(0x1a1a2a, 1);
-    this.tileSprites.fillRect(px, py, TILE, TILE);
-
-    const cx = px + TILE / 2;
-    const cy = py + TILE / 2;
+  private drawBossTileIso(cx: number, cy: number): void {
+    drawDiamond(this.tileSprites, cx, cy, 0x1a1a2a);
 
     this.tileSprites.fillStyle(0xcc4444, 1);
     this.tileSprites.fillCircle(cx, cy, 14);
@@ -299,66 +270,86 @@ export class ExpeditionScene extends Phaser.Scene {
     this.tileSprites.fillTriangle(cx - 4, cy - 8, cx, cy - 14, cx + 4, cy - 8);
   }
 
-  private drawOre(px: number, py: number, resource: string, durability: number, maxDurability: number): void {
+  private drawOreIso(cx: number, cy: number, resource: string, durability: number, maxDurability: number): void {
     const ratio = maxDurability > 0 ? durability / maxDurability : 1;
+
+    drawDiamond(this.tileSprites, cx, cy, 0x000000, 0.2);
 
     switch (resource) {
       case 'stone':
         this.tileSprites.fillStyle(0x5a5a6a, 1);
-        this.tileSprites.fillRoundedRect(px + 4, py + 4, TILE - 8, TILE - 8, 4);
+        this.tileSprites.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
         this.tileSprites.fillStyle(0x6a6a7a, 1);
-        this.tileSprites.fillRoundedRect(px + 8, py + 6, 6, 6, 2);
+        this.tileSprites.fillRoundedRect(cx - 8, cy - 8, 10, 10, 2);
         break;
       case 'bronze_ore':
         this.tileSprites.fillStyle(0x8a6a3a, 1);
-        this.tileSprites.fillRoundedRect(px + 4, py + 4, TILE - 8, TILE - 8, 4);
+        this.tileSprites.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
         this.tileSprites.fillStyle(0xaa8a4a, 1);
-        this.tileSprites.fillRect(px + 10, py + 10, 8, 8);
+        this.tileSprites.fillRect(cx - 6, cy - 6, 12, 12);
         break;
       case 'silver_ore':
         this.tileSprites.fillStyle(0x7a8a9a, 1);
-        this.tileSprites.fillRoundedRect(px + 4, py + 4, TILE - 8, TILE - 8, 4);
+        this.tileSprites.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
         this.tileSprites.fillStyle(0x9aaabc, 1);
-        this.tileSprites.fillRect(px + 10, py + 10, 8, 8);
+        this.tileSprites.fillRect(cx - 6, cy - 6, 12, 12);
         break;
       case 'gold_ore':
         this.tileSprites.fillStyle(0x8a7a2a, 1);
-        this.tileSprites.fillRoundedRect(px + 4, py + 4, TILE - 8, TILE - 8, 4);
+        this.tileSprites.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
         this.tileSprites.fillStyle(0xccaa44, 1);
-        this.tileSprites.fillRect(px + 10, py + 10, 8, 8);
+        this.tileSprites.fillRect(cx - 6, cy - 6, 12, 12);
         break;
       case 'crystal':
         this.tileSprites.fillStyle(0x6a4a8a, 1);
-        this.tileSprites.fillRoundedRect(px + 4, py + 4, TILE - 8, TILE - 8, 4);
+        this.tileSprites.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
         this.tileSprites.fillStyle(0x9a6acc, 1);
-        this.tileSprites.fillRect(px + 10, py + 10, 8, 8);
+        this.tileSprites.fillRect(cx - 6, cy - 6, 12, 12);
         break;
       case 'monster_drop':
         this.tileSprites.fillStyle(0x8a3a3a, 1);
-        this.tileSprites.fillRoundedRect(px + 4, py + 4, TILE - 8, TILE - 8, 4);
+        this.tileSprites.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
         break;
     }
 
     if (ratio <= 0.66) {
       const darken = ratio <= 0.33 ? 0.45 : 0.25;
       this.tileSprites.fillStyle(0x000000, darken);
-      this.tileSprites.fillRoundedRect(px + 4, py + 4, TILE - 8, TILE - 8, 4);
+      this.tileSprites.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
     }
 
     if (ratio <= 0.33) {
       this.tileSprites.lineStyle(1, 0x000000, 0.5);
-      this.tileSprites.lineBetween(px + 8, py + 6, px + TILE - 8, py + TILE - 6);
-      this.tileSprites.lineBetween(px + TILE - 8, py + 6, px + 8, py + TILE - 6);
+      this.tileSprites.lineBetween(cx - 10, cy - 12, cx + 10, cy + 12);
+      this.tileSprites.lineBetween(cx + 10, cy - 12, cx - 10, cy + 12);
     }
   }
 
   private createPlayer(): void {
-    this.player = this.add.rectangle(
-      this.playerX * TILE + TILE / 2,
-      this.playerY * TILE + TILE / 2,
-      20, 24, 0x88ccff
-    );
-    this.player.setDepth(10);
+    const p = gridToIso(this.playerX, this.playerY);
+    const container = this.add.container(p.x, p.y);
+
+    const base = this.add.graphics();
+    base.fillStyle(0x6699cc, 1);
+    base.beginPath();
+    base.moveTo(0, -10);
+    base.lineTo(14, 0);
+    base.lineTo(0, 10);
+    base.lineTo(-14, 0);
+    base.closePath();
+    base.fill();
+    container.add(base);
+
+    const body = this.add.rectangle(0, -20, 12, 20, 0x88ccff);
+    container.add(body);
+
+    container.setDepth(10);
+    this.player = container;
+  }
+
+  private repositionPlayer(): void {
+    const p = gridToIso(this.playerX, this.playerY);
+    this.player.setPosition(p.x, p.y);
   }
 
   private createHUD(): void {
@@ -929,10 +920,11 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.tileSprites.clear();
     this.drawFloor();
-    this.player.setPosition(this.playerX * TILE + TILE / 2, this.playerY * TILE + TILE / 2);
+    this.repositionPlayer();
     this.cameras.main.stopFollow();
-    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-    this.cameras.main.setBounds(0, 0, floor.cols * TILE, floor.rows * TILE);
+    const xMin = -(floor.rows - 1) * HALF_W;
+    this.cameras.main.startFollow(this.player, true, 0.5, 0.5);
+    this.cameras.main.setBounds(xMin, 0, worldWidth(floor.cols, floor.rows), worldHeight(floor.cols, floor.rows));
 
     this.depthText.setText(`Floor: ${this.expeditionState.depth}`);
 
@@ -940,6 +932,8 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private tryMove(dx: number, dy: number): void {
+    if (this.isMoving) return;
+
     const floor = this.currentFloor;
     if (!floor) return;
 
@@ -956,7 +950,18 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.playerX = nx;
     this.playerY = ny;
-    this.player.setPosition(nx * TILE + TILE / 2, ny * TILE + TILE / 2);
+
+    const target = gridToIso(nx, ny);
+    this.isMoving = true;
+    this.tweens.add({
+      targets: this.player,
+      x: target.x,
+      y: target.y,
+      duration: 100,
+      ease: 'Linear',
+      onComplete: () => { this.isMoving = false; },
+    });
+
     this.updateMinimapDot();
 
     if (!this.stamina.consume(2)) {
@@ -1006,8 +1011,9 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private createMiningParticles(tx: number, ty: number, resource: string): void {
-    const cx = tx * TILE + TILE / 2;
-    const cy = ty * TILE + TILE / 2;
+    const p = gridToIso(tx, ty);
+    const cx = p.x;
+    const cy = p.y;
 
     const colors: Record<string, number> = {
       stone: 0x6a6a7a,
@@ -1040,10 +1046,11 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private createHitEffect(tx: number, ty: number): void {
-    const cx = tx * TILE + TILE / 2;
-    const cy = ty * TILE + TILE / 2;
+    const p = gridToIso(tx, ty);
+    const cx = p.x;
+    const cy = p.y;
 
-    const flash = this.add.rectangle(cx, cy, TILE, TILE, 0xffffff, 0.3).setDepth(15);
+    const flash = this.add.rectangle(cx, cy, HALF_W * 2, HALF_H * 2, 0xffffff, 0.3).setDepth(15);
     this.tweens.add({
       targets: flash,
       alpha: 0,
@@ -1054,9 +1061,10 @@ export class ExpeditionScene extends Phaser.Scene {
 
   private createItemPopup(tx: number, ty: number, resource: string): void {
     const label = resource.replace(/_/g, ' ');
+    const p = gridToIso(tx, ty);
     const popup = this.add.text(
-      tx * TILE + TILE / 2,
-      ty * TILE + TILE / 2 - 10,
+      p.x,
+      p.y - 10,
       `+1 ${label}`,
       { fontSize: '13px', fontFamily: 'monospace', color: '#ffcc44', fontStyle: 'bold' }
     ).setOrigin(0.5).setDepth(25);

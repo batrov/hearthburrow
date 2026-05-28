@@ -7,25 +7,48 @@ import { ResearchPanel } from '../ui/ResearchPanel';
 import { FarmPanel } from '../ui/FarmPanel';
 import { canRestore, restoreBuilding, isRestored } from '../systems/BuildingSystem';
 import { getBuilding } from '../systems/DataRegistry';
+import {
+  gridToIso, drawDiamond, drawDiamondAt, drawExtrudedAt, drawExtrudedTile,
+  HALF_W, HALF_H, WALL_HEIGHT, worldWidth, worldHeight,
+} from '../systems/IsoUtils';
 
-interface BuildingZone {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
+interface HubBuildingDef {
+  id: string;
   label: string;
+  gx: number;
+  gy: number;
+  gw: number;
+  gh: number;
+  buildingId: string;
   description: string;
-  action: string;
-  unlocked: boolean;
-  interactable: boolean;
-  interactDistance: number;
   solid: boolean;
 }
 
+const HUB_COLS = 16;
+const HUB_ROWS = 12;
+
+const HUB_BUILDINGS: HubBuildingDef[] = [
+  { id: 'trading_post', label: 'Trading Post', gx: 1, gy: 1, gw: 3, gh: 2, buildingId: 'trading_post',
+    description: 'Trade resources with wandering merchants.', solid: true },
+  { id: 'crafting', label: 'Crafting Station', gx: 1, gy: 4, gw: 3, gh: 2, buildingId: '',
+    description: 'Craft tools and equipment from mined materials.', solid: true },
+  { id: 'farm', label: 'Farm', gx: 1, gy: 7, gw: 3, gh: 2, buildingId: 'farm',
+    description: 'Plant carrots and harvest more carrots.', solid: true },
+  { id: 'villager_house', label: 'Villager House', gx: 12, gy: 1, gw: 3, gh: 2, buildingId: 'housing',
+    description: 'A cozy home. Increases max stamina when restored.', solid: true },
+  { id: 'storage', label: 'Storage', gx: 12, gy: 4, gw: 3, gh: 2, buildingId: '',
+    description: 'Store and manage your collected resources.', solid: true },
+  { id: 'laboratory', label: 'Laboratory', gx: 12, gy: 7, gw: 3, gh: 2, buildingId: 'laboratory',
+    description: 'Research advanced upgrades and recipes.', solid: true },
+  { id: 'gate', label: 'Expedition Gate', gx: 7, gy: 9, gw: 2, gh: 1, buildingId: '',
+    description: 'Descend into the procedural dungeon to mine resources.', solid: false },
+];
+
 export class HomelandScene extends Phaser.Scene {
-  private buildings: BuildingZone[] = [];
-  private player!: Phaser.GameObjects.Rectangle;
+  private player!: Phaser.GameObjects.Container;
   private playerLabel!: Phaser.GameObjects.Text;
+  private playerGx: number = 7;
+  private playerGy: number = 8;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private promptText!: Phaser.GameObjects.Text;
   private panelBg!: Phaser.GameObjects.Graphics;
@@ -40,7 +63,7 @@ export class HomelandScene extends Phaser.Scene {
   private selectedRing1Idx: number = -1;
   private selectedRing2Idx: number = -1;
   private gateTab: number = 0;
-  private currentBuilding: BuildingZone | null = null;
+  private currentBuilding: HubBuildingDef | null = null;
   private debugMode: boolean = false;
   private consumableTypes: { id: string; name: string }[] = [
     { id: 'stamina_potion', name: 'Stamina Potion' },
@@ -49,7 +72,9 @@ export class HomelandScene extends Phaser.Scene {
   ];
   private consumableLoadout: Record<string, number> = {};
   private consumableSelectionIdx: number = 0;
-  private moveSpeed: number = 200;
+  private moveTimer: number = 0;
+  private moveDelay: number = 150;
+  private isMoving: boolean = false;
   private inventoryPanel!: InventoryPanel;
   private craftingPanel!: CraftingPanel;
   private tradePanel!: TradePanel;
@@ -62,15 +87,21 @@ export class HomelandScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.fadeIn(400, 0, 0, 0);
+    this.cameras.main.setBackgroundColor('#0a0a0a');
     this.panelVisible = false;
     this.currentBuilding = null;
+    this.moveTimer = 0;
 
-    this.drawTerrain();
-    this.drawBuildings();
-    this.drawExpeditionGate();
+    this.drawHubTerrain();
+    this.drawHubBuildings();
+    this.drawHubGate();
     this.drawPlayer();
     this.createInteractionUI();
     this.setupInput();
+
+    const xMin = -(HUB_ROWS - 1) * HALF_W;
+    this.cameras.main.startFollow(this.player, true, 0.5, 0.5);
+    this.cameras.main.setBounds(xMin, 0, worldWidth(HUB_COLS, HUB_ROWS), worldHeight(HUB_COLS, HUB_ROWS));
 
     this.inventoryPanel = new InventoryPanel(this, gameState.inventory, null, (id) => this.trashItem(id), 'Storage');
     this.craftingPanel = new CraftingPanel(this);
@@ -79,185 +110,133 @@ export class HomelandScene extends Phaser.Scene {
     this.farmPanel = new FarmPanel(this);
   }
 
-  private drawTerrain(): void {
-    const ground = this.add.graphics();
-    ground.fillStyle(0x3a5a2a, 1);
-    ground.fillRect(0, 0, 960, 640);
-
-    for (let i = 0; i < 60; i++) {
-      const gx = Phaser.Math.Between(0, 960);
-      const gy = Phaser.Math.Between(0, 640);
-      ground.fillStyle(0x4a6a3a, Phaser.Math.FloatBetween(0.2, 0.5));
-      ground.fillRect(gx, gy, Phaser.Math.Between(4, 12), Phaser.Math.Between(4, 12));
-    }
-
-    const path = this.add.graphics();
-    path.fillStyle(0x5a4a3a, 1);
-    path.fillRect(960 / 2 - 22, 0, 44, 520);
-
-    path.fillStyle(0x4a3a2a, 0.4);
-    for (let y = 20; y < 520; y += 60) {
-      path.fillRect(960 / 2 - 18, y, 36, 8);
-    }
-
-    const platform = this.add.graphics();
-    platform.fillStyle(0x4a3a3a, 1);
-    platform.fillRoundedRect(960 / 2 - 80, 520, 160, 24, 4);
-    platform.fillStyle(0x3a2a2a, 0.6);
-    platform.fillRoundedRect(960 / 2 - 76, 524, 152, 16, 3);
-  }
-
-  private drawBuildings(): void {
-    this.buildings = [
-      {
-        x: 80, y: 80, w: 160, h: 110,
-        label: 'Crafting Station',
-        description: 'Craft tools and equipment from mined materials.',
-        action: 'Open crafting menu',
-        unlocked: true, interactable: true, interactDistance: 60, solid: true,
-      },
-      {
-        x: 720, y: 80, w: 160, h: 110,
-        label: 'Storage',
-        description: 'Store and manage your collected resources.',
-        action: 'Open storage',
-        unlocked: true, interactable: true, interactDistance: 60, solid: true,
-      },
-      {
-        x: 80, y: 340, w: 160, h: 110,
-        label: 'Trading Post',
-        description: 'Trade resources with wandering merchants.',
-        action: isRestored('trading_post') ? 'Visit merchant' : 'Restore trading post',
-        unlocked: isRestored('trading_post'),
-        interactable: true, interactDistance: 60, solid: true,
-      },
-      {
-        x: 720, y: 340, w: 160, h: 110,
-        label: 'Laboratory',
-        description: 'Research advanced upgrades and recipes.',
-        action: isRestored('laboratory') ? 'Enter laboratory' : 'Restore laboratory',
-        unlocked: isRestored('laboratory'),
-        interactable: true, interactDistance: 60, solid: true,
-      },
-      {
-        x: 400, y: 200, w: 160, h: 110,
-        label: 'Villager House',
-        description: 'A cozy home. Increases max stamina when restored.',
-        action: isRestored('housing') ? 'Visit house' : 'Restore house',
-        unlocked: isRestored('housing'),
-        interactable: true, interactDistance: 60, solid: true,
-      },
-      {
-        x: 80, y: 520, w: 160, h: 110,
-        label: 'Farm',
-        description: 'Plant carrots and harvest more carrots.',
-        action: isRestored('farm') ? 'Visit farm' : 'Restore farm',
-        unlocked: isRestored('farm'),
-        interactable: true, interactDistance: 60, solid: true,
-      },
-    ];
-
-    for (const b of this.buildings) {
-      this.drawBuilding(b);
-    }
-  }
-
-  private drawBuilding(b: BuildingZone): void {
-    const alpha = b.unlocked ? 1 : 0.4;
+  private drawHubTerrain(): void {
     const g = this.add.graphics();
+    const isPath = (x: number) => x === 7 || x === 8;
 
-    g.fillStyle(0x5a3a1a, alpha);
-    g.fillRoundedRect(b.x, b.y, b.w, b.h, 6);
-
-    g.fillStyle(b.unlocked ? 0x8a6a3a : 0x4a3a2a, alpha);
-    g.fillRoundedRect(b.x + 6, b.y + 6, b.w - 12, b.h - 12, 4);
-
-    const roof = this.add.graphics();
-    roof.fillStyle(0x6a4a2a, alpha);
-    roof.fillTriangle(b.x - 10, b.y, b.x + b.w / 2, b.y - 30, b.x + b.w + 10, b.y);
-
-    this.add.text(b.x + b.w / 2, b.y + b.h / 2, b.label, {
-      fontSize: '14px', fontFamily: 'monospace', color: b.unlocked ? '#e8d5b7' : '#6a5a4a',
-    }).setOrigin(0.5).setAlpha(alpha);
-
-    if (!b.unlocked) {
-      const label = b.label === 'Villager House' ? 'restore' : 'locked';
-      this.add.text(b.x + b.w / 2, b.y + b.h / 2 + 18, label, {
-        fontSize: '11px', fontFamily: 'monospace', color: '#5a4a3a',
-      }).setOrigin(0.5);
+    for (let y = 0; y < HUB_ROWS; y++) {
+      for (let x = 0; x < HUB_COLS; x++) {
+        if (isPath(x)) {
+          drawDiamondAt(g, x, y, 0x5a4a3a);
+        } else {
+          const checker = (x + y) % 2 === 0;
+          drawDiamondAt(g, x, y, checker ? 0x3a5a2a : 0x4a6a3a);
+        }
+      }
     }
   }
 
-  private drawExpeditionGate(): void {
-    const gx = 960 / 2;
-    const gy = 544;
+  private drawHubBuildings(): void {
+    const buildingColors: Record<string, [number, number, number]> = {
+      trading_post: [0x8a6a3a, 0x6a4a2a, 0x5a3a1a],
+      crafting: [0x6a7a8a, 0x4a5a6a, 0x3a4a5a],
+      farm: [0x5a7a3a, 0x3a5a2a, 0x2a4a1a],
+      villager_house: [0x8a6a4a, 0x6a4a2a, 0x5a3a1a],
+      storage: [0x6a5a4a, 0x4a3a2a, 0x3a2a1a],
+      laboratory: [0x6a4a8a, 0x4a2a6a, 0x3a1a5a],
+    };
+    const unlocked = (b: HubBuildingDef) => !b.buildingId || isRestored(b.buildingId);
 
-    const gate = this.add.graphics();
-    gate.fillStyle(0x1a1a2e, 1);
-    gate.fillRoundedRect(gx - 44, gy, 88, 96, 6);
+    for (const b of HUB_BUILDINGS) {
+      if (b.id === 'gate') continue;
+      const ul = unlocked(b);
+      const [top, left, right] = buildingColors[b.id] ?? [0x7a6a4a, 0x5a4a2a, 0x4a3a1a];
+      const alpha = ul ? 1 : 0.4;
 
-    gate.fillStyle(0x3a2a5a, 0.7);
-    gate.fillRoundedRect(gx - 36, gy + 8, 72, 80, 4);
+      for (let dy = 0; dy < b.gh; dy++) {
+        for (let dx = 0; dx < b.gw; dx++) {
+          const p = gridToIso(b.gx + dx, b.gy + dy);
+          const g = this.add.graphics().setAlpha(alpha);
+          drawExtrudedTile(g, p.x, p.y, top, left, right, 24);
+        }
+      }
 
-    gate.fillStyle(0x5a4a8a, 0.4);
-    gate.fillRect(gx - 28, gy + 16, 56, 64);
+      const c = gridToIso(b.gx + b.gw / 2, b.gy + b.gh / 2);
+      this.add.text(c.x, c.y - 40, b.label, {
+        fontSize: '11px', fontFamily: 'monospace', color: ul ? '#e8d5b7' : '#6a5a4a',
+      }).setOrigin(0.5).setAlpha(alpha);
+    }
+  }
 
+  private drawHubGate(): void {
+    for (let dy = 0; dy < 1; dy++) {
+      for (let dx = 0; dx < 2; dx++) {
+        const p = gridToIso(7 + dx, 9 + dy);
+        const g = this.add.graphics();
+        drawExtrudedTile(g, p.x, p.y, 0x3a2a5a, 0x2a1a4a, 0x1a0a3a, 36);
+      }
+    }
+
+    const c = gridToIso(8, 9);
     const glow = this.add.graphics();
-    glow.fillStyle(0x6a5a9a, 0.2);
-    glow.fillRoundedRect(gx - 52, gy - 4, 104, 104, 10);
-    glow.fillStyle(0x8a7aba, 0.1);
-    glow.fillRoundedRect(gx - 60, gy - 8, 120, 112, 12);
+    glow.fillStyle(0x6a5a9a, 0.15);
+    drawDiamond(glow, c.x, c.y - 36, 0x6a5a9a, 0.15);
+    drawDiamond(glow, c.x, c.y - 36, 0x8a7aba, 0.1);
 
     this.tweens.add({
       targets: glow,
-      alpha: 0.6,
+      alpha: 0.4,
       yoyo: true,
       repeat: -1,
       duration: 1200,
       ease: 'Sine.easeInOut',
     });
 
-    this.add.text(gx, gy - 16, 'FORGOTTEN DEPTHS', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#7a6a9a',
+    this.add.text(c.x, c.y - 52, 'FORGOTTEN DEPTHS', {
+      fontSize: '10px', fontFamily: 'monospace', color: '#7a6a9a',
     }).setOrigin(0.5);
 
-    this.add.text(gx, gy + 112, '[SPACE] Descend', {
-      fontSize: '13px', fontFamily: 'monospace', color: '#8a7aba',
+    this.add.text(c.x, c.y + 24, '[SPACE] Descend', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#8a7aba',
     }).setOrigin(0.5);
-
-    this.buildings.push({
-      x: gx - 44, y: gy, w: 88, h: 96,
-      label: 'Expedition Gate',
-      description: 'Descend into the procedural dungeon to mine resources.',
-      action: 'Begin expedition',
-      unlocked: true, interactable: true, interactDistance: 60, solid: false,
-    });
   }
 
   private drawPlayer(): void {
-    this.player = this.add.rectangle(960 / 2, 544 - 32, 20, 24, 0x88ccff);
-    this.playerLabel = this.add.text(960 / 2, 544 - 52, 'You', {
+    const p = gridToIso(this.playerGx, this.playerGy);
+    const container = this.add.container(p.x, p.y);
+
+    const base = this.add.graphics();
+    base.fillStyle(0x6699cc, 1);
+    base.beginPath();
+    base.moveTo(0, -10);
+    base.lineTo(14, 0);
+    base.lineTo(0, 10);
+    base.lineTo(-14, 0);
+    base.closePath();
+    base.fill();
+    container.add(base);
+
+    const body = this.add.rectangle(0, -20, 12, 20, 0x88ccff);
+    container.add(body);
+
+    container.setDepth(10);
+    this.player = container;
+
+    const pp = gridToIso(this.playerGx, this.playerGy);
+    this.playerLabel = this.add.text(pp.x, pp.y - 30, 'You', {
       fontSize: '11px', fontFamily: 'monospace', color: '#aaddff',
     }).setOrigin(0.5);
   }
 
-  private createInteractionUI(): void {
-    this.add.text(960 / 2, 510, '[TAB] Inventory', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#4a5a4a',
-    }).setOrigin(0.5);
+  private repositionPlayer(): void {
+    const p = gridToIso(this.playerGx, this.playerGy);
+    this.player.setPosition(p.x, p.y);
+    this.playerLabel.setPosition(p.x, p.y - 30);
+  }
 
+  private createInteractionUI(): void {
     this.promptText = this.add.text(0, 0, '', {
-      fontSize: '13px', fontFamily: 'monospace', color: '#ffdd88',
-    }).setOrigin(0.5).setAlpha(0).setDepth(50);
+      fontSize: '12px', fontFamily: 'monospace', color: '#ffdd88',
+    }).setOrigin(0.5).setAlpha(0).setDepth(55);
 
     this.panelBg = this.add.graphics();
-    this.panelBg.setDepth(90);
+    this.panelBg.setDepth(90).setScrollFactor(0);
     this.panelBg.setAlpha(0);
 
     this.panelText = this.add.text(960 / 2, 640 / 2, '', {
       fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7',
       align: 'center', lineSpacing: 8,
-    }).setOrigin(0.5).setDepth(91).setAlpha(0);
+    }).setOrigin(0.5).setDepth(91).setScrollFactor(0).setAlpha(0);
   }
 
   private setupInput(): void {
@@ -451,12 +430,57 @@ export class HomelandScene extends Phaser.Scene {
       return;
     }
 
-    this.handleMovement(delta);
+    this.moveTimer += delta;
+    if (this.moveTimer >= this.moveDelay) {
+      this.handleMovement(delta);
+      this.moveTimer = 0;
+    }
     this.checkProximity();
     this.handleInteraction();
   }
 
-  private handleMovement(delta: number): void {
+  private isSolid(gx: number, gy: number): boolean {
+    for (const b of HUB_BUILDINGS) {
+      if (!b.solid) continue;
+      if (gx >= b.gx && gx < b.gx + b.gw && gy >= b.gy && gy < b.gy + b.gh) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private tryMove(dx: number, dy: number): void {
+    if (this.isMoving) return;
+
+    const nx = this.playerGx + dx;
+    const ny = this.playerGy + dy;
+
+    if (nx < 0 || nx >= HUB_COLS || ny < 0 || ny >= HUB_ROWS) return;
+    if (this.isSolid(nx, ny)) return;
+
+    this.playerGx = nx;
+    this.playerGy = ny;
+
+    const target = gridToIso(nx, ny);
+    this.isMoving = true;
+    this.tweens.add({
+      targets: this.player,
+      x: target.x,
+      y: target.y,
+      duration: 100,
+      ease: 'Linear',
+      onComplete: () => { this.isMoving = false; },
+    });
+    this.tweens.add({
+      targets: this.playerLabel,
+      x: target.x,
+      y: target.y - 30,
+      duration: 100,
+      ease: 'Linear',
+    });
+  }
+
+  private handleMovement(_delta: number): void {
     let dx = 0;
     let dy = 0;
 
@@ -465,67 +489,52 @@ export class HomelandScene extends Phaser.Scene {
     if (this.keys.W.isDown || this.keys.UP.isDown) dy = -1;
     else if (this.keys.S.isDown || this.keys.DOWN.isDown) dy = 1;
 
-    if (dx === 0 && dy === 0) return;
+    if (dx !== 0 && dy !== 0) dy = 0;
 
-    const speed = this.moveSpeed * (delta / 1000);
-    const pHw = 10;
-    const pHh = 12;
-
-    let nx = this.player.x + dx * speed;
-    let ny = this.player.y + dy * speed;
-
-    nx = Phaser.Math.Clamp(nx, pHw, 960 - pHw);
-    ny = Phaser.Math.Clamp(ny, pHh, 640 - pHh);
-
-    const collides = (cx: number, cy: number): boolean => {
-      for (const b of this.buildings) {
-        if (!b.solid) continue;
-        if (cx + pHw > b.x && cx - pHw < b.x + b.w &&
-            cy + pHh > b.y && cy - pHh < b.y + b.h) {
-          return true;
-        }
-      }
-      return false;
-    };
-
-    if (!collides(nx, ny)) {
-      this.player.setPosition(nx, ny);
-      this.playerLabel.setPosition(nx, ny - 20);
-      return;
+    if (dx !== 0 || dy !== 0) {
+      this.tryMove(dx, dy);
     }
-
-    const tryX = this.player.x + dx * speed;
-    const tryY = this.player.y + dy * speed;
-
-    if (dx !== 0 && !collides(tryX, this.player.y)) {
-      this.player.x = tryX;
-    }
-    if (dy !== 0 && !collides(this.player.x, tryY)) {
-      this.player.y = tryY;
-    }
-    this.playerLabel.setPosition(this.player.x, this.player.y - 20);
   }
 
   private checkProximity(): void {
-    let closest: BuildingZone | null = null;
+    let closest: HubBuildingDef | null = null;
     let closestDist = Infinity;
 
-    for (const b of this.buildings) {
-      if (!b.interactable) continue;
-      const nearX = Phaser.Math.Clamp(this.player.x, b.x, b.x + b.w);
-      const nearY = Phaser.Math.Clamp(this.player.y, b.y, b.y + b.h);
-      const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, nearX, nearY);
+    for (const b of HUB_BUILDINGS) {
+      const unlocked = !b.buildingId || isRestored(b.buildingId);
+      if (!unlocked) continue;
 
-      if (dist < b.interactDistance && dist < closestDist) {
-        closest = b;
-        closestDist = dist;
+      const bLeft = b.gx - 1;
+      const bRight = b.gx + b.gw;
+      const bTop = b.gy - 1;
+      const bBottom = b.gy + b.gh;
+
+      if (this.playerGx >= bLeft && this.playerGx <= bRight &&
+          this.playerGy >= bTop && this.playerGy <= bBottom) {
+        const cx = this.playerGx - (b.gx + b.gw / 2);
+        const cy = this.playerGy - (b.gy + b.gh / 2);
+        const dist = Math.abs(cx) + Math.abs(cy);
+
+        if (dist < closestDist) {
+          closest = b;
+          closestDist = dist;
+        }
       }
     }
 
     if (closest) {
       this.currentBuilding = closest;
-      this.promptText.setPosition(this.player.x, this.player.y - 32);
-      this.promptText.setText(`[SPACE] ${closest.action}`);
+      const pp = gridToIso(this.playerGx, this.playerGy);
+      this.promptText.setPosition(pp.x, pp.y - 32).setScrollFactor(1);
+
+      let action = 'Interact';
+      if (closest.id === 'gate') action = 'Begin expedition';
+      else if (closest.id === 'crafting') action = 'Open crafting menu';
+      else if (closest.id === 'storage') action = 'Open storage';
+      else if (!closest.buildingId || isRestored(closest.buildingId)) action = `Visit ${closest.label.split(' ')[0].toLowerCase()}`;
+      else action = `Restore ${closest.label.split(' ')[0].toLowerCase()}`;
+
+      this.promptText.setText(`[SPACE] ${action}`);
       this.promptText.setAlpha(1);
     } else {
       this.currentBuilding = null;
@@ -535,28 +544,30 @@ export class HomelandScene extends Phaser.Scene {
 
   private handleInteraction(): void {
     if (!Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) return;
-    if (!this.currentBuilding || !this.currentBuilding.interactable) return;
+    if (!this.currentBuilding) return;
 
-    if (this.currentBuilding.label === 'Expedition Gate') {
+    const b = this.currentBuilding;
+
+    if (b.id === 'gate') {
       this.showGatePanel();
       return;
     }
 
-    if (this.currentBuilding.label === 'Crafting Station') {
+    if (b.id === 'crafting') {
       this.craftingPanel.refresh();
       this.craftingPanel.show();
       return;
     }
 
-    if (this.currentBuilding.label === 'Storage') {
+    if (b.id === 'storage') {
       this.inventoryPanel.refresh();
       this.inventoryPanel.show();
       return;
     }
 
-    if (this.currentBuilding.label === 'Villager House') {
+    if (b.id === 'villager_house') {
       if (isRestored('housing')) {
-        this.showBuildingPanel(this.currentBuilding);
+        this.showBuildingPanel(b);
       } else {
         this.showRestorePanel('housing');
         this.restoreBuildingId = 'housing';
@@ -564,7 +575,7 @@ export class HomelandScene extends Phaser.Scene {
       return;
     }
 
-    if (this.currentBuilding.label === 'Trading Post') {
+    if (b.id === 'trading_post') {
       if (isRestored('trading_post')) {
         this.showTradePanel();
       } else {
@@ -574,7 +585,7 @@ export class HomelandScene extends Phaser.Scene {
       return;
     }
 
-    if (this.currentBuilding.label === 'Laboratory') {
+    if (b.id === 'laboratory') {
       if (isRestored('laboratory')) {
         this.showResearchPanel();
       } else {
@@ -584,7 +595,7 @@ export class HomelandScene extends Phaser.Scene {
       return;
     }
 
-    if (this.currentBuilding.label === 'Farm') {
+    if (b.id === 'farm') {
       if (isRestored('farm')) {
         this.showFarmPanel();
       } else {
@@ -594,7 +605,7 @@ export class HomelandScene extends Phaser.Scene {
       return;
     }
 
-    this.showBuildingPanel(this.currentBuilding);
+    this.showBuildingPanel(b);
   }
 
   private showRestorePanel(buildingId: string): void {
@@ -639,7 +650,7 @@ export class HomelandScene extends Phaser.Scene {
       const name = building?.name ?? buildingId.replace(/_/g, ' ');
       const popup = this.add.text(960 / 2, 640 / 2, `${name} Restored!`, {
         fontSize: '18px', fontFamily: 'monospace', color: '#44cc66', fontStyle: 'bold', align: 'center',
-      }).setOrigin(0.5).setDepth(250);
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(250);
 
       this.tweens.add({
         targets: popup,
@@ -769,7 +780,7 @@ export class HomelandScene extends Phaser.Scene {
     });
   }
 
-  private showBuildingPanel(building: BuildingZone): void {
+  private showBuildingPanel(building: HubBuildingDef): void {
     this.panelVisible = true;
     this.restoreMode = false;
 
