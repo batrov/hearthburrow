@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { itemDisplayName } from '../systems/GameState';
+import { audio } from '../systems/AudioSystem';
 
 export interface EventChoice {
   label: string;
@@ -124,6 +124,7 @@ export class EventPanel {
     this.container.setVisible(false);
 
     choice.action();
+    audio.playItemPickup();
 
     if (this.onComplete) {
       this.onComplete();

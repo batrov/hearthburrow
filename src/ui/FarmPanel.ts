@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { gameState } from '../systems/GameState';
+import { audio } from '../systems/AudioSystem';
 
 export class FarmPanel {
   private scene: Phaser.Scene;
@@ -48,9 +49,13 @@ export class FarmPanel {
   }
 
   harvest(): void {
-    if (gameState.farmHarvest <= 0) return;
+    if (gameState.farmHarvest <= 0) {
+      audio.playError();
+      return;
+    }
     const amount = gameState.farmHarvest;
     gameState.inventory.addItem('carrot', amount);
+    audio.playItemPickup();
     gameState.farmHarvest = 0;
     gameState.save();
     this.render();

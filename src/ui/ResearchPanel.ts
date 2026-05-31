@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { gameState } from '../systems/GameState';
+import { audio } from '../systems/AudioSystem';
 
 interface ResearchProject {
   id: string;
@@ -72,10 +73,16 @@ export class ResearchPanel {
     const project = PROJECTS[this.selectionIndex];
     if (!project) return;
 
-    if (gameState.researchedUpgrades.includes(project.id)) return;
+    if (gameState.researchedUpgrades.includes(project.id)) {
+      audio.playError();
+      return;
+    }
 
     for (const [id, qty] of Object.entries(project.cost)) {
-      if (gameState.inventory.count(id) < qty) return;
+      if (gameState.inventory.count(id) < qty) {
+        audio.playError();
+        return;
+      }
     }
 
     for (const [id, qty] of Object.entries(project.cost)) {
@@ -94,6 +101,7 @@ export class ResearchPanel {
         break;
     }
 
+    audio.playItemPickup();
     gameState.save();
     this.render();
   }

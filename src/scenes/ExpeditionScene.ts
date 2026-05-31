@@ -8,6 +8,7 @@ import { gameState, itemDisplayName } from '../systems/GameState';
 import { InventoryPanel } from '../ui/InventoryPanel';
 import { EventPanel, EventChoice, EventConfig } from '../ui/EventPanel';
 import { CombatPanel, CombatResult, EnemyConfig } from '../ui/CombatPanel';
+import { audio } from '../systems/AudioSystem';
 import {
   gridToIso, tileSortKey, drawDiamond, drawDiamondAt,
   drawExtrudedAt,
@@ -66,7 +67,10 @@ export class ExpeditionScene extends Phaser.Scene {
   private dungeonGen: DungeonGenerator;
   private expeditionState: ExpeditionState;
   private currentFloor: DungeonFloor | null = null;
-  private tileSprites!: Phaser.GameObjects.Graphics;
+  private terrainSprites!: Phaser.GameObjects.Graphics;
+  private objectSprites!: Phaser.GameObjects.Graphics;
+  private selectedObject!: Phaser.GameObjects.Graphics;
+  private facingHighlight!: Phaser.GameObjects.Graphics;
   private staminaBar!: Phaser.GameObjects.Graphics;
   private staminaText!: Phaser.GameObjects.Text;
   private inventoryText!: Phaser.GameObjects.Text;
@@ -96,6 +100,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private stairAction: 'ascend' | 'descend' | null = null;
   private stairPrompt: Phaser.GameObjects.Container | null = null;
   private exhausted: boolean = false;
+  private stairsSpawned: boolean = false;
   private facingX: number = 0;
   private facingY: number = -1;
   private debugMode: boolean = false;
@@ -145,7 +150,10 @@ export class ExpeditionScene extends Phaser.Scene {
     }
     this.expeditionState.reset();
     this.moveTimer = 0;
-    this.tileSprites = this.add.graphics();
+    this.terrainSprites = this.add.graphics().setDepth(4);
+    this.objectSprites = this.add.graphics().setDepth(6);
+    this.facingHighlight = this.add.graphics().setDepth(12);
+    this.selectedObject = this.add.graphics().setDepth(7);
 
     this.inventoryPanel = new InventoryPanel(
       this, this.inventory,
@@ -187,7 +195,10 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private drawFloor(): void {
-    this.tileSprites.clear();
+    this.terrainSprites.clear();
+    this.objectSprites.clear();
+    this.facingHighlight.clear();
+    this.selectedObject.clear();
 
     const floor = this.currentFloor;
     if (!floor) return;
@@ -204,105 +215,242 @@ export class ExpeditionScene extends Phaser.Scene {
 
     for (const { x, y } of tiles) {
       const tile = floor.tiles[y][x];
-      const p = gridToIso(x, y);
       const checker = (x + y) % 2 === 0;
 
       switch (tile.type) {
-        case 'wall':
-          drawExtrudedAt(this.tileSprites, x, y, pal.wall[0], pal.wall[1], pal.wall[2], 12);
-          break;
         case 'floor':
-          drawDiamondAt(this.tileSprites, x, y, pal.floor[0]);
-          if (checker) drawDiamondAt(this.tileSprites, x, y, pal.floor[1], 0.5);
+          drawDiamondAt(this.terrainSprites, x, y, pal.floor[0]);
+          if (checker) drawDiamondAt(this.terrainSprites, x, y, pal.floor[1], 0.5);
           break;
         case 'corridor':
-          drawDiamondAt(this.tileSprites, x, y, pal.corridor);
+          drawDiamondAt(this.terrainSprites, x, y, pal.corridor);
           break;
         case 'mineable':
-          drawDiamondAt(this.tileSprites, x, y, pal.floor[0]);
-          if (checker) drawDiamondAt(this.tileSprites, x, y, pal.floor[1], 0.5);
+          drawDiamondAt(this.terrainSprites, x, y, pal.floor[0]);
+          if (checker) drawDiamondAt(this.terrainSprites, x, y, pal.floor[1], 0.5);
+          break;
+        case 'stairs_up':
+          drawDiamondAt(this.terrainSprites, x, y, 0x1a2a1a);
+          break;
+        case 'stairs_down':
+          drawDiamondAt(this.terrainSprites, x, y, 0x1a1a2e);
+          break;
+        case 'pressure_plate':
+          drawDiamondAt(this.terrainSprites, x, y, pal.floor[0]);
+          if (checker) drawDiamondAt(this.terrainSprites, x, y, pal.floor[1], 0.5);
+          break;
+        case 'blocked':
+          drawDiamondAt(this.terrainSprites, x, y, 0x2a2a3a);
+          break;
+        default:
+          if (tile.type.startsWith('event_') || tile.type === 'enemy' || tile.type === 'event_boss') {
+            drawDiamondAt(this.terrainSprites, x, y, tile.broken ? pal.floor[0] : 0x1a1a2a);
+            if (tile.broken && checker) drawDiamondAt(this.terrainSprites, x, y, pal.floor[1], 0.5);
+          }
+          break;
+      }
+    }
+
+    this.drawInteractiveTiles();
+    this.updateFacingHighlight();
+  }
+
+  private drawInteractiveTiles(): void {
+    this.objectSprites.clear();
+    const floor = this.currentFloor;
+    if (!floor) return;
+    const pal = getDepthPalette(floor.depth);
+
+    const tiles: { x: number; y: number }[] = [];
+    for (let y = 0; y < floor.rows; y++) {
+      for (let x = 0; x < floor.cols; x++) {
+        tiles.push({ x, y });
+      }
+    }
+    tiles.sort((a, b) => (a.x + a.y) - (b.x + b.y) || a.x - b.x);
+
+    for (const { x, y } of tiles) {
+      const tile = floor.tiles[y][x];
+      const p = gridToIso(x, y);
+
+      switch (tile.type) {
+        case 'wall':
+          drawExtrudedAt(this.objectSprites, x, y, pal.wall[0], pal.wall[1], pal.wall[2], WALL_HEIGHT);
+          break;
+        case 'mineable':
           if (!tile.broken) {
-            this.drawOreIso(p.x, p.y, tile.resource, tile.durability, tile.maxDurability);
+            this.drawOreIso(this.objectSprites, p.x, p.y, tile.resource, tile.durability, tile.maxDurability);
           }
           break;
         case 'stairs_up':
-          drawDiamondAt(this.tileSprites, x, y, 0x1a2a1a);
-          this.tileSprites.fillStyle(0x44cc66, 0.7);
-          this.tileSprites.fillTriangle(p.x - 10, p.y + 8, p.x, p.y - 12, p.x + 10, p.y + 8);
+          this.objectSprites.fillStyle(0x44cc66, 0.7);
+          this.objectSprites.fillTriangle(p.x - 10, p.y + 8, p.x, p.y - 12, p.x + 10, p.y + 8);
           break;
         case 'stairs_down':
-          drawDiamondAt(this.tileSprites, x, y, 0x1a1a2e);
-          this.tileSprites.fillStyle(0x8866cc, 0.7);
-          this.tileSprites.fillTriangle(p.x - 10, p.y - 8, p.x, p.y + 12, p.x + 10, p.y - 8);
+          this.objectSprites.fillStyle(0x8866cc, 0.7);
+          this.objectSprites.fillTriangle(p.x - 10, p.y - 8, p.x, p.y + 12, p.x + 10, p.y - 8);
+          break;
+        case 'pressure_plate':
+          if (!tile.broken) {
+            this.objectSprites.lineStyle(1, 0x88cc88, 0.6);
+            this.objectSprites.strokeCircle(p.x - 3, p.y - 3, 10);
+            this.objectSprites.fillStyle(0x88cc88, 0.3);
+            this.objectSprites.fillCircle(p.x - 3, p.y - 3, 6);
+          }
+          break;
+        case 'blocked':
+          this.objectSprites.fillStyle(0x5a4a3a, 0.9);
+          this.objectSprites.fillRect(p.x - 12, p.y - 8, 24, 16);
+          this.objectSprites.lineStyle(2, 0xcc6644, 0.8);
+          this.objectSprites.lineBetween(p.x - 8, p.y - 4, p.x + 8, p.y + 4);
+          this.objectSprites.lineBetween(p.x - 8, p.y + 4, p.x + 8, p.y - 4);
           break;
         default:
-          if (tile.type.startsWith('event_')) {
-            this.drawEventTileIso(p.x, p.y, tile.type, tile.broken);
+          if (tile.type.startsWith('event_') && !tile.broken) {
+            this.drawEventTileIso(this.objectSprites, p.x, p.y, tile.type, tile.broken);
           } else if (tile.type === 'enemy' && !tile.broken) {
-            this.drawEnemyTileIso(p.x, p.y, tile.resource);
+            this.drawEnemyTileIso(this.objectSprites, p.x, p.y, tile.resource);
           } else if (tile.type === 'event_boss' && !tile.broken) {
-            this.drawBossTileIso(p.x, p.y);
-          } else if ((tile.type === 'enemy' || tile.type === 'event_boss') && tile.broken) {
-            drawDiamondAt(this.tileSprites, x, y, pal.floor[0]);
-            if (checker) drawDiamondAt(this.tileSprites, x, y, pal.floor[1], 0.5);
+            this.drawBossTileIso(this.objectSprites, p.x, p.y);
           }
           break;
       }
     }
   }
 
-  private drawEventTileIso(cx: number, cy: number, type: string, used: boolean): void {
-    drawDiamond(this.tileSprites, cx, cy, 0x1a1a2a);
-    if (used) return;
+  private updateFacingHighlight(): void {
+    this.facingHighlight.clear();
+    this.selectedObject.clear();
+    const floor = this.currentFloor;
+    if (!floor) return;
+    const tx = this.playerX + this.facingX;
+    const ty = this.playerY + this.facingY;
+    if (tx < 0 || tx >= floor.cols || ty < 0 || ty >= floor.rows) return;
+    const tile = floor.tiles[ty][tx];
+    if (tile.type === 'floor' || tile.type === 'corridor' || tile.type === 'wall') return;
+    if (tile.broken) return;
+    const pal = getDepthPalette(floor.depth);
+    const checker = (tx + ty) % 2 === 0;
+    const p = gridToIso(tx, ty);
 
-    switch (type) {
-      case 'event_chest':
-        this.tileSprites.fillStyle(0x8a6a3a, 1);
-        this.tileSprites.fillRoundedRect(cx - 14, cy - 12, 28, 20, 3);
-        this.tileSprites.fillStyle(0xccaa44, 1);
-        this.tileSprites.fillRect(cx - 4, cy - 6, 8, 4);
+    switch (tile.type) {
+      case 'mineable':
+      case 'pressure_plate':
+        drawDiamondAt(this.selectedObject, tx, ty, pal.floor[0]);
+        if (checker) drawDiamondAt(this.selectedObject, tx, ty, pal.floor[1], 0.5);
         break;
-      case 'event_merchant':
-        this.tileSprites.fillStyle(0x3a5a8a, 1);
-        this.tileSprites.fillCircle(cx, cy - 10, 6);
-        this.tileSprites.fillRect(cx - 10, cy - 4, 20, 16);
+      case 'stairs_up':
+        drawDiamondAt(this.selectedObject, tx, ty, 0x1a2a1a);
         break;
-      case 'event_goblin':
-        this.tileSprites.fillStyle(0x5a8a3a, 1);
-        this.tileSprites.fillCircle(cx, cy - 10, 6);
-        this.tileSprites.fillRect(cx - 10, cy - 4, 20, 16);
+      case 'stairs_down':
+        drawDiamondAt(this.selectedObject, tx, ty, 0x1a1a2e);
         break;
-      case 'event_villager':
-        this.tileSprites.fillStyle(0xcc8844, 1);
-        this.tileSprites.fillCircle(cx, cy - 10, 6);
-        this.tileSprites.fillRect(cx - 10, cy - 4, 20, 16);
+      case 'blocked':
+        drawDiamondAt(this.selectedObject, tx, ty, 0x2a2a3a);
         break;
-      case 'event_fountain':
-        this.tileSprites.fillStyle(0x3a5a8a, 1);
-        this.tileSprites.fillRoundedRect(cx - 14, cy - 12, 28, 20, 6);
-        this.tileSprites.fillStyle(0x5a8acc, 0.6);
-        this.tileSprites.fillRoundedRect(cx - 10, cy - 8, 20, 12, 4);
+      default:
+        if (tile.type.startsWith('event_') || tile.type === 'enemy' || tile.type === 'event_boss') {
+          drawDiamondAt(this.selectedObject, tx, ty, 0x1a1a2a);
+        }
         break;
-      case 'event_shop':
-        this.tileSprites.fillStyle(0x8a6a3a, 1);
-        this.tileSprites.fillRect(cx - 14, cy - 4, 28, 16);
-        this.tileSprites.fillStyle(0xccaa44, 1);
-        this.tileSprites.fillTriangle(cx - 6, cy + 8, cx + 6, cy + 8, cx, cy - 8);
+    }
+
+    this.facingHighlight.lineStyle(2, 0xffffff, 0.8);
+    this.facingHighlight.beginPath();
+    this.facingHighlight.moveTo(p.x, p.y - HALF_H);
+    this.facingHighlight.lineTo(p.x + HALF_W, p.y);
+    this.facingHighlight.lineTo(p.x, p.y + HALF_H);
+    this.facingHighlight.lineTo(p.x - HALF_W, p.y);
+    this.facingHighlight.closePath();
+    this.facingHighlight.strokePath();
+
+    switch (tile.type) {
+      case 'mineable':
+        this.drawOreIso(this.selectedObject, p.x, p.y, tile.resource, tile.durability, tile.maxDurability);
         break;
-      case 'event_treasure_vault':
-        this.tileSprites.fillStyle(0xccaa44, 1);
-        this.tileSprites.fillRoundedRect(cx - 14, cy - 10, 28, 20, 4);
-        this.tileSprites.fillStyle(0xffdd66, 1);
-        this.tileSprites.fillRect(cx - 4, cy - 4, 8, 8);
-        this.tileSprites.fillStyle(0x88ccff, 0.7);
-        this.tileSprites.fillRect(cx - 2, cy - 2, 4, 4);
+      case 'stairs_up':
+        this.selectedObject.fillStyle(0x44cc66, 0.7);
+        this.selectedObject.fillTriangle(p.x - 10, p.y + 8, p.x, p.y - 12, p.x + 10, p.y + 8);
+        break;
+      case 'stairs_down':
+        this.selectedObject.fillStyle(0x8866cc, 0.7);
+        this.selectedObject.fillTriangle(p.x - 10, p.y - 8, p.x, p.y + 12, p.x + 10, p.y - 8);
+        break;
+      case 'pressure_plate':
+        this.selectedObject.lineStyle(1, 0x88cc88, 0.6);
+        this.selectedObject.strokeCircle(p.x - 3, p.y - 3, 10);
+        this.selectedObject.fillStyle(0x88cc88, 0.3);
+        this.selectedObject.fillCircle(p.x - 3, p.y - 3, 6);
+        break;
+      case 'blocked':
+        this.selectedObject.fillStyle(0x5a4a3a, 0.9);
+        this.selectedObject.fillRect(p.x - 12, p.y - 8, 24, 16);
+        this.selectedObject.lineStyle(2, 0xcc6644, 0.8);
+        this.selectedObject.lineBetween(p.x - 8, p.y - 4, p.x + 8, p.y + 4);
+        this.selectedObject.lineBetween(p.x - 8, p.y + 4, p.x + 8, p.y - 4);
+        break;
+      default:
+        if (tile.type.startsWith('event_') && tile.type !== 'event_boss') {
+          this.drawEventTileIso(this.selectedObject, p.x, p.y, tile.type, false);
+        } else if (tile.type === 'event_boss') {
+          this.drawBossTileIso(this.selectedObject, p.x, p.y);
+        } else if (tile.type === 'enemy') {
+          this.drawEnemyTileIso(this.selectedObject, p.x, p.y, tile.resource);
+        }
         break;
     }
   }
 
-  private drawEnemyTileIso(cx: number, cy: number, type: string): void {
-    drawDiamond(this.tileSprites, cx, cy, 0x1a1a2a);
 
+  private drawEventTileIso(g: Phaser.GameObjects.Graphics, cx: number, cy: number, type: string, used: boolean): void {
+    if (used) return;
+
+    switch (type) {
+      case 'event_chest':
+        g.fillStyle(0x8a6a3a, 1);
+        g.fillRoundedRect(cx - 14, cy - 12, 28, 20, 3);
+        g.fillStyle(0xccaa44, 1);
+        g.fillRect(cx - 4, cy - 6, 8, 4);
+        break;
+      case 'event_merchant':
+        g.fillStyle(0x3a5a8a, 1);
+        g.fillCircle(cx, cy - 10, 6);
+        g.fillRect(cx - 10, cy - 4, 20, 16);
+        break;
+      case 'event_goblin':
+        g.fillStyle(0x5a8a3a, 1);
+        g.fillCircle(cx, cy - 10, 6);
+        g.fillRect(cx - 10, cy - 4, 20, 16);
+        break;
+      case 'event_villager':
+        g.fillStyle(0xcc8844, 1);
+        g.fillCircle(cx, cy - 10, 6);
+        g.fillRect(cx - 10, cy - 4, 20, 16);
+        break;
+      case 'event_fountain':
+        g.fillStyle(0x3a5a8a, 1);
+        g.fillRoundedRect(cx - 14, cy - 12, 28, 20, 6);
+        g.fillStyle(0x5a8acc, 0.6);
+        g.fillRoundedRect(cx - 10, cy - 8, 20, 12, 4);
+        break;
+      case 'event_shop':
+        g.fillStyle(0x8a6a3a, 1);
+        g.fillRect(cx - 14, cy - 4, 28, 16);
+        g.fillStyle(0xccaa44, 1);
+        g.fillTriangle(cx - 6, cy + 8, cx + 6, cy + 8, cx, cy - 8);
+        break;
+      case 'event_treasure_vault':
+        g.fillStyle(0xccaa44, 1);
+        g.fillRoundedRect(cx - 14, cy - 10, 28, 20, 4);
+        g.fillStyle(0xffdd66, 1);
+        g.fillRect(cx - 4, cy - 4, 8, 8);
+        g.fillStyle(0x88ccff, 0.7);
+        g.fillRect(cx - 2, cy - 2, 4, 4);
+        break;
+    }
+  }
+
+  private drawEnemyTileIso(g: Phaser.GameObjects.Graphics, cx: number, cy: number, type: string): void {
     const colors: Record<string, number> = {
       slime: 0x44aa44,
       rat: 0x8a6a3a,
@@ -310,81 +458,79 @@ export class ExpeditionScene extends Phaser.Scene {
     };
     const color = colors[type] ?? 0xaa4444;
 
-    this.tileSprites.fillStyle(0x000000, 0.3);
-    this.tileSprites.fillCircle(cx - 3, cy + 5, 10);
+    g.fillStyle(0x000000, 0.3);
+    g.fillCircle(cx - 3, cy + 5, 10);
 
-    this.tileSprites.fillStyle(color, 0.7);
-    this.tileSprites.fillCircle(cx - 3, cy - 3, 9);
+    g.fillStyle(color, 0.7);
+    g.fillCircle(cx - 3, cy - 3, 9);
   }
 
-  private drawBossTileIso(cx: number, cy: number): void {
-    drawDiamond(this.tileSprites, cx, cy, 0x1a1a2a);
+  private drawBossTileIso(g: Phaser.GameObjects.Graphics, cx: number, cy: number): void {
+    g.fillStyle(0xcc4444, 1);
+    g.fillCircle(cx, cy, 14);
 
-    this.tileSprites.fillStyle(0xcc4444, 1);
-    this.tileSprites.fillCircle(cx, cy, 14);
+    g.fillStyle(0xaa2222, 0.5);
+    g.fillCircle(cx, cy, 10);
 
-    this.tileSprites.fillStyle(0xaa2222, 0.5);
-    this.tileSprites.fillCircle(cx, cy, 10);
+    g.lineStyle(2, 0xff6644, 0.8);
+    g.strokeCircle(cx, cy, 14);
 
-    this.tileSprites.lineStyle(2, 0xff6644, 0.8);
-    this.tileSprites.strokeCircle(cx, cy, 14);
-
-    this.tileSprites.fillStyle(0xffff00, 0.6);
-    this.tileSprites.fillTriangle(cx - 4, cy - 8, cx, cy - 14, cx + 4, cy - 8);
+    g.fillStyle(0xffff00, 0.6);
+    g.fillTriangle(cx - 4, cy - 8, cx, cy - 14, cx + 4, cy - 8);
   }
 
-  private drawOreIso(cx: number, cy: number, resource: string, durability: number, maxDurability: number): void {
+  private drawOreIso(g: Phaser.GameObjects.Graphics, cx: number, cy: number, resource: string, durability: number, maxDurability: number): void {
     const ratio = maxDurability > 0 ? durability / maxDurability : 1;
 
-    drawDiamond(this.tileSprites, cx, cy, 0x000000, 0.2);
+    drawDiamond(g, cx, cy, 0x000000, 0.2);
 
     switch (resource) {
       case 'stone':
-        this.tileSprites.fillStyle(0x5a5a6a, 1);
-        this.tileSprites.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
-        this.tileSprites.fillStyle(0x6a6a7a, 1);
-        this.tileSprites.fillRoundedRect(cx - 8, cy - 8, 10, 10, 2);
+        g.fillStyle(0x5a5a6a, 1);
+        g.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
+        g.fillStyle(0x6a6a7a, 1);
+        g.fillRoundedRect(cx - 8, cy - 8, 10, 10, 2);
         break;
       case 'bronze_ore':
-        this.tileSprites.fillStyle(0x8a6a3a, 1);
-        this.tileSprites.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
-        this.tileSprites.fillStyle(0xaa8a4a, 1);
-        this.tileSprites.fillRect(cx - 6, cy - 6, 12, 12);
+        g.fillStyle(0x8a6a3a, 1);
+        g.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
+        g.fillStyle(0xaa8a4a, 1);
+        g.fillRect(cx - 6, cy - 6, 12, 12);
         break;
       case 'silver_ore':
-        this.tileSprites.fillStyle(0x7a8a9a, 1);
-        this.tileSprites.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
-        this.tileSprites.fillStyle(0x9aaabc, 1);
-        this.tileSprites.fillRect(cx - 6, cy - 6, 12, 12);
+        g.fillStyle(0x7a8a9a, 1);
+        g.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
+        g.fillStyle(0x9aaabc, 1);
+        g.fillRect(cx - 6, cy - 6, 12, 12);
         break;
       case 'gold_ore':
-        this.tileSprites.fillStyle(0x8a7a2a, 1);
-        this.tileSprites.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
-        this.tileSprites.fillStyle(0xccaa44, 1);
-        this.tileSprites.fillRect(cx - 6, cy - 6, 12, 12);
+        g.fillStyle(0x8a7a2a, 1);
+        g.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
+        g.fillStyle(0xccaa44, 1);
+        g.fillRect(cx - 6, cy - 6, 12, 12);
         break;
       case 'crystal':
-        this.tileSprites.fillStyle(0x6a4a8a, 1);
-        this.tileSprites.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
-        this.tileSprites.fillStyle(0x9a6acc, 1);
-        this.tileSprites.fillRect(cx - 6, cy - 6, 12, 12);
+        g.fillStyle(0x6a4a8a, 1);
+        g.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
+        g.fillStyle(0x9a6acc, 1);
+        g.fillRect(cx - 6, cy - 6, 12, 12);
         break;
       case 'monster_drop':
-        this.tileSprites.fillStyle(0x8a3a3a, 1);
-        this.tileSprites.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
+        g.fillStyle(0x8a3a3a, 1);
+        g.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
         break;
     }
 
     if (ratio <= 0.66) {
       const darken = ratio <= 0.33 ? 0.45 : 0.25;
-      this.tileSprites.fillStyle(0x000000, darken);
-      this.tileSprites.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
+      g.fillStyle(0x000000, darken);
+      g.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
     }
 
     if (ratio <= 0.33) {
-      this.tileSprites.lineStyle(1, 0x000000, 0.5);
-      this.tileSprites.lineBetween(cx - 10, cy - 12, cx + 10, cy + 12);
-      this.tileSprites.lineBetween(cx + 10, cy - 12, cx - 10, cy + 12);
+      g.lineStyle(1, 0x000000, 0.5);
+      g.lineBetween(cx - 10, cy - 12, cx + 10, cy + 12);
+      g.lineBetween(cx + 10, cy - 12, cx - 10, cy + 12);
     }
   }
 
@@ -406,7 +552,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const body = this.add.rectangle(0, -20, 12, 20, 0x88ccff);
     container.add(body);
 
-    container.setDepth(10);
+    container.setDepth(8);
     this.player = container;
   }
 
@@ -740,6 +886,7 @@ export class ExpeditionScene extends Phaser.Scene {
         this.facingX = dx;
         this.facingY = dy;
         this.tryMove(dx, dy);
+        this.updateFacingHighlight();
         this.moveTimer = 0;
       }
     }
@@ -754,55 +901,52 @@ export class ExpeditionScene extends Phaser.Scene {
     const floor = this.currentFloor;
     if (!floor) return;
 
-    const checkPositions = [
-      { x: this.playerX, y: this.playerY },
-      { x: this.playerX + 1, y: this.playerY },
-      { x: this.playerX - 1, y: this.playerY },
-      { x: this.playerX, y: this.playerY + 1 },
-      { x: this.playerX, y: this.playerY - 1 },
-    ];
+    const tx = this.playerX + this.facingX;
+    const ty = this.playerY + this.facingY;
+    if (tx < 0 || tx >= floor.cols || ty < 0 || ty >= floor.rows) {
+      this.interactTarget = null;
+      this.interactPrompt.setAlpha(0);
+      return;
+    }
 
-    for (const pos of checkPositions) {
-      if (pos.x < 0 || pos.x >= floor.cols || pos.y < 0 || pos.y >= floor.rows) continue;
-      const tile = floor.tiles[pos.y][pos.x];
-      if (tile.type === 'enemy' && !tile.broken) {
-        this.interactTarget = { x: pos.x, y: pos.y, id: tile.eventId };
-        if (this.stamina.remaining <= 10) {
-          this.interactPrompt.setText('Not enough stamina!');
-        } else {
-          this.interactPrompt.setText('[SPACE] Fight!');
-        }
-        this.interactPrompt.setPosition(this.player.x, this.player.y - 30);
-        this.interactPrompt.setAlpha(1);
-        return;
+    const tile = floor.tiles[ty][tx];
+    if (tile.type === 'enemy' && !tile.broken) {
+      this.interactTarget = { x: tx, y: ty, id: tile.eventId };
+      if (this.stamina.remaining <= 10) {
+        this.interactPrompt.setText('Not enough stamina!');
+      } else {
+        this.interactPrompt.setText('[SPACE] Fight!');
       }
-      if (tile.type === 'event_boss' && !tile.broken) {
-        this.interactTarget = { x: pos.x, y: pos.y, id: 'boss' };
-        if (this.stamina.remaining <= 10) {
-          this.interactPrompt.setText('Not enough stamina!');
-        } else {
-          this.interactPrompt.setText('[SPACE] Face the Boss!');
-        }
-        this.interactPrompt.setPosition(this.player.x, this.player.y - 30);
-        this.interactPrompt.setAlpha(1);
-        return;
+      this.interactPrompt.setPosition(this.player.x, this.player.y - 30);
+      this.interactPrompt.setAlpha(1);
+      return;
+    }
+    if (tile.type === 'event_boss' && !tile.broken) {
+      this.interactTarget = { x: tx, y: ty, id: 'boss' };
+      if (this.stamina.remaining <= 10) {
+        this.interactPrompt.setText('Not enough stamina!');
+      } else {
+        this.interactPrompt.setText('[SPACE] Face the Boss!');
       }
-      if (tile.type.startsWith('event_') && !tile.broken) {
-        this.interactTarget = { x: pos.x, y: pos.y, id: tile.eventId };
-        const labels: Record<string, string> = {
-          event_chest: '[SPACE] Open chest',
-          event_merchant: '[SPACE] Talk to merchant',
-          event_goblin: '[SPACE] Talk to goblin',
-          event_villager: '[SPACE] Rescue villager',
-          event_fountain: '[SPACE] Drink from fountain',
-          event_shop: '[SPACE] Browse wares',
-          event_treasure_vault: '[SPACE] Open vault',
-        };
-        this.interactPrompt.setText(labels[tile.type] ?? '[SPACE] Interact');
-        this.interactPrompt.setPosition(this.player.x, this.player.y - 30);
-        this.interactPrompt.setAlpha(1);
-        return;
-      }
+      this.interactPrompt.setPosition(this.player.x, this.player.y - 30);
+      this.interactPrompt.setAlpha(1);
+      return;
+    }
+    if (tile.type.startsWith('event_') && !tile.broken) {
+      this.interactTarget = { x: tx, y: ty, id: tile.eventId };
+      const labels: Record<string, string> = {
+        event_chest: '[SPACE] Open chest',
+        event_merchant: '[SPACE] Talk to merchant',
+        event_goblin: '[SPACE] Talk to goblin',
+        event_villager: '[SPACE] Rescue villager',
+        event_fountain: '[SPACE] Drink from fountain',
+        event_shop: '[SPACE] Browse wares',
+        event_treasure_vault: '[SPACE] Open vault',
+      };
+      this.interactPrompt.setText(labels[tile.type] ?? '[SPACE] Interact');
+      this.interactPrompt.setPosition(this.player.x, this.player.y - 30);
+      this.interactPrompt.setAlpha(1);
+      return;
     }
 
     this.interactTarget = null;
@@ -829,7 +973,8 @@ export class ExpeditionScene extends Phaser.Scene {
       tile.broken = true;
       this.interactTarget = null;
       this.interactPrompt.setAlpha(0);
-      this.tileSprites.clear();
+      this.terrainSprites.clear();
+      this.objectSprites.clear();
       this.drawFloor();
       this.drawMinimap();
     });
@@ -838,7 +983,10 @@ export class ExpeditionScene extends Phaser.Scene {
   private buildEventConfig(id: string): EventConfig | null {
     const stone = () => gameState.inventory.count('stone');
     const removeStone = (n: number) => gameState.inventory.removeItem('stone', n);
-    const addItem = (id: string, qty: number) => gameState.inventory.addItem(id, qty);
+    const addItem = (id: string, qty: number) => {
+      gameState.inventory.addItem(id, qty);
+      audio.playItemPickup();
+    };
 
     switch (id) {
       case 'hidden_treasure': {
@@ -1051,6 +1199,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
   private handleDescend(): void {
     this.expeditionState.descend();
+    audio.playStairs();
 
     if (this.expeditionState.depth >= 2 && !gameState.crafting.isDiscovered('mining_bomb')) {
       gameState.crafting.discover('mining_bomb');
@@ -1065,6 +1214,7 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private handleAscend(): void {
+    audio.playStairs(true);
     if (this.expeditionState.depth % 5 === 0) {
       this.safeExtract();
     } else {
@@ -1128,10 +1278,12 @@ export class ExpeditionScene extends Phaser.Scene {
     const floor = this.currentFloor;
     if (!floor) return;
 
+    this.stairsSpawned = false;
     this.interactTarget = null;
     this.interactPrompt.setAlpha(0);
 
-    this.tileSprites.clear();
+    this.terrainSprites.clear();
+    this.objectSprites.clear();
     this.drawFloor();
     this.repositionPlayer();
     this.cameras.main.stopFollow();
@@ -1158,6 +1310,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     const tile = floor.tiles[ny][nx];
     if (tile.type === 'wall') return;
+    if (tile.type === 'blocked') return;
     if (tile.type === 'mineable' && !tile.broken) return;
     if ((tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken) return;
     if (tile.type.startsWith('event_') && !tile.broken) return;
@@ -1191,9 +1344,24 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.updateMinimapDot();
 
-    if (!this.stamina.consume(2)) {
-      this.handleExhaustion();
-    }
+    this.activatePressurePlate(nx, ny);
+
+    audio.playStep();
+  }
+
+  private activatePressurePlate(x: number, y: number): void {
+    const floor = this.currentFloor;
+    if (!floor) return;
+    const tile = floor.tiles[y][x];
+    if (tile.type !== 'pressure_plate') return;
+    if (tile.broken) return;
+    const target = tile.pressurePlateTarget;
+    if (!target) return;
+    const targetTile = floor.tiles[target.y][target.x];
+    if (targetTile.type !== 'blocked') return;
+    targetTile.type = 'floor';
+    tile.broken = true;
+    this.drawFloor();
   }
 
   private tryMine(): void {
@@ -1208,6 +1376,7 @@ export class ExpeditionScene extends Phaser.Scene {
     if (tile.type !== 'mineable' || tile.broken) return;
 
     tile.durability -= this.mining.getDamage();
+    audio.playMineHit(tile.maxDurability);
 
     if (!this.stamina.consume(5)) {
       this.handleExhaustion();
@@ -1216,6 +1385,9 @@ export class ExpeditionScene extends Phaser.Scene {
     if (tile.durability <= 0) {
       tile.broken = true;
       this.inventory.addItem(tile.resource, 1);
+      audio.playItemPickup(tile.maxDurability);
+
+      this.spawnStairsOnBreak(tx, ty);
 
       this.createHitEffect(tx, ty);
       this.createMiningParticles(tx, ty, tile.resource);
@@ -1223,7 +1395,8 @@ export class ExpeditionScene extends Phaser.Scene {
 
       this.checkRecipeDiscovery(tile.resource);
 
-      this.tileSprites.clear();
+      this.terrainSprites.clear();
+      this.objectSprites.clear();
       this.drawFloor();
       this.drawMinimap();
     } else {
@@ -1353,6 +1526,7 @@ export class ExpeditionScene extends Phaser.Scene {
     if (this.exhausted) return;
     this.exhausted = true;
     this.cameras.main.shake(300, 0.01);
+    audio.playExhaustion();
 
     const cx = this.cameras.main.width / 2;
     const cy = this.cameras.main.height / 2;
@@ -1382,6 +1556,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private safeExtract(): void {
     if (this.exhausted) return;
     this.exhausted = true;
+    audio.playExtraction('safe');
 
     const cx = this.cameras.main.width / 2;
     const cy = this.cameras.main.height / 2;
@@ -1411,6 +1586,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private emergencyExtract(): void {
     if (this.exhausted) return;
     this.exhausted = true;
+    audio.playExtraction('emergency');
 
     const cx = this.cameras.main.width / 2;
     const cy = this.cameras.main.height / 2;
@@ -1462,6 +1638,7 @@ export class ExpeditionScene extends Phaser.Scene {
     };
 
     this.combatActive = true;
+    audio.playCombatStart();
     this.interactPrompt.setAlpha(0);
     this.interactTarget = null;
 
@@ -1476,6 +1653,7 @@ export class ExpeditionScene extends Phaser.Scene {
         for (const r of rewards) {
           this.inventory.addItem(r.id, r.quantity * lootMult);
           this.createItemPopup(tx, ty, r.id);
+          audio.playItemPickup();
         }
 
         if (!isBoss && (enemyType === 'slime' || enemyType === 'rat' || enemyType === 'bat')) {
@@ -1487,7 +1665,8 @@ export class ExpeditionScene extends Phaser.Scene {
           tile.type = 'stairs_down';
           tile.resource = '';
           tile.broken = false;
-          this.tileSprites.clear();
+          this.terrainSprites.clear();
+          this.objectSprites.clear();
           this.drawFloor();
           this.drawMinimap();
 
@@ -1497,7 +1676,8 @@ export class ExpeditionScene extends Phaser.Scene {
           }
         } else {
           tile.broken = true;
-          this.tileSprites.clear();
+          this.terrainSprites.clear();
+          this.objectSprites.clear();
           this.drawFloor();
           this.drawMinimap();
         }
@@ -1518,6 +1698,7 @@ export class ExpeditionScene extends Phaser.Scene {
         this.inventory.removeItem(itemId, 1);
         this.stamina.refill(30);
         this.showConsumableFeedback('+30 Stamina');
+        audio.playPotion();
         break;
       }
       case 'teleport_scroll': {
@@ -1535,9 +1716,25 @@ export class ExpeditionScene extends Phaser.Scene {
     this.inventoryPanel.refresh();
   }
 
+  private spawnStairsOnBreak(x: number, y: number): void {
+    if (this.stairsSpawned) return;
+    if (this.expeditionState.depth % 5 === 4) return;
+    const floor = this.currentFloor;
+    if (!floor) return;
+    const chance = Math.min(0.5, floor.mineableCount * 0.003);
+    if (Math.random() < chance) {
+      const tile = floor.tiles[y][x];
+      tile.type = 'stairs_down';
+      tile.resource = '';
+      this.stairsSpawned = true;
+    }
+  }
+
   private detonateMiningBomb(): void {
     const floor = this.currentFloor;
     if (!floor) return;
+
+    audio.playExplosion();
 
     const damage = this.mining.getDamage();
     const dirs = [
@@ -1547,6 +1744,7 @@ export class ExpeditionScene extends Phaser.Scene {
     ];
     let changed = false;
 
+    let stairsChecked = false;
     for (const d of dirs) {
       const tx = this.playerX + d.x;
       const ty = this.playerY + d.y;
@@ -1561,12 +1759,17 @@ export class ExpeditionScene extends Phaser.Scene {
         this.createMiningParticles(tx, ty, tile.resource);
         this.createItemPopup(tx, ty, tile.resource);
         this.checkRecipeDiscovery(tile.resource);
+        if (!stairsChecked) {
+          this.spawnStairsOnBreak(tx, ty);
+          stairsChecked = true;
+        }
       }
       changed = true;
     }
 
     if (changed) {
-      this.tileSprites.clear();
+      this.terrainSprites.clear();
+      this.objectSprites.clear();
       this.drawFloor();
       this.drawMinimap();
     }
@@ -1591,6 +1794,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private trashItem(itemId: string): void {
     if (this.inventory.count(itemId) <= 0) return;
     this.inventory.removeItem(itemId, 1);
+    audio.playError();
     this.inventoryPanel.refresh();
   }
 

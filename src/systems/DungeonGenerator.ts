@@ -2,7 +2,8 @@ export type TileType = 'wall' | 'floor' | 'mineable' | 'stairs_up' | 'stairs_dow
   | 'event_chest' | 'event_merchant' | 'event_goblin' | 'event_villager' | 'event_fountain'
   | 'event_shop'
   | 'event_treasure_vault'
-  | 'enemy' | 'event_boss';
+  | 'enemy' | 'event_boss'
+  | 'pressure_plate' | 'blocked';
 
 export interface DungeonTile {
   type: TileType;
@@ -11,6 +12,7 @@ export interface DungeonTile {
   maxDurability: number;
   broken: boolean;
   eventId: string;
+  pressurePlateTarget?: { x: number; y: number };
 }
 
 export interface DungeonFloor {
@@ -22,6 +24,7 @@ export interface DungeonFloor {
   stairsDownX: number;
   stairsDownY: number;
   depth: number;
+  mineableCount: number;
 }
 
 interface RoomRect {
@@ -118,6 +121,12 @@ export class DungeonGenerator {
         this.placeTreasureVault(tiles, rooms);
       }
 
+      if (depth >= 1 && Math.random() < 0.25) {
+        this.placePuzzle(tiles, rooms);
+      }
+
+      this.fixCorridorEntries(tiles);
+
       const entryRoom = rooms[0];
       const exitRoom = rooms[exitRoomIndex];
 
@@ -127,7 +136,14 @@ export class DungeonGenerator {
       exitY = Math.floor(exitRoom.y + exitRoom.h / 2);
 
       tiles[entryY][entryX] = this.makeTile(depth % 5 === 0 ? 'stairs_up' : 'floor');
-      tiles[exitY][exitX] = this.makeTile('stairs_down');
+      tiles[exitY][exitX] = this.makeTile('floor');
+    }
+
+    let mineableCount = 0;
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        if (tiles[y][x].type === 'mineable') mineableCount++;
+      }
     }
 
     return {
@@ -139,6 +155,7 @@ export class DungeonGenerator {
       stairsDownX: exitX,
       stairsDownY: exitY,
       depth,
+      mineableCount,
     };
   }
 
@@ -434,6 +451,76 @@ export class DungeonGenerator {
     if (tiles[y][x].type === 'wall') {
       tiles[y][x] = this.makeTile('corridor');
     }
+  }
+
+  private fixCorridorEntries(tiles: DungeonTile[][]): void {
+    for (let y = 0; y < tiles.length; y++) {
+      for (let x = 0; x < tiles[y].length; x++) {
+        if (tiles[y][x].type !== 'corridor') continue;
+        for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+          const wx = x + dx;
+          const wy = y + dy;
+          if (!this.inBounds(tiles, wx, wy)) continue;
+          if (tiles[wy][wx].type !== 'wall') continue;
+          const bx = wx + dx;
+          const by = wy + dy;
+          if (!this.inBounds(tiles, bx, by)) continue;
+          if (this.isWalkable(tiles[by][bx])) {
+            tiles[wy][wx] = this.makeTile('floor');
+          }
+        }
+      }
+    }
+  }
+
+  private isWalkable(tile: DungeonTile): boolean {
+    return tile.type === 'floor'
+      || tile.type === 'mineable'
+      || tile.type === 'corridor'
+      || tile.type === 'stairs_up'
+      || tile.type === 'stairs_down';
+  }
+
+  private placePuzzle(tiles: DungeonTile[][], rooms: RoomRect[]): void {
+    const room = rooms[Math.floor(Math.random() * rooms.length)];
+
+    const floorTiles: { x: number; y: number }[] = [];
+    for (let y = room.y + 1; y < room.y + room.h - 1; y++) {
+      for (let x = room.x + 1; x < room.x + room.w - 1; x++) {
+        if (tiles[y][x].type === 'floor') {
+          floorTiles.push({ x, y });
+        }
+      }
+    }
+    if (floorTiles.length < 4) return;
+
+    const plateIdx = Math.floor(Math.random() * floorTiles.length);
+    const plate = floorTiles[plateIdx];
+
+    const candidates = floorTiles.filter(t =>
+      Math.abs(t.x - plate.x) + Math.abs(t.y - plate.y) >= 3
+    );
+    if (candidates.length === 0) return;
+    const blocked = candidates[Math.floor(Math.random() * candidates.length)];
+
+    const dirs: [number, number][] = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+    const shuffled = dirs.sort(() => Math.random() - 0.5);
+    let placed = false;
+    for (const [bdx, bdy] of shuffled) {
+      const wx = blocked.x + bdx;
+      const wy = blocked.y + bdy;
+      if (wy >= room.y && wy <= room.y + room.h - 1 &&
+          wx >= room.x && wx <= room.x + room.w - 1 &&
+          tiles[wy][wx].type === 'floor') {
+        tiles[wy][wx] = this.makeTile('blocked');
+        tiles[blocked.y][blocked.x] = { ...this.makeTile('floor'), pressurePlateTarget: { x: wx, y: wy } };
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) return;
+
+    tiles[plate.y][plate.x] = this.makeTile('pressure_plate');
   }
 
   private inBounds(tiles: DungeonTile[][], x: number, y: number): boolean {

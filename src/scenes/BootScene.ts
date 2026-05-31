@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { gameState } from '../systems/GameState';
+import { audio } from '../systems/AudioSystem';
 
 export class BootScene extends Phaser.Scene {
   private loadingBar!: Phaser.GameObjects.Graphics;
@@ -11,6 +12,9 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     gameState.load();
+    audio.init();
+    audio.setMasterVolume(gameState.masterVolume);
+    audio.setSfxVolume(gameState.sfxVolume);
 
     const cx = this.cameras.main.centerX;
     const cy = this.cameras.main.centerY;

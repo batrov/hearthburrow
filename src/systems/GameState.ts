@@ -51,6 +51,9 @@ class GameState {
   researchedUpgrades: string[];
   monsterKills: { slime: number; rat: number; bat: number };
   villagersRescued: number;
+  masterVolume: number;
+  musicVolume: number;
+  sfxVolume: number;
 
   constructor() {
     this.inventory = new InventorySystem(32);
@@ -66,6 +69,9 @@ class GameState {
     this.researchedUpgrades = [];
     this.monsterKills = { slime: 0, rat: 0, bat: 0 };
     this.villagersRescued = 0;
+    this.masterVolume = 1;
+    this.musicVolume = 0.4;
+    this.sfxVolume = 0.6;
   }
 
   remainingPickaxeRuns(tier?: number): number {
@@ -145,6 +151,9 @@ class GameState {
       researchedUpgrades: this.researchedUpgrades,
       monsterKills: { ...this.monsterKills },
       villagersRescued: this.villagersRescued,
+      masterVolume: this.masterVolume,
+      musicVolume: this.musicVolume,
+      sfxVolume: this.sfxVolume,
     };
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -177,6 +186,9 @@ class GameState {
       this.researchedUpgrades = data.researchedUpgrades ?? [];
       this.monsterKills = data.monsterKills ?? { slime: 0, rat: 0, bat: 0 };
       this.villagersRescued = data.villagersRescued ?? 0;
+      this.masterVolume = data.masterVolume ?? 1;
+      this.musicVolume = data.musicVolume ?? 0.4;
+      this.sfxVolume = data.sfxVolume ?? 0.6;
 
       const oldKey = 'researched_upgrades';
       const oldRaw = localStorage.getItem(oldKey);

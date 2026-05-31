@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
-import { gameState } from '../systems/GameState';
+import { gameState, itemDisplayName } from '../systems/GameState';
 import { getRecipe } from '../systems/DataRegistry';
-import { itemDisplayName } from '../systems/GameState';
+import { audio } from '../systems/AudioSystem';
 
 export class CraftingPanel {
   private scene: Phaser.Scene;
@@ -95,15 +95,18 @@ export class CraftingPanel {
 
   craftSelected(): boolean {
     if (this.recipes.length === 0) {
+      audio.playError();
       this.showNoCraft();
       return false;
     }
     const recipe = this.recipes[this.selectedIndex];
     if (!gameState.crafting.canCraft(recipe.id)) {
+      audio.playError();
       this.showNoCraft();
       return false;
     }
     gameState.crafting.craft(recipe.id);
+    audio.playItemPickup();
     this.refresh();
     this.showCraftSuccess(recipe.id);
     return true;

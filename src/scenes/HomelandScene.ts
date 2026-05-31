@@ -7,6 +7,7 @@ import { ResearchPanel } from '../ui/ResearchPanel';
 import { FarmPanel } from '../ui/FarmPanel';
 import { canRestore, restoreBuilding, isRestored } from '../systems/BuildingSystem';
 import { getBuilding } from '../systems/DataRegistry';
+import { audio } from '../systems/AudioSystem';
 import {
   gridToIso, drawDiamond, drawDiamondAt, drawExtrudedAt, drawExtrudedTile,
   HALF_W, HALF_H, WALL_HEIGHT, worldWidth, worldHeight,
@@ -153,7 +154,7 @@ export class HomelandScene extends Phaser.Scene {
       }
 
       const c = gridToIso(b.gx + b.gw / 2, b.gy + b.gh / 2);
-      this.add.text(c.x, c.y - 40, b.label, {
+      this.add.text(c.x, c.y - 48, b.label, {
         fontSize: '11px', fontFamily: 'monospace', color: ul ? '#e8d5b7' : '#6a5a4a',
       }).setOrigin(0.5).setAlpha(alpha);
     }
@@ -198,7 +199,7 @@ export class HomelandScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
     });
 
-    this.add.text(c.x, c.y - 52, 'FORGOTTEN DEPTHS', {
+    this.add.text(c.x, c.y - 60, 'FORGOTTEN DEPTHS', {
       fontSize: '10px', fontFamily: 'monospace', color: '#7a6a9a',
     }).setOrigin(0.5);
 
@@ -473,6 +474,8 @@ export class HomelandScene extends Phaser.Scene {
 
     if (nx < 0 || nx >= HUB_COLS || ny < 0 || ny >= HUB_ROWS) return;
     if (this.isSolid(nx, ny)) return;
+
+    audio.playStep();
 
     this.playerGx = nx;
     this.playerGy = ny;
@@ -845,6 +848,7 @@ export class HomelandScene extends Phaser.Scene {
   private trashItem(itemId: string): void {
     if (gameState.inventory.count(itemId) <= 0) return;
     gameState.inventory.removeItem(itemId, 1);
+    audio.playError();
     this.inventoryPanel.refresh();
   }
 }

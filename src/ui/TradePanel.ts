@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { gameState, itemDisplayName } from '../systems/GameState';
+import { audio } from '../systems/AudioSystem';
 
 interface TradeItem {
   id: string;
@@ -82,14 +83,20 @@ export class TradePanel {
       if (hasGold) {
         gameState.inventory.removeItem(item.priceId, item.priceQty);
         gameState.inventory.addItem(item.id, 1);
+        audio.playItemPickup();
         gameState.save();
+      } else {
+        audio.playError();
       }
     } else {
       const hasItem = gameState.inventory.count(item.id) >= 1;
       if (hasItem) {
         gameState.inventory.removeItem(item.id, 1);
         gameState.inventory.addItem(item.priceId, item.priceQty);
+        audio.playItemPickup();
         gameState.save();
+      } else {
+        audio.playError();
       }
     }
     this.render();

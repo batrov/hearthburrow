@@ -53,8 +53,8 @@
 | Puzzle/shrine/relic rooms | ❌ | Not implemented |
 | Random events (5 types) | ✅ | Treasure, Fountain, Trader, Villager, Goblin — all hardcoded in `buildEventConfig()` |
 | Biome-scaled ore distribution | ✅ | `pickResource(depth)` uses 5 biome tiers with per-biome scaling; Forest = stone/bronze heavy, Cave adds silver, Ice adds gold, Lava/Ruins = gold heavy |
-| Stairs up/down | ✅ | `stairs_up` only on depth % 5 === 0 (return floors); all other floors get `floor` at entry tile |
-| Corridor connectivity | 🟡 | Clean 1-tile L-shape; known corner dead-end bug (see Known Bugs #3) |
+| Stairs up/down | ✅ | `stairs_up` only on depth % 5 === 0 (return floors); all other floors get `floor` at entry tile; `stairs_down` no longer pre-placed — spawns dynamically when breaking mineable tiles on non-boss floors |
+| Corridor connectivity | ✅ | Clean 1-tile L-shape with post-carve entry widening; no dead-ends |
 
 ---
 
@@ -62,7 +62,7 @@
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Stamina System | ✅ | Movement (2), Mining (5), Combat miss (10); consumed **after** action |
+| Stamina System | ✅ | Walking no longer costs stamina; Mining (5), Combat miss (10); consumed **after** action |
 | Exhaustion = emergency extract | ✅ | 30% loss, red shake overlay; auto-triggers when stamina reaches 0 |
 | Emergency Escape (ESC) | ✅ | "Give Up", 30% loss, orange overlay |
 | Safe extraction via stairs_up | ✅ | At depth 0 on return floors; 0% loss |
@@ -143,7 +143,7 @@
 | 5 event interactions | ✅ | Treasure, Fountain, Trader, Villager, Goblin |
 | Event tiles require proximity + SPACE | ✅ | Checks 5 tiles around player |
 | Event panel with W/S/SPACE navigation | ✅ | Navigate choices, confirm with SPACE |
-| Pressure plates | ❌ | Not implemented |
+| Pressure plate puzzle | ✅ | `pressure_plate` tile activates paired `blocked` tile → converts to `floor` on step; 25% chance per floor (depth 1+) |
 | Pushable rocks | ❌ | Not implemented |
 
 ---
@@ -157,7 +157,7 @@
 | Biome-specific color palettes | ✅ | 5 distinct color schemes for wall/floor/corridor across Forest, Cave, Ice Cave, Lava, Ruins |
 | Player sprite (isometric diamond+body) | ✅ | Diamond base + body rectangle |
 | Item/event sprites | ❌ | Drawn via Graphics primitives |
-| Audio / sound effects / music | ❌ | Not started; no sound system or audio files exist |
+| Audio / sound effects / music | 🟡 | Web Audio API synthesis; generated tones for mine_hit, item_pickup, step, stairs, combat hit/miss, victory; no music or ambient tracks |
 | Broken tile rendering | ✅ | Enemy and boss tiles revert to floor style when broken (no more black voids) |
 | Isometric viewport | ✅ | Dungeon and hub both use 80×40 isometric diamond projection |
 | 3D extruded walls | ✅ | Walls render as 3D blocks with visible height (top + left + right faces), height 12 to keep objects visible behind them |
@@ -194,7 +194,7 @@ Stamina | ✅ | Movement, mining, and combat miss costs
 Inventory | ✅ | 16 base slots, upgradeable to 26+
 Extraction | ✅ | Safe (0% at depth 0) and emergency (30%)
 One boss | ✅ | Forest Guardian on depth % 5 === 4 (floors 4, 9, 14, 19, ...)
-One puzzle type | ❌ | Not implemented
+One puzzle type | ✅ | Pressure plate puzzle implemented
 Two random events | ✅ | Five events implemented (exceeds MVP)
 Crafting station | ✅ | Operational with discovery system
 Storage | ✅ | Operational with trash support
@@ -207,9 +207,7 @@ Limited recipes | ✅ | 5 discoverable recipes
 
 ## Known Bugs & Issues
 
-1. **Isometric depth sorting is per-tile only** — Player, enemies, events are NOT Y-sorted against each other; fixed depth layers (10 for player, 0 for tiles) may cause visual layering artifacts. Not critical for MVP since enemies are drawn on the tile Graphics before the player.
-2. **Building label positioning** — Labels are positioned at building footprint center, but with 3D extrusion the text may overlap the block visual. Needs per-building pixel offset tuning.
-3. **Corridor dead-end (L-corner on room corner wall)** — The L-shaped corridor from room center to room center can terminate at a room's corner wall tile (where the L turns). If that corner tile is the only connection point, the adjacent tiles inside the room are still walls (not floor), making the corridor a dead-end — the player can't enter the room. The `carveCorridorTile` clears the wall-to-corridor tile and adjacent mineable tiles, but does not convert the room's interior corner walls to floor. Fix options: shift the L-corner away from room corners, or widen the entry when the corner tile has two adjacent non-corridor walls.
+(none)
 
 ## Resolved Bugs
 
@@ -219,3 +217,6 @@ Limited recipes | ✅ | 5 discoverable recipes
 4. **ResearchPanel parallel save system** — Research progress was stored under a separate localStorage key (`researched_upgrades`) that could de-sync from the main save. Merged into GameState as `researchedUpgrades` with automatic migration from the old key on load.
 5. **Dead code removed** — Removed unused `MiningSystem.canMine()/mine()/requiredTier()` methods, 12 unused DataRegistry getter functions, 3 unused JSON imports (`relics.json`, `events.json`, `rooms.json`), 4 unused type exports, and 1 unused IsoUtils import.
 6. **MiningSystem.requiredTier() string-comparison bug** — checked `"bronze"`/`"silver"`/`"gold"` (no `_ore` suffix) against DungeonGenerator's `"bronze_ore"`/`"silver_ore"`/`"gold_ore"`. Method was dead code and has been removed entirely.
+7. **Corridor dead-end (post-carve entry widening)** — The L-shaped corridor could terminate at a room's corner wall tile where both adjacent cardinal tiles inside the room were still wall perimeter tiles, creating a dead-end. Fixed by adding `fixCorridorEntries()`: after all corridors are carved (including vault/puzzle corridors), scan every corridor tile; for each adjacent wall tile that separates the corridor from a walkable tile (floor/mineable/corridor/stairs), convert that wall to floor — effectively punching a doorway through thin room-perimeter walls.
+8. **Pressure plate puzzle implemented** — New `pressure_plate` and `blocked` tile types. 25% chance per floor (depth 1+) to place a puzzle room: a pressure plate linked to a blocked barrier. Stepping on the plate converts the paired blocked tile to floor. Adds visual indicators (green circle on plate, stone slab with X on blocker).
+9. **Basic audio system added** — `AudioSystem.ts` using Web Audio API to generate sounds programmatically (no asset files). Sounds: mine_hit (percussive square wave), item_pickup (ascending sine chime), stairs (sine sweep up/down), step (noise burst), combat hit/miss, victory (ascending arpeggio). Initialized in BootScene, wired into ExpeditionScene (mining, movement, stairs, events, combat) and HomelandScene (movement).

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { itemDisplayName } from '../systems/GameState';
+import { audio } from '../systems/AudioSystem';
 
 export type CombatResult = 'victory' | 'retreat' | null;
 
@@ -186,12 +187,14 @@ export class CombatPanel {
       this.enemyHP -= damage;
       this.drawHP();
       this.showFeedback(isCrit ? 'CRIT! +' + damage : 'HIT!', '#44cc66');
+      audio.playCombatHit();
 
       if (this.enemyHP <= 0) {
         this.result = 'victory';
         this.stopMarker();
         this.marker.setVisible(false);
         this.showFeedback('VICTORY!', '#44cc66');
+        audio.playVictory();
         this.hintText.setText('[SPACE] Collect rewards');
         return 'kill';
       }
@@ -200,6 +203,7 @@ export class CombatPanel {
       return 'hit';
     } else {
       this.showFeedback('MISS!', '#cc4444');
+      audio.playCombatMiss();
       this.startMarker(this.currentEnemy!.timingSpeed);
       return 'miss';
     }

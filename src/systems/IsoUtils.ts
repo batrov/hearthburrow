@@ -4,7 +4,7 @@ export const TILE_W = 80;
 export const TILE_H = 40;
 export const HALF_W = 40;
 export const HALF_H = 20;
-export const WALL_HEIGHT = 30;
+export const WALL_HEIGHT = 20;
 
 export function gridToIso(x: number, y: number): { x: number; y: number } {
   return {
