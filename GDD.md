@@ -696,6 +696,23 @@ Focus:
 
 ---
 
+# Sprite Sizes
+
+| Category             | Size (px) | Notes                         |
+| -------------------- | --------- | ----------------------------- |
+| Player               | 32 × 48   | Two directional base sprites  |
+| Walls                | 80 × 64   | One texture per biome (5)     |
+| Ores                 | 32 × 32   | Per ore type                  |
+| Enemies              | 32 × 32   | Per enemy type                |
+| Events               | 32 × 32   | Per event type                |
+| Stairs               | 32 × 32   | Up and down variants          |
+| Pressure Plate       | 32 × 32   |                               |
+| Blocked Tile         | 32 × 32   |                               |
+| Overlays             | 32 × 32   | Crack, damage indicators      |
+| Floor / Corridor     | —         | Rendered as terrain diamonds  |
+
+---
+
 # 12. Audio Direction
 
 # Emotional Audio Goals

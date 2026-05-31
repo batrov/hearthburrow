@@ -63,6 +63,10 @@ export class HomelandScene extends Phaser.Scene {
   private ringOptions: { id: string; name: string }[] = [];
   private selectedRing1Idx: number = -1;
   private selectedRing2Idx: number = -1;
+  private bootOptions: { id: string; name: string; runs: number }[] = [];
+  private selectedBootsIdx: number = -1;
+  private lanternOptions: { id: string; name: string; runs: number }[] = [];
+  private selectedLanternIdx: number = -1;
   private gateTab: number = 0;
   private currentBuilding: HubBuildingDef | null = null;
   private debugMode: boolean = false;
@@ -367,19 +371,19 @@ export class HomelandScene extends Phaser.Scene {
         const left = Phaser.Input.Keyboard.JustDown(this.keys.LEFT) || Phaser.Input.Keyboard.JustDown(this.keys.A);
         const right = Phaser.Input.Keyboard.JustDown(this.keys.RIGHT) || Phaser.Input.Keyboard.JustDown(this.keys.D);
 
-        if (this.gateTab === 3) {
+        if (this.gateTab === 5) {
           if (up) {
             if (this.consumableSelectionIdx > 0) {
               this.consumableSelectionIdx--;
             } else {
-              this.gateTab = 2;
+              this.gateTab = 4;
             }
             this.renderGatePanel();
           } else if (down) {
             if (this.consumableSelectionIdx < this.consumableTypes.length - 1) {
               this.consumableSelectionIdx++;
             } else {
-              this.gateTab = 4;
+              this.gateTab = 6;
             }
             this.renderGatePanel();
           } else if (left) {
@@ -400,7 +404,7 @@ export class HomelandScene extends Phaser.Scene {
             this.renderGatePanel();
           }
           if (down) {
-            this.gateTab = Math.min(4, this.gateTab + 1);
+            this.gateTab = Math.min(6, this.gateTab + 1);
             this.renderGatePanel();
           }
           if (left) {
@@ -413,7 +417,13 @@ export class HomelandScene extends Phaser.Scene {
             } else if (this.gateTab === 2 && this.selectedRing2Idx > -1) {
               this.selectedRing2Idx--;
               this.renderGatePanel();
-            } else if (this.gateTab === 4) {
+            } else if (this.gateTab === 3 && this.selectedBootsIdx > -1) {
+              this.selectedBootsIdx--;
+              this.renderGatePanel();
+            } else if (this.gateTab === 4 && this.selectedLanternIdx > -1) {
+              this.selectedLanternIdx--;
+              this.renderGatePanel();
+            } else if (this.gateTab === 6) {
               this.debugMode = !this.debugMode;
               this.renderGatePanel();
             }
@@ -428,7 +438,13 @@ export class HomelandScene extends Phaser.Scene {
             } else if (this.gateTab === 2 && this.selectedRing2Idx < this.ringOptions.length - 1) {
               this.selectedRing2Idx++;
               this.renderGatePanel();
-            } else if (this.gateTab === 4) {
+            } else if (this.gateTab === 3 && this.selectedBootsIdx < this.bootOptions.length - 1) {
+              this.selectedBootsIdx++;
+              this.renderGatePanel();
+            } else if (this.gateTab === 4 && this.selectedLanternIdx < this.lanternOptions.length - 1) {
+              this.selectedLanternIdx++;
+              this.renderGatePanel();
+            } else if (this.gateTab === 6) {
               this.debugMode = !this.debugMode;
               this.renderGatePanel();
             }
@@ -692,6 +708,8 @@ export class HomelandScene extends Phaser.Scene {
     this.debugMode = false;
     this.pickaxeOptions = gameState.getAvailablePickaxes();
     this.ringOptions = gameState.getAvailableRings();
+    this.bootOptions = gameState.getAvailableBoots();
+    this.lanternOptions = gameState.getAvailableLanterns();
 
     const currentTier = gameState.currentPickaxeTier;
     this.selectedPickaxeIdx = this.pickaxeOptions.findIndex(o => o.tier === currentTier);
@@ -699,6 +717,9 @@ export class HomelandScene extends Phaser.Scene {
 
     this.selectedRing1Idx = this.ringOptions.findIndex(r => r.id === gameState.equippedRings.ring1);
     this.selectedRing2Idx = this.ringOptions.findIndex(r => r.id === gameState.equippedRings.ring2);
+
+    this.selectedBootsIdx = this.bootOptions.findIndex(b => b.id === gameState.equippedBoots);
+    this.selectedLanternIdx = this.lanternOptions.findIndex(l => l.id === gameState.equippedLantern);
 
     this.consumableLoadout = {};
     for (const ct of this.consumableTypes) {
@@ -742,31 +763,48 @@ export class HomelandScene extends Phaser.Scene {
       `  ${ring2Marker} Ring 2: ${ring2Name}`,
     ].join('\n');
 
+    const bootsMarker = this.gateTab === 3 ? '▶' : ' ';
+    const bootsName = this.selectedBootsIdx >= 0 ? this.bootOptions[this.selectedBootsIdx]?.name ?? '(none)' : '(none)';
+    const bootsRuns = this.selectedBootsIdx >= 0 ? this.bootOptions[this.selectedBootsIdx]?.runs ?? 0 : 0;
+    const bootsRunsStr = bootsRuns === Infinity ? '' : ` (${bootsRuns}/5)`;
+    const bootsLine = `  ${bootsMarker} Boots: ${bootsName}${bootsRunsStr}`;
+
+    const lanternMarker = this.gateTab === 4 ? '▶' : ' ';
+    const lanternName = this.selectedLanternIdx >= 0 ? this.lanternOptions[this.selectedLanternIdx]?.name ?? '(none)' : '(none)';
+    const lanternRuns = this.selectedLanternIdx >= 0 ? this.lanternOptions[this.selectedLanternIdx]?.runs ?? 0 : 0;
+    const lanternRunsStr = lanternRuns === Infinity ? '' : ` (${lanternRuns}/5)`;
+    const lanternLine = `  ${lanternMarker} Lantern: ${lanternName}${lanternRunsStr}`;
+
     const consumableLines = this.consumableTypes
       .map((ct, i) => {
-        const marker = this.gateTab === 3 && i === this.consumableSelectionIdx ? '▶' : ' ';
+        const marker = this.gateTab === 5 && i === this.consumableSelectionIdx ? '▶' : ' ';
         const qty = this.consumableLoadout[ct.id];
         const available = gameState.inventory.count(ct.id);
         return `  ${marker} ${ct.name.padEnd(18)} ${qty} (have ${available})`;
       })
       .join('\n');
 
-    const dbgMarker = this.gateTab === 4 ? '▶' : ' ';
+    const dbgMarker = this.gateTab === 6 ? '▶' : ' ';
     const dbgLine = `  ${dbgMarker} Debug Mode: ${this.debugMode ? 'ON' : 'OFF'}`;
 
     this.panelBg.clear();
     this.panelBg.fillStyle(0x0a0a1a, 0.85);
-    this.panelBg.fillRoundedRect(960 / 2 - 220, 640 / 2 - 170, 440, 350, 10);
+    this.panelBg.fillRoundedRect(960 / 2 - 260, 640 / 2 - 240, 520, 480, 10);
     this.panelBg.lineStyle(2, 0x6a5a8a, 1);
-    this.panelBg.strokeRoundedRect(960 / 2 - 220, 640 / 2 - 170, 440, 350, 10);
+    this.panelBg.strokeRoundedRect(960 / 2 - 260, 640 / 2 - 240, 520, 480, 10);
     this.panelBg.setAlpha(1);
+
+    const foundRelics = gameState.getFoundRelics();
+    const relicLine = foundRelics.length > 0 ? `\nRelics: ${foundRelics.length} found` : '';
 
     this.panelText.setText(
       `Expedition Loadout\n\n` +
       `${pickaxeLines}\n\n` +
       `${ringLines}\n\n` +
+      `${bootsLine}\n` +
+      `${lanternLine}\n\n` +
       `Consumables:\n${consumableLines}\n\n` +
-      `${dbgLine}\n\n` +
+      `${dbgLine}${relicLine}\n\n` +
       `   [↑/↓] select slot  [←/→] change\n\n` +
       `Max Stamina: ${maxStamina}\n` +
       `Inventory: ${invSlots} slots\n\n` +
@@ -782,6 +820,8 @@ export class HomelandScene extends Phaser.Scene {
     }
     gameState.equippedRings.ring1 = this.selectedRing1Idx >= 0 ? this.ringOptions[this.selectedRing1Idx]?.id ?? null : null;
     gameState.equippedRings.ring2 = this.selectedRing2Idx >= 0 ? this.ringOptions[this.selectedRing2Idx]?.id ?? null : null;
+    gameState.equippedBoots = this.selectedBootsIdx >= 0 ? this.bootOptions[this.selectedBootsIdx]?.id ?? null : null;
+    gameState.equippedLantern = this.selectedLanternIdx >= 0 ? this.lanternOptions[this.selectedLanternIdx]?.id ?? null : null;
 
     const consumables: Record<string, number> = {};
     for (const ct of this.consumableTypes) {

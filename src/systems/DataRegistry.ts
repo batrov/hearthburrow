@@ -39,15 +39,25 @@ interface BuildingData {
   unlocked: boolean;
 }
 
+export interface RelicData {
+  id: string;
+  name: string;
+  description: string;
+  effect: string;
+  value: number;
+}
+
 import itemsJson from '../data/items.json';
 import recipesJson from '../data/recipes.json';
 import buildingsJson from '../data/buildings.json';
+import relicsJson from '../data/relics.json';
 
 const materials = new Map<string, MaterialData>();
 const equipment = new Map<string, EquipmentData>();
 const consumables = new Map<string, ConsumableData>();
 const recipes = new Map<string, RecipeData>();
 const buildings = new Map<string, BuildingData>();
+const relics = new Map<string, RelicData>();
 
 function init(): void {
   const itemsFile = itemsJson as unknown as {
@@ -64,6 +74,9 @@ function init(): void {
 
   const buildingsFile = buildingsJson as unknown as { buildings: BuildingData[] };
   for (const b of buildingsFile.buildings) buildings.set(b.id, b);
+
+  const relicsFile = relicsJson as unknown as { relics: RelicData[] };
+  for (const r of relicsFile.relics) relics.set(r.id, r);
 }
 
 init();
@@ -82,4 +95,12 @@ export function getAllRecipes(): RecipeData[] {
 
 export function getBuilding(id: string): BuildingData | undefined {
   return buildings.get(id);
+}
+
+export function getRelic(id: string): RelicData | undefined {
+  return relics.get(id);
+}
+
+export function getAllRelics(): RelicData[] {
+  return Array.from(relics.values());
 }

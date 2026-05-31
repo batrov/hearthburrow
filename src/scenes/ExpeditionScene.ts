@@ -115,6 +115,8 @@ export class ExpeditionScene extends Phaser.Scene {
   private minimapDot!: Phaser.GameObjects.Rectangle;
   private interactPrompt!: Phaser.GameObjects.Text;
   private interactTarget: { x: number; y: number; id: string } | null = null;
+  private darknessOverlay!: Phaser.GameObjects.Graphics;
+  private rocksBrokenThisRun: number = 0;
 
   constructor() {
     super({ key: 'ExpeditionScene' });
@@ -136,7 +138,9 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.exhausted = false;
     this.hasFinished = false;
-    const staminaMax = this.debugMode ? 10000 : 100 + gameState.maxStaminaBonus;
+    const bootStaminaBonus = gameState.getBootEffects().maxStaminaBonus;
+    const staminaMax = this.debugMode ? 10000 : 100 + gameState.maxStaminaBonus + bootStaminaBonus;
+    this.rocksBrokenThisRun = 0;
     this.stamina = new StaminaSystem(staminaMax);
     this.mining = new MiningSystem();
     this.mining.setPickaxeTier(gameState.currentPickaxeTier);
@@ -154,6 +158,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.objectSprites = this.add.graphics().setDepth(6);
     this.facingHighlight = this.add.graphics().setDepth(12);
     this.selectedObject = this.add.graphics().setDepth(7);
+    this.darknessOverlay = this.add.graphics().setDepth(48);
 
     this.inventoryPanel = new InventoryPanel(
       this, this.inventory,
@@ -192,6 +197,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.setBounds(xMin, yMin, worldWidth(floor.cols, floor.rows), worldHeight(floor.cols, floor.rows));
 
     this.drawMinimap();
+    this.updateDarkness();
   }
 
   private drawFloor(): void {
@@ -895,6 +901,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const slots = this.inventory.getItems();
     const used = slots.filter(s => s !== null).length;
     this.inventoryText.setText(`Slots: ${used}/${slots.length}`);
+    this.updateDarkness();
   }
 
   private checkEventProximity(): void {
@@ -942,6 +949,7 @@ export class ExpeditionScene extends Phaser.Scene {
         event_fountain: '[SPACE] Drink from fountain',
         event_shop: '[SPACE] Browse wares',
         event_treasure_vault: '[SPACE] Open vault',
+        event_relic: '[SPACE] Claim Relic',
       };
       this.interactPrompt.setText(labels[tile.type] ?? '[SPACE] Interact');
       this.interactPrompt.setPosition(this.player.x, this.player.y - 30);
@@ -1149,6 +1157,46 @@ export class ExpeditionScene extends Phaser.Scene {
         };
       }
 
+      case 'relic_chamber': {
+        const relicIds = ['relic_stamina', 'relic_inventory', 'relic_luck'];
+        const available = relicIds.filter(r => !gameState.hasFoundRelic(r));
+        if (available.length === 0) {
+          return {
+            title: 'Ancient Relic',
+            description: 'The pedestal is empty \u2014 you have already claimed all relics.',
+            choices: [{ label: 'Leave', action: () => {} }],
+          };
+        }
+        const relicId = available[Math.floor(Math.random() * available.length)];
+        const relicNames: Record<string, string> = {
+          relic_stamina: 'Heart of the Mountain',
+          relic_inventory: 'Pouch of Holding',
+          relic_luck: 'Four-Leaf Clover',
+        };
+        const relicDescs: Record<string, string> = {
+          relic_stamina: 'Permanently increases max stamina.',
+          relic_inventory: 'Permanently expands inventory capacity.',
+          relic_luck: 'Permanently increases luck.',
+        };
+        return {
+          title: 'Ancient Relic',
+          description: relicDescs[relicId] ?? 'A glowing artifact radiates ancient power...',
+          choices: [
+            {
+              label: `Claim the ${relicNames[relicId] ?? 'Relic'}`,
+              action: () => {
+                gameState.addFoundRelic(relicId);
+                this.showRecipeDiscovery(relicNames[relicId] ?? 'Relic');
+              },
+            },
+            {
+              label: 'Leave it',
+              action: () => {},
+            },
+          ],
+        };
+      }
+
       default:
         return null;
     }
@@ -1204,6 +1252,19 @@ export class ExpeditionScene extends Phaser.Scene {
     if (this.expeditionState.depth >= 2 && !gameState.crafting.isDiscovered('mining_bomb')) {
       gameState.crafting.discover('mining_bomb');
       this.showRecipeDiscovery('Mining Bomb');
+    }
+
+    if (this.expeditionState.depth === 3 && !gameState.crafting.isDiscovered('lantern_bronze')) {
+      gameState.crafting.discover('lantern_bronze');
+      this.showRecipeDiscovery('Bronze Lantern');
+    }
+    if (this.expeditionState.depth === 8 && !gameState.crafting.isDiscovered('lantern_silver')) {
+      gameState.crafting.discover('lantern_silver');
+      this.showRecipeDiscovery('Silver Lantern');
+    }
+    if (this.expeditionState.depth === 13 && !gameState.crafting.isDiscovered('lantern_gold')) {
+      gameState.crafting.discover('lantern_gold');
+      this.showRecipeDiscovery('Gold Lantern');
     }
 
     const floor = this.dungeonGen.generateFloor(this.expeditionState.depth);
@@ -1295,6 +1356,8 @@ export class ExpeditionScene extends Phaser.Scene {
     this.depthText.setText(`Floor: ${this.expeditionState.depth}`);
 
     this.drawMinimap();
+    this.rocksBrokenThisRun = 0;
+    this.updateDarkness();
   }
 
   private tryMove(dx: number, dy: number): void {
@@ -1388,6 +1451,15 @@ export class ExpeditionScene extends Phaser.Scene {
       audio.playItemPickup(tile.maxDurability);
 
       this.spawnStairsOnBreak(tx, ty);
+
+      this.rocksBrokenThisRun++;
+      this.checkRegenBoots();
+
+      const luckBonus = gameState.getBootEffects().luckBonus;
+      if (Math.random() < luckBonus) {
+        this.inventory.addItem(tile.resource, 1);
+        this.createItemPopup(tx, ty, tile.resource);
+      }
 
       this.createHitEffect(tx, ty);
       this.createMiningParticles(tx, ty, tile.resource);
@@ -1513,6 +1585,8 @@ export class ExpeditionScene extends Phaser.Scene {
     }
 
     gameState.consumePickaxeRun();
+    gameState.consumeEquipmentRun(gameState.equippedBoots);
+    gameState.consumeEquipmentRun(gameState.equippedLantern);
     gameState.save();
 
     gameState.lastRunResult = { itemsObtained: obtained, itemsLost: lost, extractType, depth: this.expeditionState.depth };
@@ -1520,6 +1594,32 @@ export class ExpeditionScene extends Phaser.Scene {
     this.time.delayedCall(800, () => {
       this.scene.start('ExpeditionRecapScene');
     });
+  }
+
+  private updateDarkness(): void {
+    this.darknessOverlay.clear();
+    const range = gameState.getLanternRange(this.expeditionState.depth);
+    if (range <= 0) return;
+    const r = range;
+    const cx = this.player.x;
+    const cy = this.player.y;
+    const cam = this.cameras.main;
+    const sx = cam.scrollX;
+    const sy = cam.scrollY;
+    const w = cam.width;
+    const h = cam.height;
+    const pad = 2000;
+    this.darknessOverlay.fillStyle(0x000000, 0.85);
+    this.darknessOverlay.fillRect(sx - pad, sy - pad, w + pad * 2, cy - r - sy + pad);
+    this.darknessOverlay.fillRect(sx - pad, cy + r, w + pad * 2, sy + h + pad - (cy + r));
+    this.darknessOverlay.fillRect(sx - pad, cy - r, cx - r - sx + pad, 2 * r);
+    this.darknessOverlay.fillRect(cx + r, cy - r, sx + w + pad - (cx + r), 2 * r);
+  }
+
+  private checkRegenBoots(): void {
+    if (gameState.equippedBoots === 'boots_regen' && this.rocksBrokenThisRun % 5 === 0) {
+      this.stamina.refill(1);
+    }
   }
 
   private handleExhaustion(): void {
@@ -1721,7 +1821,8 @@ export class ExpeditionScene extends Phaser.Scene {
     if (this.expeditionState.depth % 5 === 4) return;
     const floor = this.currentFloor;
     if (!floor) return;
-    const chance = Math.min(0.5, floor.mineableCount * 0.003);
+    const stairMult = gameState.getBootEffects().stairMultiplier;
+    const chance = Math.min(0.5, floor.mineableCount * 0.003 * stairMult);
     if (Math.random() < chance) {
       const tile = floor.tiles[y][x];
       tile.type = 'stairs_down';
@@ -1759,6 +1860,15 @@ export class ExpeditionScene extends Phaser.Scene {
         this.createMiningParticles(tx, ty, tile.resource);
         this.createItemPopup(tx, ty, tile.resource);
         this.checkRecipeDiscovery(tile.resource);
+
+          this.rocksBrokenThisRun++;
+          this.checkRegenBoots();
+
+          const luckBonus = gameState.getBootEffects().luckBonus;
+          if (Math.random() < luckBonus) {
+            this.inventory.addItem(tile.resource, 1);
+            this.createItemPopup(tx, ty, tile.resource);
+          }
         if (!stairsChecked) {
           this.spawnStairsOnBreak(tx, ty);
           stairsChecked = true;

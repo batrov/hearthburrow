@@ -8,6 +8,17 @@
     { "id": "ring_critical", "result": "ring_critical", "quantity": 1, "ingredients": { "monster_drop": 5, "crystal": 2 }, "discovered": false },
     { "id": "ring_damage", "result": "ring_damage", "quantity": 1, "ingredients": { "silver_ore": 5, "monster_drop": 3 }, "discovered": false },
     { "id": "ring_precision", "result": "ring_precision", "quantity": 1, "ingredients": { "crystal": 3, "gold_ore": 2 }, "discovered": false },
-    { "id": "ring_hunter", "result": "ring_hunter", "quantity": 1, "ingredients": { "monster_drop": 8, "crystal": 3 }, "discovered": false }
+    { "id": "ring_hunter", "result": "ring_hunter", "quantity": 1, "ingredients": { "monster_drop": 8, "crystal": 3 }, "discovered": false },
+
+    { "id": "boots_stamina_bronze", "result": "boots_stamina_bronze", "quantity": 1, "ingredients": { "silver_ore": 5, "monster_drop": 3 }, "discovered": false },
+    { "id": "boots_stamina_silver", "result": "boots_stamina_silver", "quantity": 1, "ingredients": { "gold_ore": 6, "crystal": 3 }, "discovered": false },
+    { "id": "boots_stamina_gold", "result": "boots_stamina_gold", "quantity": 1, "ingredients": { "gold_ore": 10, "crystal": 5 }, "discovered": false },
+    { "id": "boots_luck_bronze", "result": "boots_luck_bronze", "quantity": 1, "ingredients": { "bronze_ore": 8, "stone": 10 }, "discovered": false },
+    { "id": "boots_luck_silver", "result": "boots_luck_silver", "quantity": 1, "ingredients": { "silver_ore": 8, "crystal": 4 }, "discovered": false },
+    { "id": "boots_luck_gold", "result": "boots_luck_gold", "quantity": 1, "ingredients": { "gold_ore": 8, "crystal": 6 }, "discovered": false },
+    { "id": "boots_regen", "result": "boots_regen", "quantity": 1, "ingredients": { "crystal": 8, "gold_ore": 5, "monster_drop": 8 }, "discovered": false },
+    { "id": "lantern_bronze", "result": "lantern_bronze", "quantity": 1, "ingredients": { "bronze_ore": 5, "stone": 10 }, "discovered": false },
+    { "id": "lantern_silver", "result": "lantern_silver", "quantity": 1, "ingredients": { "silver_ore": 8, "crystal": 3 }, "discovered": false },
+    { "id": "lantern_gold", "result": "lantern_gold", "quantity": 1, "ingredients": { "gold_ore": 8, "crystal": 5 }, "discovered": false }
   ]
 }

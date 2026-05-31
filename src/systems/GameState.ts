@@ -28,6 +28,16 @@ const ITEM_NAMES: Record<string, string> = {
   pickaxe_1: 'Common Pickaxe',
   pickaxe_2: 'Bronze Pickaxe',
   pickaxe_3: 'Silver Pickaxe',
+  boots_stamina_bronze: 'Stamina Boots (Bronze)',
+  boots_stamina_silver: 'Stamina Boots (Silver)',
+  boots_stamina_gold: 'Stamina Boots (Gold)',
+  boots_luck_bronze: 'Luck Boots (Bronze)',
+  boots_luck_silver: 'Luck Boots (Silver)',
+  boots_luck_gold: 'Luck Boots (Gold)',
+  boots_regen: 'Regenerative Boots',
+  lantern_bronze: 'Bronze Lantern',
+  lantern_silver: 'Silver Lantern',
+  lantern_gold: 'Gold Lantern',
 };
 
 export function itemDisplayName(id: string): string {
@@ -35,6 +45,7 @@ export function itemDisplayName(id: string): string {
 }
 
 const MAX_PICKAXE_RUNS = 5;
+const MAX_EQUIP_RUNS = 5;
 
 class GameState {
   inventory: InventorySystem;
@@ -46,11 +57,15 @@ class GameState {
   inventorySlotBonus: number;
   pickaxeRuns: Record<number, number>;
   equippedRings: { ring1: string | null; ring2: string | null };
+  equippedBoots: string | null;
+  equippedLantern: string | null;
+  itemRuns: Record<string, number>;
   farmPlanted: number;
   farmHarvest: number;
   researchedUpgrades: string[];
   monsterKills: { slime: number; rat: number; bat: number };
   villagersRescued: number;
+  foundRelics: string[];
   masterVolume: number;
   musicVolume: number;
   sfxVolume: number;
@@ -64,11 +79,15 @@ class GameState {
     this.inventorySlotBonus = 0;
     this.pickaxeRuns = {};
     this.equippedRings = { ring1: null, ring2: null };
+    this.equippedBoots = null;
+    this.equippedLantern = null;
+    this.itemRuns = {};
     this.farmPlanted = 0;
     this.farmHarvest = 0;
     this.researchedUpgrades = [];
     this.monsterKills = { slime: 0, rat: 0, bat: 0 };
     this.villagersRescued = 0;
+    this.foundRelics = [];
     this.masterVolume = 1;
     this.musicVolume = 0.4;
     this.sfxVolume = 0.6;
@@ -136,6 +155,107 @@ class GameState {
     return effects;
   }
 
+  getBootEffects(): { maxStaminaBonus: number; luckBonus: number; stairMultiplier: number } {
+    switch (this.equippedBoots) {
+      case 'boots_stamina_bronze': return { maxStaminaBonus: 10, luckBonus: 0, stairMultiplier: 1 };
+      case 'boots_stamina_silver': return { maxStaminaBonus: 20, luckBonus: 0, stairMultiplier: 1 };
+      case 'boots_stamina_gold':   return { maxStaminaBonus: 30, luckBonus: 0, stairMultiplier: 1 };
+      case 'boots_luck_bronze':    return { maxStaminaBonus: 0, luckBonus: 0.10, stairMultiplier: 1.1 };
+      case 'boots_luck_silver':    return { maxStaminaBonus: 0, luckBonus: 0.25, stairMultiplier: 1.25 };
+      case 'boots_luck_gold':      return { maxStaminaBonus: 0, luckBonus: 0.40, stairMultiplier: 1.4 };
+      default:                     return { maxStaminaBonus: 0, luckBonus: 0, stairMultiplier: 1 };
+    }
+  }
+
+  getLanternRange(depth: number): number {
+    const isDarkFloor = depth > 0 && depth % 5 === 3;
+    const tierRanges: Record<string, number> = {
+      lantern_bronze: 3, lantern_silver: 4, lantern_gold: 5,
+    };
+    const bonus = this.equippedLantern ? (tierRanges[this.equippedLantern] ?? 0) : 0;
+    if (isDarkFloor) {
+      return 90 + bonus * 60;
+    }
+    return bonus * 60;
+  }
+
+  hasUsageLimit(id: string): boolean {
+    return id.startsWith('boots_') || id.startsWith('lantern_');
+  }
+
+  remainingEquipmentRuns(itemId: string): number {
+    if (!this.hasUsageLimit(itemId)) return Infinity;
+    return Math.max(0, MAX_EQUIP_RUNS - (this.itemRuns[itemId] ?? 0));
+  }
+
+  consumeEquipmentRun(itemId: string | null): void {
+    if (!itemId || !this.hasUsageLimit(itemId)) return;
+    this.itemRuns[itemId] = (this.itemRuns[itemId] ?? 0) + 1;
+    if (this.remainingEquipmentRuns(itemId) <= 0) {
+      this.inventory.removeItem(itemId, 1);
+      if (this.equippedBoots === itemId) this.equippedBoots = null;
+      if (this.equippedLantern === itemId) this.equippedLantern = null;
+      if (this.inventory.count(itemId) > 0) {
+        this.itemRuns[itemId] = 0;
+      }
+    }
+  }
+
+  getAvailableBoots(): { id: string; name: string; runs: number }[] {
+    const bootIds = ['boots_stamina_bronze', 'boots_stamina_silver', 'boots_stamina_gold',
+      'boots_luck_bronze', 'boots_luck_silver', 'boots_luck_gold', 'boots_regen'];
+    const result: { id: string; name: string; runs: number }[] = [];
+    for (const id of bootIds) {
+      if (this.inventory.count(id) > 0 || this.equippedBoots === id) {
+        result.push({ id, name: itemDisplayName(id), runs: this.remainingEquipmentRuns(id) });
+      }
+    }
+    return result;
+  }
+
+  getAvailableLanterns(): { id: string; name: string; runs: number }[] {
+    const lanternIds = ['lantern_bronze', 'lantern_silver', 'lantern_gold'];
+    const result: { id: string; name: string; runs: number }[] = [];
+    for (const id of lanternIds) {
+      if (this.inventory.count(id) > 0 || this.equippedLantern === id) {
+        result.push({ id, name: itemDisplayName(id), runs: this.remainingEquipmentRuns(id) });
+      }
+    }
+    return result;
+  }
+
+  addFoundRelic(id: string): void {
+    if (!this.foundRelics.includes(id)) {
+      this.foundRelics.push(id);
+      const relicData = this.getRelicData(id);
+      if (relicData) {
+        switch (relicData.effect) {
+          case 'max_stamina': this.maxStaminaBonus += relicData.value; break;
+          case 'inventory_slots': this.inventorySlotBonus += relicData.value; break;
+          case 'luck': break;
+        }
+      }
+      this.save();
+    }
+  }
+
+  hasFoundRelic(id: string): boolean {
+    return this.foundRelics.includes(id);
+  }
+
+  getFoundRelics(): string[] {
+    return [...this.foundRelics];
+  }
+
+  private getRelicData(id: string): { effect: string; value: number } | undefined {
+    const map: Record<string, { effect: string; value: number }> = {
+      relic_stamina: { effect: 'max_stamina', value: 20 },
+      relic_inventory: { effect: 'inventory_slots', value: 4 },
+      relic_luck: { effect: 'luck', value: 1 },
+    };
+    return map[id];
+  }
+
   save(): void {
     const data = {
       inventory: this.inventory.getItems().map(s => s ? { itemId: s.itemId, quantity: s.quantity } : null),
@@ -145,12 +265,16 @@ class GameState {
       inventorySlotBonus: this.inventorySlotBonus,
       pickaxeRuns: { ...this.pickaxeRuns },
       equippedRings: { ...this.equippedRings },
+      equippedBoots: this.equippedBoots,
+      equippedLantern: this.equippedLantern,
+      itemRuns: { ...this.itemRuns },
       farmPlanted: this.farmPlanted,
       farmHarvest: this.farmHarvest,
       discovered: this.crafting.getDiscoveredIds(),
       researchedUpgrades: this.researchedUpgrades,
       monsterKills: { ...this.monsterKills },
       villagersRescued: this.villagersRescued,
+      foundRelics: this.foundRelics,
       masterVolume: this.masterVolume,
       musicVolume: this.musicVolume,
       sfxVolume: this.sfxVolume,
@@ -181,11 +305,15 @@ class GameState {
       this.inventorySlotBonus = data.inventorySlotBonus ?? 0;
       this.pickaxeRuns = data.pickaxeRuns ?? {};
       this.equippedRings = data.equippedRings ?? { ring1: null, ring2: null };
+      this.equippedBoots = data.equippedBoots ?? null;
+      this.equippedLantern = data.equippedLantern ?? null;
+      this.itemRuns = data.itemRuns ?? {};
       this.farmPlanted = data.farmPlanted ?? 0;
       this.farmHarvest = data.farmHarvest ?? 0;
       this.researchedUpgrades = data.researchedUpgrades ?? [];
       this.monsterKills = data.monsterKills ?? { slime: 0, rat: 0, bat: 0 };
       this.villagersRescued = data.villagersRescued ?? 0;
+      this.foundRelics = data.foundRelics ?? [];
       this.masterVolume = data.masterVolume ?? 1;
       this.musicVolume = data.musicVolume ?? 0.4;
       this.sfxVolume = data.sfxVolume ?? 0.6;

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { gameState } from '../systems/GameState';
 import { audio } from '../systems/AudioSystem';
+import { generateAll } from '../systems/TextureGenerator';
 
 export class BootScene extends Phaser.Scene {
   private loadingBar!: Phaser.GameObjects.Graphics;
@@ -8,6 +9,48 @@ export class BootScene extends Phaser.Scene {
 
   constructor() {
     super({ key: 'BootScene' });
+  }
+
+  preload(): void {
+    this.load.setPath('assets/sprites');
+
+    this.load.image('player_bottom_left', 'player/player_bottom_left.png');
+    this.load.image('player_top_right', 'player/player_top_right.png');
+
+    this.load.image('wall_FOREST', 'tiles/wall_FOREST.png');
+    this.load.image('wall_CAVE', 'tiles/wall_CAVE.png');
+    this.load.image('wall_ICE', 'tiles/wall_ICE.png');
+    this.load.image('wall_LAVA', 'tiles/wall_LAVA.png');
+    this.load.image('wall_RUINS', 'tiles/wall_RUINS.png');
+
+    this.load.image('stairs_up', 'tiles/stairs_up.png');
+    this.load.image('stairs_down', 'tiles/stairs_down.png');
+    this.load.image('pressure_plate', 'tiles/pressure_plate.png');
+    this.load.image('blocked', 'tiles/blocked.png');
+
+    this.load.image('ore_stone', 'ores/stone.png');
+    this.load.image('ore_bronze_ore', 'ores/bronze_ore.png');
+    this.load.image('ore_silver_ore', 'ores/silver_ore.png');
+    this.load.image('ore_gold_ore', 'ores/gold_ore.png');
+    this.load.image('ore_crystal', 'ores/crystal.png');
+    this.load.image('ore_monster_drop', 'ores/monster_drop.png');
+
+    this.load.image('enemy_slime', 'enemies/slime.png');
+    this.load.image('enemy_rat', 'enemies/rat.png');
+    this.load.image('enemy_bat', 'enemies/bat.png');
+    this.load.image('enemy_boss', 'enemies/boss.png');
+
+    this.load.image('event_chest', 'events/chest.png');
+    this.load.image('event_merchant', 'events/merchant.png');
+    this.load.image('event_goblin', 'events/goblin.png');
+    this.load.image('event_villager', 'events/villager.png');
+    this.load.image('event_fountain', 'events/fountain.png');
+    this.load.image('event_shop', 'events/shop.png');
+    this.load.image('event_treasure_vault', 'events/treasure_vault.png');
+    this.load.image('event_relic', 'events/relic.png');
+
+    this.load.image('overlay_damage', 'overlays/damage.png');
+    this.load.image('overlay_crack', 'overlays/crack.png');
   }
 
   create(): void {
@@ -20,6 +63,7 @@ export class BootScene extends Phaser.Scene {
     const cy = this.cameras.main.centerY;
 
     this.cameras.main.setBackgroundColor('#0a0a1a');
+    generateAll(this);
 
     this.add.text(cx, cy - 80, 'HEARTHBURROW', {
       fontSize: '48px',

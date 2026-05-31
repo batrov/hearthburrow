@@ -69,8 +69,8 @@
 | Inventory (slot-based, 16 base) | ✅ | Per-unit-per-slot in dungeon, stacked in homeland; +8 from storage upgrade, +2 per research |
 | Equipment: Pickaxe (3 tiers) | ✅ | Run-based durability (tier 1 unlimited runs, tiers 2-3 = 5 runs each); wood(3)/bronze(5)/iron(7) damage |
 | Equipment: Rings (slots 1 & 2) | ✅ | 4 types (Critical, Damage, Precision, Hunter); crafted via monster kill thresholds; effects applied in combat |
-| Equipment: Boots | ❌ | Not implemented (no code exists) |
-| Equipment: Lantern | ❌ | Not implemented (no code exists) |
+| Equipment: Boots | ✅ | 7 items: 3 stamina tiers (+10/20/30 max), 3 luck tiers (10/25/40% double-drop + stair multiplier), 1 regen (1/5 rocks). All 5-run limited |
+| Equipment: Lantern | ✅ | 3 tiers (3/4/5 tile range). 5-run limited. Dark floors (depth%5=3) = base 90px+lantern bonus. Recipes discovered on first entry to floor 3/8/13 |
 | Consumable usage | ✅ | [Q] Stamina Potion, [E] Teleport Scroll, [F] Mining Bomb; [W] cycles consumable slot |
 | Inventory management | ✅ | Interactive panel with W/S select, [Z] trash, [SPACE] use; available in dungeon and homeland storage |
 | Consumable loadout | ✅ | Gate panel tab 3: select potions/scrolls/bombs from storage before descending; tabs 0-2 for pickaxe + ring selection |

@@ -2,6 +2,7 @@ export type TileType = 'wall' | 'floor' | 'mineable' | 'stairs_up' | 'stairs_dow
   | 'event_chest' | 'event_merchant' | 'event_goblin' | 'event_villager' | 'event_fountain'
   | 'event_shop'
   | 'event_treasure_vault'
+  | 'event_relic'
   | 'enemy' | 'event_boss'
   | 'pressure_plate' | 'blocked';
 
@@ -123,6 +124,10 @@ export class DungeonGenerator {
 
       if (depth >= 1 && Math.random() < 0.25) {
         this.placePuzzle(tiles, rooms);
+      }
+
+      if (depth >= 10 && Math.random() < 0.15) {
+        this.placeRelicChamber(tiles, rooms);
       }
 
       this.fixCorridorEntries(tiles);
@@ -525,5 +530,45 @@ export class DungeonGenerator {
 
   private inBounds(tiles: DungeonTile[][], x: number, y: number): boolean {
     return y >= 0 && y < tiles.length && x >= 0 && x < tiles[0].length;
+  }
+
+  private placeRelicChamber(tiles: DungeonTile[][], rooms: RoomRect[]): void {
+    const vw = 6;
+    const vh = 6;
+
+    for (let attempt = 0; attempt < 50; attempt++) {
+      const vx = 1 + Math.floor(Math.random() * (50 - vw - 1));
+      const vy = 1 + Math.floor(Math.random() * (40 - vh - 1));
+
+      const overlaps = rooms.some(r =>
+        vx < r.x + r.w + 3 && vx + vw + 3 > r.x &&
+        vy < r.y + r.h + 3 && vy + vh + 3 > r.y
+      );
+      if (overlaps) continue;
+
+      for (let y = vy; y < vy + vh; y++) {
+        for (let x = vx; x < vx + vw; x++) {
+          if (x === vx || x === vx + vw - 1 || y === vy || y === vy + vh - 1) {
+            tiles[y][x] = this.makeTile('wall');
+          } else {
+            tiles[y][x] = this.makeTile('floor');
+          }
+        }
+      }
+
+      const cf = this.getFloorTiles(tiles, { x: vx, y: vy, w: vw, h: vh });
+      if (cf.length > 0) {
+        const cp = cf[Math.floor(Math.random() * cf.length)];
+        tiles[cp.y][cp.x] = this.makeTile('event_relic', 'relic_chamber');
+      }
+
+      const nearest = rooms.reduce((best, r) => {
+        const dc = Math.abs(r.x - vx) + Math.abs(r.y - vy);
+        return dc < best.dist ? { room: r, dist: dc } : best;
+      }, { room: rooms[0], dist: Infinity }).room;
+      this.carveCorridor(tiles, nearest, { x: vx, y: vy, w: vw, h: vh });
+      rooms.push({ x: vx, y: vy, w: vw, h: vh });
+      return;
+    }
   }
 }
