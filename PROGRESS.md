@@ -231,7 +231,7 @@ Limited recipes | ✅ | 5 discoverable recipes
 11. **Multi-plate puzzle redesign** — Replaced single-plate+blocker puzzle with N-plate (3–5) rooms. All plates must be stepped on to spawn `stairs_down` in the puzzle room. Mining does not spawn stairs on puzzle floors. Placed via `placePuzzle()` with min Manhattan distance 3 between plates.
 
 
-## Feature Requests
+## Ad-Hoc Feature Requests
 1. Additional 2 mode of movements to support mobile: 
     - Click tiles to move (using pathfinding) 
     - Virtual analog
@@ -247,3 +247,5 @@ Limited recipes | ✅ | 5 discoverable recipes
         2. Laboratory
         3. Trading Post
         4. Farm
+5. Unlocking recipe rebalancing
+    - Teleport scroll recipe unlocked after 3 times getting exhausted OR emergency exit

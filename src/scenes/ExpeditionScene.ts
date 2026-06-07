@@ -1834,6 +1834,7 @@ export class ExpeditionScene extends Phaser.Scene {
       hp: data.hp,
       timingSpeed: data.speed,
       hitZoneWidth: Math.round(data.zoneWidth * ringEffects.precisionMult),
+      spriteKey: isBoss ? 'enemy_boss' : `enemy_${enemyType}`,
       rewards: data.rewards,
       ringBonusDamage: ringEffects.bonusDamage,
       ringCritChance: ringEffects.critChance,

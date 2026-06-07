@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { itemDisplayName } from '../systems/GameState';
 import { audio } from '../systems/AudioSystem';
 
 export type CombatResult = 'victory' | 'retreat' | null;
@@ -9,6 +8,7 @@ export interface EnemyConfig {
   hp: number;
   timingSpeed: number;
   hitZoneWidth: number;
+  spriteKey?: string;
   rewards?: { id: string; quantity: number }[];
   ringBonusDamage?: number;
   ringCritChance?: number;
@@ -26,8 +26,10 @@ export class CombatPanel {
   private hitZoneGfx: Phaser.GameObjects.Graphics;
   private feedbackText: Phaser.GameObjects.Text;
   private hintText: Phaser.GameObjects.Text;
-  private staminaText: Phaser.GameObjects.Text;
   private instructionText: Phaser.GameObjects.Text;
+  private enemySprite: Phaser.GameObjects.Image;
+  private staminaGfx: Phaser.GameObjects.Graphics;
+  private staminaLabel: Phaser.GameObjects.Text;
 
   private visible: boolean = false;
   private result: CombatResult = null;
@@ -37,6 +39,8 @@ export class CombatPanel {
   private barRight: number = 0;
   private barCenter: number = 0;
   private hitZoneHalf: number = 0;
+  private hitZoneOffset: number = 0;
+  private currentHitZoneWidth: number = 0;
   private currentEnemy: EnemyConfig | null = null;
   private onComplete: ((result: CombatResult, rewards: { id: string; quantity: number }[]) => void) | null = null;
   private markerTween: Phaser.Tweens.Tween | null = null;
@@ -67,6 +71,10 @@ export class CombatPanel {
     }).setOrigin(0.5);
     this.container.add(this.hpText);
 
+    this.enemySprite = scene.add.image(960 / 2, 120, '__DEFAULT');
+    this.enemySprite.setOrigin(0.5);
+    this.container.add(this.enemySprite);
+
     this.instructionText = scene.add.text(960 / 2, 230, '', {
       fontSize: '13px', fontFamily: 'monospace', color: '#b8a898',
     }).setOrigin(0.5);
@@ -96,10 +104,13 @@ export class CombatPanel {
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
-    this.staminaText = scene.add.text(960 / 2, 555, '', {
+    this.staminaLabel = scene.add.text(960 / 2, 525, '', {
       fontSize: '11px', fontFamily: 'monospace', color: '#6aaa6a',
     }).setOrigin(0.5);
-    this.container.add(this.staminaText);
+    this.container.add(this.staminaLabel);
+
+    this.staminaGfx = scene.add.graphics();
+    this.container.add(this.staminaGfx);
 
     this.container.setVisible(false);
   }
@@ -127,6 +138,14 @@ export class CombatPanel {
     this.instructionText.setText('Watch the marker — strike when it\'s in the green zone!');
     this.feedbackText.setText('');
 
+    if (config.spriteKey && this.scene.textures.exists(config.spriteKey)) {
+      this.enemySprite.setTexture(config.spriteKey);
+      this.enemySprite.setVisible(true);
+    } else {
+      this.enemySprite.setVisible(false);
+    }
+
+    this.hitZoneOffset = 0;
     this.updateStamina(staminaRemaining, staminaMax);
     this.drawHP();
     this.drawTimingBar(config.hitZoneWidth);
@@ -144,10 +163,12 @@ export class CombatPanel {
 
   updateStamina(current?: number, max?: number): void {
     if (current !== undefined && max !== undefined) {
-      this.staminaText.setText(`Stamina: ${current}/${max}`);
-      this.staminaText.setColor(current >= 10 ? '#6aaa6a' : '#cc6644');
+      this.staminaLabel.setText(`Stamina: ${current}/${max}`);
+      this.staminaLabel.setColor(current >= 10 ? '#6aaa6a' : '#cc6644');
+      this.drawStaminaBar(current, max);
     } else {
-      this.staminaText.setText('');
+      this.staminaLabel.setText('');
+      this.staminaGfx.clear();
     }
   }
 
@@ -158,6 +179,7 @@ export class CombatPanel {
     }
     this.visible = false;
     this.currentEnemy = null;
+    this.enemySprite.setVisible(false);
     this.container.setVisible(false);
     this.result = null;
   }
@@ -174,8 +196,9 @@ export class CombatPanel {
     if (!this.visible || this.result) return 'miss';
 
     const markerX = this.marker.x;
-    const zoneLeft = this.barCenter - this.hitZoneHalf;
-    const zoneRight = this.barCenter + this.hitZoneHalf;
+    const zoneCenter = this.barCenter + this.hitZoneOffset;
+    const zoneLeft = zoneCenter - this.hitZoneHalf;
+    const zoneRight = zoneCenter + this.hitZoneHalf;
 
     const inZone = markerX >= zoneLeft && markerX <= zoneRight;
 
@@ -199,12 +222,11 @@ export class CombatPanel {
         return 'kill';
       }
 
-      this.startMarker(this.currentEnemy!.timingSpeed);
+      this.randomizeHitZone();
       return 'hit';
     } else {
       this.showFeedback('MISS!', '#cc4444');
       audio.playCombatMiss();
-      this.startMarker(this.currentEnemy!.timingSpeed);
       return 'miss';
     }
   }
@@ -242,6 +264,22 @@ export class CombatPanel {
     this.hpText.setText(`HP: ${this.enemyHP}/${this.enemyMaxHP}`);
   }
 
+  private drawStaminaBar(current: number, max: number): void {
+    this.staminaGfx.clear();
+    const barW = 200;
+    const barH = 10;
+    const x = 960 / 2 - barW / 2;
+    const y = 535;
+
+    this.staminaGfx.fillStyle(0x1a1a2a, 1);
+    this.staminaGfx.fillRoundedRect(x, y, barW, barH, 3);
+
+    const ratio = current / max;
+    const color = ratio > 0.5 ? 0x44cc66 : ratio > 0.25 ? 0xcccc44 : 0xcc4444;
+    this.staminaGfx.fillStyle(color, 1);
+    this.staminaGfx.fillRoundedRect(x + 1, y + 1, (barW - 2) * Math.max(0, ratio), barH - 2, 2);
+  }
+
   private drawTimingBar(hitZoneWidth: number): void {
     this.timingBar.clear();
     this.hitZoneGfx.clear();
@@ -255,9 +293,21 @@ export class CombatPanel {
     this.timingBar.strokeRoundedRect(this.barLeft, y, this.BAR_WIDTH, h, 4);
 
     this.hitZoneHalf = hitZoneWidth / 2;
+    this.currentHitZoneWidth = hitZoneWidth;
 
+    const zoneCenter = this.barCenter + this.hitZoneOffset;
     this.hitZoneGfx.fillStyle(0x44cc66, 0.5);
-    this.hitZoneGfx.fillRect(this.barCenter - this.hitZoneHalf, y + 2, hitZoneWidth, h - 4);
+    this.hitZoneGfx.fillRect(zoneCenter - this.hitZoneHalf, y + 2, hitZoneWidth, h - 4);
+  }
+
+  private randomizeHitZone(): void {
+    const maxOffset = (this.BAR_WIDTH / 2) - this.currentHitZoneWidth / 2;
+    if (maxOffset <= 0) {
+      this.hitZoneOffset = 0;
+    } else {
+      this.hitZoneOffset = Phaser.Math.Between(-maxOffset, maxOffset);
+    }
+    this.drawTimingBar(this.currentHitZoneWidth);
   }
 
   private startMarker(speed: number): void {
