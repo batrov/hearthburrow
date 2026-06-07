@@ -62,7 +62,7 @@ class GameState {
   itemRuns: Record<string, number>;
   farmPlanted: number;
   farmHarvest: number;
-  researchedUpgrades: string[];
+  researchLevels: Record<string, number>;
   monsterKills: { slime: number; rat: number; bat: number };
   villagersRescued: number;
   foundRelics: string[];
@@ -86,7 +86,7 @@ class GameState {
     this.itemRuns = {};
     this.farmPlanted = 0;
     this.farmHarvest = 0;
-    this.researchedUpgrades = [];
+    this.researchLevels = {};
     this.monsterKills = { slime: 0, rat: 0, bat: 0 };
     this.villagersRescued = 0;
     this.foundRelics = [];
@@ -95,6 +95,14 @@ class GameState {
     this.masterVolume = 1;
     this.musicVolume = 0.4;
     this.sfxVolume = 0.6;
+  }
+
+  getResearchLevel(id: string): number {
+    return this.researchLevels[id] ?? 0;
+  }
+
+  setResearchLevel(id: string, level: number): void {
+    this.researchLevels[id] = level;
   }
 
   remainingPickaxeRuns(tier?: number): number {
@@ -284,7 +292,7 @@ class GameState {
     this.itemRuns = {};
     this.farmPlanted = 0;
     this.farmHarvest = 0;
-    this.researchedUpgrades = [];
+    this.researchLevels = {};
     this.monsterKills = { slime: 0, rat: 0, bat: 0 };
     this.villagersRescued = 0;
     this.foundRelics = [];
@@ -310,7 +318,7 @@ class GameState {
       farmPlanted: this.farmPlanted,
       farmHarvest: this.farmHarvest,
       discovered: this.crafting.getDiscoveredIds(),
-      researchedUpgrades: this.researchedUpgrades,
+      researchLevels: { ...this.researchLevels },
       monsterKills: { ...this.monsterKills },
       villagersRescued: this.villagersRescued,
       foundRelics: this.foundRelics,
@@ -351,7 +359,6 @@ class GameState {
       this.itemRuns = data.itemRuns ?? {};
       this.farmPlanted = data.farmPlanted ?? 0;
       this.farmHarvest = data.farmHarvest ?? 0;
-      this.researchedUpgrades = data.researchedUpgrades ?? [];
       this.monsterKills = data.monsterKills ?? { slime: 0, rat: 0, bat: 0 };
       this.villagersRescued = data.villagersRescued ?? 0;
       this.foundRelics = data.foundRelics ?? [];
@@ -361,20 +368,16 @@ class GameState {
       this.musicVolume = data.musicVolume ?? 0.4;
       this.sfxVolume = data.sfxVolume ?? 0.6;
 
-      const oldKey = 'researched_upgrades';
-      const oldRaw = localStorage.getItem(oldKey);
-      if (oldRaw) {
-        try {
-          const oldSet = JSON.parse(oldRaw);
-          if (Array.isArray(oldSet)) {
-            for (const id of oldSet) {
-              if (!this.researchedUpgrades.includes(id)) {
-                this.researchedUpgrades.push(id);
-              }
-            }
-          }
-          localStorage.removeItem(oldKey);
-        } catch { /* ignore corrupt old data */ }
+      // migrate researchLevels from old format
+      if (data.researchLevels && typeof data.researchLevels === 'object' && !Array.isArray(data.researchLevels)) {
+        this.researchLevels = { ...data.researchLevels };
+      } else if (Array.isArray(data.researchedUpgrades)) {
+        // old format: convert stamina_up → stamina:1, inventory_up → backpack:1
+        this.researchLevels = {};
+        for (const id of data.researchedUpgrades) {
+          if (id === 'stamina_up') this.researchLevels['stamina'] = 1;
+          if (id === 'inventory_up') this.researchLevels['backpack'] = 1;
+        }
       }
 
       if (data.discovered) {

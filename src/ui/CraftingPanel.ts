@@ -3,6 +3,28 @@ import { gameState, itemDisplayName } from '../systems/GameState';
 import { getRecipe } from '../systems/DataRegistry';
 import { audio } from '../systems/AudioSystem';
 
+const RECIPE_INFO: Record<string, { desc: string; unlock?: string }> = {
+  pickaxe_2: { desc: 'Bronze Pickaxe — 5 runs, mines bronze ore' },
+  pickaxe_3: { desc: 'Silver Pickaxe — 5 runs, mines silver ore', unlock: 'Mine silver ore' },
+  stamina_potion: { desc: 'Restores 50 stamina during expedition', unlock: 'Defeat the boss on floor 4' },
+  teleport_scroll: { desc: 'Emergency teleport back to homeland', unlock: 'Exhaust yourself 3 times' },
+  mining_bomb: { desc: 'Destroys surrounding walls instantly', unlock: 'Unlocked via events' },
+  ring_critical: { desc: 'Chance to deal double damage in combat', unlock: 'Defeat 3 slimes' },
+  ring_damage: { desc: '+1 base damage in combat', unlock: 'Defeat 3 rats' },
+  ring_precision: { desc: 'Wider hit zone in combat', unlock: 'Defeat 3 bats' },
+  ring_hunter: { desc: 'Combines crit + damage bonuses', unlock: 'Defeat 3 of each monster' },
+  boots_stamina_bronze: { desc: '+10 max stamina for 5 expeditions', unlock: 'Reach floor 3 (dark)' },
+  boots_stamina_silver: { desc: '+20 max stamina for 5 expeditions', unlock: 'Craft bronze version first' },
+  boots_stamina_gold: { desc: '+30 max stamina for 5 expeditions', unlock: 'Craft silver version first' },
+  boots_luck_bronze: { desc: '10% double-drop chance for 5 expeditions', unlock: 'Reach floor 3 (dark)' },
+  boots_luck_silver: { desc: '25% double-drop chance for 5 expeditions', unlock: 'Craft bronze version first' },
+  boots_luck_gold: { desc: '40% double-drop chance for 5 expeditions', unlock: 'Craft silver version first' },
+  boots_regen: { desc: '+1 stamina per 5 rocks broken for 5 expeditions', unlock: 'Reach floor 8 (dark)' },
+  lantern_bronze: { desc: '+60px light radius for 5 expeditions', unlock: 'Reach floor 3 (dark)' },
+  lantern_silver: { desc: '+60px light radius for 5 expeditions', unlock: 'Craft bronze version first' },
+  lantern_gold: { desc: '+60px light radius for 5 expeditions', unlock: 'Craft silver version first' },
+};
+
 export class CraftingPanel {
   private scene: Phaser.Scene;
   private container: Phaser.GameObjects.Container;
@@ -10,6 +32,7 @@ export class CraftingPanel {
   private titleText: Phaser.GameObjects.Text;
   private contentText: Phaser.GameObjects.Text;
   private hintText: Phaser.GameObjects.Text;
+  private descriptionText: Phaser.GameObjects.Text;
   private visible: boolean = false;
   private recipes: { id: string; name: string }[] = [];
   private selectedIndex: number = 0;
@@ -32,6 +55,12 @@ export class CraftingPanel {
       align: 'left', lineSpacing: 5,
     }).setOrigin(0.5, 0);
     this.container.add(this.contentText);
+
+    this.descriptionText = scene.add.text(960 / 2, 585, '', {
+      fontSize: '12px', fontFamily: 'monospace', color: '#b8a898',
+      align: 'center',
+    }).setOrigin(0.5);
+    this.container.add(this.descriptionText);
 
     this.hintText = scene.add.text(960 / 2, 610, '[W/S] Select  [SPACE] Craft  [ESC] Close', {
       fontSize: '11px', fontFamily: 'monospace', color: '#5a4a6a',
@@ -82,13 +111,13 @@ export class CraftingPanel {
   }
 
   navigateUp(): void {
-    if (this.recipes.length < 2) return;
+    if (this.recipes.length === 0) return;
     this.selectedIndex = (this.selectedIndex - 1 + this.recipes.length) % this.recipes.length;
     this.renderContent();
   }
 
   navigateDown(): void {
-    if (this.recipes.length < 2) return;
+    if (this.recipes.length === 0) return;
     this.selectedIndex = (this.selectedIndex + 1) % this.recipes.length;
     this.renderContent();
   }
@@ -100,6 +129,12 @@ export class CraftingPanel {
       return false;
     }
     const recipe = this.recipes[this.selectedIndex];
+    if (!gameState.crafting.isDiscovered(recipe.id)) {
+      audio.playError();
+      const info = RECIPE_INFO[recipe.id];
+      this.showHowToUnlock(info?.unlock ?? 'Unknown discovery method');
+      return false;
+    }
     if (!gameState.crafting.canCraft(recipe.id)) {
       audio.playError();
       this.showNoCraft();
@@ -113,38 +148,54 @@ export class CraftingPanel {
   }
 
   private renderContent(): void {
-    const discovered = gameState.crafting.getDiscoveredRecipes();
-
     const lines: string[] = [];
 
-    for (let i = 0; i < discovered.length; i++) {
-      const r = discovered[i];
-      const canCraft = gameState.crafting.canCraft(r.id);
-      const ings = Object.entries(r.ingredients)
-        .map(([id, qty]) => {
-          const have = gameState.inventory.count(id);
-          return `${itemDisplayName(id)} ${have}/${qty}`;
-        })
-        .join(', ');
+    for (let i = 0; i < this.recipes.length; i++) {
+      const r = this.recipes[i];
+      const discovered = gameState.crafting.isDiscovered(r.id);
       const marker = i === this.selectedIndex ? '▸' : ' ';
-      const name = itemDisplayName(r.result);
-      lines.push(`  ${marker} ${name.padEnd(20)} ${ings}${canCraft ? '  ✓' : ''}`);
-    }
-
-    const undiscovered = gameState.crafting.getUndiscoveredRecipes();
-    if (undiscovered.length > 0) {
-      if (lines.length > 0) lines.push('');
-      lines.push('     Unknown Recipes ???');
-      for (const r of undiscovered) {
-        lines.push(`       ${'?'.repeat(r.result.length)}  (undiscovered)`);
+      if (discovered) {
+        const recipe = gameState.crafting.getDiscoveredRecipes().find(d => d.id === r.id);
+        const canCraft = recipe ? gameState.crafting.canCraft(r.id) : false;
+        const ings = recipe ? Object.entries(recipe.ingredients)
+          .map(([id, qty]) => {
+            const have = gameState.inventory.count(id);
+            return `${itemDisplayName(id)} ${have}/${qty}`;
+          })
+          .join(', ') : '';
+        lines.push(`  ${marker} ${r.name.padEnd(20)} ${ings}${canCraft ? '  ✓' : ''}`);
+      } else {
+        const info = RECIPE_INFO[r.id];
+        const unlockStr = info?.unlock ? ` (${info.unlock})` : '';
+        lines.push(`  ${marker} ???${unlockStr}`);
       }
     }
 
-    if (discovered.length === 0 && undiscovered.length === 0) {
+    if (this.recipes.length === 0) {
       lines.push('  (no recipes)');
     }
 
     this.contentText.setText(lines.join('\n'));
+
+    // update description bar
+    if (this.recipes.length > 0 && this.selectedIndex < this.recipes.length) {
+      const selectedId = this.recipes[this.selectedIndex].id;
+      const discovered = gameState.crafting.isDiscovered(selectedId);
+      const info = RECIPE_INFO[selectedId];
+      if (info) {
+        if (discovered) {
+          this.descriptionText.setText(info.desc);
+          this.descriptionText.setColor('#b8a898');
+        } else {
+          this.descriptionText.setText(`??? — ${info.unlock ?? 'Unknown discovery method'}`);
+          this.descriptionText.setColor('#aa8844');
+        }
+      } else {
+        this.descriptionText.setText('');
+      }
+    } else {
+      this.descriptionText.setText('');
+    }
   }
 
   refresh(): void {
@@ -156,7 +207,11 @@ export class CraftingPanel {
     this.overlay.strokeRect(40, 65, 880, 530);
 
     const discovered = gameState.crafting.getDiscoveredRecipes();
-    this.recipes = discovered.map(r => ({ id: r.id, name: itemDisplayName(r.result) }));
+    const undiscovered = gameState.crafting.getUndiscoveredRecipes();
+    this.recipes = [
+      ...discovered.map(r => ({ id: r.id, name: itemDisplayName(r.result) })),
+      ...undiscovered.map(r => ({ id: r.id, name: '???' })),
+    ];
 
     if (this.selectedIndex >= this.recipes.length) {
       this.selectedIndex = 0;
@@ -188,6 +243,23 @@ export class CraftingPanel {
       960 / 2, 640 / 2,
       'No craftable recipe — need more materials!',
       { fontSize: '16px', fontFamily: 'monospace', color: '#cc6644' }
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(250);
+
+    this.scene.tweens.add({
+      targets: popup,
+      y: popup.y - 40,
+      alpha: 0,
+      duration: 1000,
+      ease: 'Quad.easeOut',
+      onComplete: () => popup.destroy(),
+    });
+  }
+
+  private showHowToUnlock(hint: string): void {
+    const popup = this.scene.add.text(
+      960 / 2, 640 / 2,
+      `??? — ${hint}`,
+      { fontSize: '16px', fontFamily: 'monospace', color: '#aa8844' }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(250);
 
     this.scene.tweens.add({

@@ -793,9 +793,8 @@ export class ExpeditionScene extends Phaser.Scene {
     const w = 200;
     const h = 8;
 
-    const slots = this.inventory.getItems();
-    const used = slots.filter(s => s !== null).length;
-    const max = slots.length;
+    const used = this.inventory.capacityUsed();
+    const max = this.inventory.capacityMax();
     const ratio = max > 0 ? used / max : 0;
 
     this.inventoryGauge.fillStyle(0x1a1a2a, 1);

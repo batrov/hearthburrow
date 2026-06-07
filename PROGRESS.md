@@ -21,10 +21,10 @@
 |----------|--------|-------|
 | Crafting Station | ✅ | Operational; opens CraftingPanel with recipe list |
 | Storage | ✅ | Operational; opens InventoryPanel with trash |
-| Trading Post | ✅ | Restorable (no cost); opens TradePanel with buy/sell using carrots |
-| Laboratory | ✅ | Restorable (no cost); opens ResearchPanel with permanent upgrades |
-| Housing | ✅ | Restorable for 100 stone; grants +20 max stamina |
-| Farm | ✅ | Restorable (no cost); plant carrots before expedition, harvest yield after |
+| Trading Post | ✅ | Restorable (20 stone, 3 silver_ore); opens TradePanel with buy/sell using carrots |
+| Laboratory | ✅ | Restorable (15 stone, 5 bronze_ore); opens ResearchPanel with tiered upgrades |
+| Housing | ✅ | Restorable (10 stone); grants +20 max stamina |
+| Farm | ✅ | Restorable (25 stone, 5 silver_ore, 10 bronze_ore); plant carrots before expedition, harvest yield after |
 | Decorative Structures | ❌ | Not planned for MVP |
 
 ---
@@ -101,6 +101,10 @@
 |---------|--------|-------|
 | Optional combat | ✅ | Enemy tiles placed on floors; triggered via SPACE when adjacent; non-blocking to exploration |
 | Timing-based interaction | ✅ | Oscillating marker with green hit zone; SPACE to strike; ESC to retreat |
+| Enemy sprite in combat overlay | ✅ | Enemy PNG sprite displayed above name in combat panel (slime/rat/bat/boss) |
+| Player stamina gauge in combat | ✅ | Color-coded gauge bar (green/yellow/red) replaces plain text |
+| Randomized hit zone | ✅ | Green zone shifts to random position after each successful hit |
+| No marker reset on strike | ✅ | Marker continues oscillating from current position instead of resetting to left |
 | Ring effects | ✅ | Critical (double damage), Damage (+1), Precision (wider zone), Hunter (double loot) |
 | Boss fights | ✅ | depth % 5 === 4 (floors 4, 9, 14, 19); single large room; 60 HP boss; stamina ≥ 10 to enter; no stairs_down until defeat |
 | Monster drops | ✅ | Slime/Bat/Rat enemies drop 1-2 `gold_ore` each; boss drops 3-5 gold_ore + crystal |
@@ -113,11 +117,11 @@
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Homeland restoration | ✅ | Building restoration with material costs |
-| Recipe discovery | ✅ | 5 discoverable recipes via events/milestones (bronze pick, iron pick, stamina potion, teleport scroll, mining bomb) |
+| Recipe discovery | ✅ | 5 discoverable recipes via events/milestones (bronze pick, iron pick, stamina potion, teleport scroll, mining bomb). Teleport scroll unlocked after 3 emergency extracts. |
 | Rescued villagers | 🟡 | Event exists (+2 max stamina) but no persistent tracking system |
 | Relics | ✅ | 3 types (stamina +20, inventory +4, luck +1). Found in relic chambers (depth ≥10, 15% chance per floor). Each found once permanently. |
 | Building unlocks | ✅ | All 4 buildings restorable (housing, trading_post, laboratory, farm); each unlocks distinct gameplay |
-| Permanent stat upgrades | ✅ | Max stamina (+20 from housing, +10 per research) and inventory slots (+8 from storage, +2 per research) |
+| Permanent stat upgrades | ✅ | Max stamina (+20 from housing, +5 per research tier, +20 from relic) and inventory slots (+8 from storage, +2-6 per research tier, +4 from relic) |
 | Temporary run buffs | ✅ | Ring effects applied per run; consumables provide on-demand effects |
 
 ---
@@ -127,13 +131,15 @@
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Discovery-based crafting | ✅ | Recipes unlock via events and milestones |
-| Recipe selection with W/S + SPACE | ✅ | Crafting panel uses selectable list |
+| Recipe selection with W/S + SPACE | ✅ | Crafting panel shows all recipes (discovered + undiscovered); cursor scrolls through full list |
+| Item description bar | ✅ | Bottom info bar shows selected recipe description; undiscovered recipes show unlock hint |
+| Undiscovered recipe hints | ✅ | Inline unlock hint shown beside ??? entries; SPACE on undiscovered shows how-to-unlock popup |
 | 7 material types | ✅ | Stone, Bronze Ore, Silver Ore, Gold Ore, Crystal, Monster Essence, Carrot |
 | 2 craftable pickaxe recipes | ✅ | Bronze (tier 2) and Iron (tier 3); wooden pickaxe (tier 1) is default |
 | 3 consumable recipes | ✅ | Stamina Potion, Teleport Scroll, Mining Bomb |
 | Farming system | ✅ | Restore farm building; plant carrots before expedition, harvest yield after expedition |
 | Trading with carrots | ✅ | TradePanel at Trading Post: buy potions/scrolls/bombs with carrots, sell ore/essence for carrots |
-| Research upgrades | ✅ | ResearchPanel at Laboratory: spend crystals + ores for +10 max stamina and +2 inventory slots |
+| Research upgrades | ✅ | 2 tiered projects with 5 levels each: Backpack Expansion (scaling stone+bronze+silver+gold costs, +2→+6 slots) and Stamina Boost (scaling crystal costs, +5 stamina each). Research panel shows level progress [X/5]. |
 | Consumable usage during expedition | ✅ | [Q] Potion (restore 30 stam), [E] Scroll (safe extract), [F] Bomb (damage 8 surrounding tiles) |
 
 ---
@@ -207,15 +213,14 @@ Crafting station | ✅ | Operational with discovery system
 Storage | ✅ | Operational with trash support
 One villager house | ✅ | Restorable, grants +20 stamina
 Three pickaxe tiers | ✅ | Wood (default), Bronze (craftable), Iron (craftable)
-Stamina upgrades | ✅ | Via housing (+20) and research (+10 each)
+Stamina upgrades | ✅ | Via housing (+20), research (5 tiers, +5 each), and relic (+20)
 Limited recipes | ✅ | 5 discoverable recipes
 
 ---
 
 ## Known Bugs & Issues
 
-1. NPC interactions is not working
-2. UI Bug: max inventory capacity can show more than max cap when it is overcapacity
+(none)
 
 ## Resolved Bugs
 
@@ -230,39 +235,12 @@ Limited recipes | ✅ | 5 discoverable recipes
 9. **Basic audio system added** — `AudioSystem.ts` using Web Audio API to generate sounds programmatically (no asset files). Sounds: mine_hit (percussive square wave), item_pickup (ascending sine chime), stairs (sine sweep up/down), step (noise burst), combat hit/miss, victory (ascending arpeggio). Initialized in BootScene, wired into ExpeditionScene (mining, movement, stairs, events, combat) and HomelandScene (movement).
 10. **Player sprite direction fixed** — `updatePlayerSprite()` now uses `isUpFacing = facingY < 0 || (facingY === 0 && facingX < 0)` to correctly map LEFT direction to `player_top_right` flipped. Facing change triggers sprite update immediately.
 11. **Multi-plate puzzle redesign** — Replaced single-plate+blocker puzzle with N-plate (3–5) rooms. All plates must be stepped on to spawn `stairs_down` in the puzzle room. Mining does not spawn stairs on puzzle floors. Placed via `placePuzzle()` with min Manhattan distance 3 between plates.
+12. **NPC interactions not working** — Resource-cost events (Wandering Trader, Gambling Goblin, Midrun Shop) checked `gameState.inventory` (homestead) instead of `this.inventory` (run inventory), so they always showed "not enough" during a run. Fixed by changing all references to `this.inventory` in `buildEventConfig()` and `buyAtShop()`.
+13. **Building restore freeze** — `tryRestore()` called `this.scene.restart()` inside a tween callback, destroying and recreating the scene. Fixed by refactoring `drawHubBuildings()` to use a `buildingsContainer` for clean in-place redraws, removing the scene restart.
+14. **Crafting popup not centered** — `showCraftSuccess` and `showNoCraft` popups were created without `setScrollFactor(0)`, so they scrolled with the camera in HomelandScene instead of staying fixed to viewport center.
+15. **Inventory gauge overcapacity display** — `drawInventoryGauge()` used `getItems()` which inflates array length when over capacity (overflow items appended beyond maxSlots). Fixed by using `capacityUsed()`/`capacityMax()` instead.
 
-
-## Ad-Hoc Feature Requests
+## Ad-Hoc Feature Requests (Remaining)
 1. Additional 2 mode of movements to support mobile: 
     - Click tiles to move (using pathfinding) 
     - Virtual analog
-2. Make result screen more satisfying by showing the item qty gradually
-3. Combat revamp:
-    - Show player stamina as gauge during combat
-    - Show enemy sprite
-    - Randomize hit box location on every successful hit
-    - Do not reset the pointer location on hit/miss, should continue moving
-4. Building Rebalancing
-    - Balance material needed to build the buildings, sorted from easier to harder
-        1. Villager house
-        2. Laboratory
-        3. Trading Post
-        4. Farm
-5. Unlocking recipe rebalancing
-    - Teleport scroll recipe unlocked after 3 times getting exhausted OR emergency exit
-6. Revamp laboratory:
-    - Can upgrade backpack max slots, material needed scales
-        - lv 1: 100 stones, + 2 slots
-        - lv 2: 200 stones, 50 bronze, + 3 slots
-        - lv 3: 300 stones, 100 bronze, 50 silver, + 4 slots
-        - lv 4: 400 stones, 150 bronze, 100 silver, + 5 slots
-        - lv 5: 500 stones, 200 bronze, 150 silver, 50 gold, + 6 slots
-    - Upgrade max stamina using materials
-        - lv 1: 1 crystal, + 5 stamina
-        - lv 2: 3 crystal, + 5 stamina
-        - lv 3: 5 crystal, + 5 stamina
-        - lv 4: 7 crystal, + 5 stamina
-        - lv 5: 10 crystal, + 5 stamina
-7. Crafting improvement
-    - Add selected item descriptions, render info UI in the bottom of the screen, should fit for 1 line of text
-    - For undiscovered recipe, the info UI should show how to obtain them

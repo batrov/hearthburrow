@@ -1,18 +1,36 @@
 import Phaser from 'phaser';
 import { gameState } from '../systems/GameState';
 import { audio } from '../systems/AudioSystem';
+import { itemDisplayName } from '../systems/GameState';
 
 interface ResearchProject {
   id: string;
   label: string;
-  description: string;
-  cost: Record<string, number>;
-  effect: string;
+  levels: { cost: Record<string, number>; slotBonus?: number; staminaBonus?: number }[];
+  maxLevel: number;
 }
 
 const PROJECTS: ResearchProject[] = [
-  { id: 'stamina_up', label: 'Stamina Boost', description: '+10 max stamina', cost: { crystal: 5, gold_ore: 3 }, effect: 'stamina' },
-  { id: 'inventory_up', label: 'Inventory Expansion', description: '+2 inventory slots', cost: { crystal: 3, silver_ore: 5 }, effect: 'inventory' },
+  {
+    id: 'backpack', label: 'Backpack Expansion', maxLevel: 5,
+    levels: [
+      { cost: { stone: 100 }, slotBonus: 2 },
+      { cost: { stone: 200, bronze_ore: 50 }, slotBonus: 3 },
+      { cost: { stone: 300, bronze_ore: 100, silver_ore: 50 }, slotBonus: 4 },
+      { cost: { stone: 400, bronze_ore: 150, silver_ore: 100 }, slotBonus: 5 },
+      { cost: { stone: 500, bronze_ore: 200, silver_ore: 150, gold_ore: 50 }, slotBonus: 6 },
+    ],
+  },
+  {
+    id: 'stamina', label: 'Stamina Boost', maxLevel: 5,
+    levels: [
+      { cost: { crystal: 1 }, staminaBonus: 5 },
+      { cost: { crystal: 3 }, staminaBonus: 5 },
+      { cost: { crystal: 5 }, staminaBonus: 5 },
+      { cost: { crystal: 7 }, staminaBonus: 5 },
+      { cost: { crystal: 10 }, staminaBonus: 5 },
+    ],
+  },
 ];
 
 export class ResearchPanel {
@@ -73,37 +91,49 @@ export class ResearchPanel {
     const project = PROJECTS[this.selectionIndex];
     if (!project) return;
 
-    if (gameState.researchedUpgrades.includes(project.id)) {
+    const level = gameState.getResearchLevel(project.id);
+    if (level >= project.maxLevel) {
       audio.playError();
       return;
     }
 
-    for (const [id, qty] of Object.entries(project.cost)) {
+    const levelData = project.levels[level];
+    for (const [id, qty] of Object.entries(levelData.cost)) {
       if (gameState.inventory.count(id) < qty) {
         audio.playError();
         return;
       }
     }
 
-    for (const [id, qty] of Object.entries(project.cost)) {
+    for (const [id, qty] of Object.entries(levelData.cost)) {
       gameState.inventory.removeItem(id, qty);
     }
 
-    gameState.researchedUpgrades.push(project.id);
+    gameState.setResearchLevel(project.id, level + 1);
 
-    switch (project.effect) {
-      case 'stamina':
-        gameState.maxStaminaBonus += 10;
-        break;
-      case 'inventory':
-        gameState.inventorySlotBonus += 2;
-        gameState.inventory.expandSlots(2);
-        break;
+    if (levelData.slotBonus) {
+      gameState.inventorySlotBonus += levelData.slotBonus;
+      gameState.inventory.expandSlots(levelData.slotBonus);
+    }
+    if (levelData.staminaBonus) {
+      gameState.maxStaminaBonus += levelData.staminaBonus;
     }
 
     audio.playItemPickup();
     gameState.save();
     this.render();
+  }
+
+  private getLevelSummary(project: ResearchProject): string {
+    let totalSlots = 0;
+    let totalStamina = 0;
+    for (let i = 0; i < project.maxLevel; i++) {
+      totalSlots += project.levels[i].slotBonus ?? 0;
+      totalStamina += project.levels[i].staminaBonus ?? 0;
+    }
+    if (totalSlots > 0) return `+${totalSlots} inventory slots max`;
+    if (totalStamina > 0) return `+${totalStamina} max stamina max`;
+    return '';
   }
 
   private render(): void {
@@ -124,19 +154,27 @@ export class ResearchPanel {
 
     for (let i = 0; i < PROJECTS.length; i++) {
       const p = PROJECTS[i];
+      const level = gameState.getResearchLevel(p.id);
       const cursor = i === this.selectionIndex ? '▸' : ' ';
-      const done = gameState.researchedUpgrades.includes(p.id);
-      const status = done ? '[DONE]' : '';
-      const costStr = Object.entries(p.cost)
-        .map(([id, qty]) => {
-          const have = gameState.inventory.count(id);
-          const color = have >= qty ? '#88dd88' : '#dd6666';
-          return `${id.replace(/_/g, ' ')} ${have}/${qty}`;
-        })
-        .join('  ');
-      lines.push(` ${cursor} ${p.label.padEnd(20)} ${status}`);
-      lines.push(`    ${p.description}`);
-      if (!done) lines.push(`    Cost: ${costStr}`);
+      const done = level >= p.maxLevel;
+      const status = done ? '[MAX]' : `[${level}/${p.maxLevel}]`;
+
+      lines.push(` ${cursor} ${p.label.padEnd(22)} ${status}`);
+      lines.push(`    ${this.getLevelSummary(p)}`);
+
+      if (!done) {
+        const levelData = p.levels[level];
+        const costStr = Object.entries(levelData.cost)
+          .map(([id, qty]) => {
+            const have = gameState.inventory.count(id);
+            const color = have >= qty ? '#88dd88' : '#dd6666';
+            return `${itemDisplayName(id)} ${have}/${qty}`;
+          })
+          .join('  ');
+        const bonusStr = levelData.slotBonus ? `+${levelData.slotBonus} slots` :
+          levelData.staminaBonus ? `+${levelData.staminaBonus} stamina` : '';
+        lines.push(`    Cost: ${costStr}  ${bonusStr}`);
+      }
       lines.push('');
     }
 
