@@ -1513,8 +1513,6 @@ export class ExpeditionScene extends Phaser.Scene {
 
     if (tile.durability <= 0) {
       tile.broken = true;
-      this.inventory.addItem(tile.resource, 1);
-      audio.playResourcePickup(tile.resource);
 
       this.spawnStairsOnBreak(tx, ty);
 
@@ -1523,7 +1521,6 @@ export class ExpeditionScene extends Phaser.Scene {
 
       const luckBonus = gameState.getBootEffects().luckBonus;
       if (Math.random() < luckBonus) {
-        this.inventory.addItem(tile.resource, 1);
         this.createItemPopup(tx, ty, tile.resource);
         this.spawnItemSprite(tx, ty, tile.resource);
       }
@@ -1925,7 +1922,6 @@ export class ExpeditionScene extends Phaser.Scene {
       this.createHitEffect(tx, ty);
       if (tile.durability <= 0) {
         tile.broken = true;
-        this.inventory.addItem(tile.resource, 1);
         this.createMiningParticles(tx, ty, tile.resource);
         this.createItemPopup(tx, ty, tile.resource);
         this.spawnItemSprite(tx, ty, tile.resource);
@@ -1936,7 +1932,6 @@ export class ExpeditionScene extends Phaser.Scene {
 
           const luckBonus = gameState.getBootEffects().luckBonus;
           if (Math.random() < luckBonus) {
-            this.inventory.addItem(tile.resource, 1);
             this.createItemPopup(tx, ty, tile.resource);
             this.spawnItemSprite(tx, ty, tile.resource);
           }
@@ -2033,8 +2028,8 @@ export class ExpeditionScene extends Phaser.Scene {
     const screenX = sprite.x - cam.scrollX;
     const screenY = sprite.y - cam.scrollY;
     sprite.setScrollFactor(0).setPosition(screenX, screenY);
-    const targetX = 830;
-    const targetY = 560;
+    const targetX = 100;
+    const targetY = 50;
     this.tweens.add({
       targets: sprite,
       x: targetX,
@@ -2045,6 +2040,10 @@ export class ExpeditionScene extends Phaser.Scene {
       ease: 'Quad.easeIn',
       onComplete: () => {
         audio.playResourcePickup(resource);
+        this.inventory.addItem(resource, 1);
+        const slots = this.inventory.getItems();
+        const used = slots.filter(s => s !== null).length;
+        this.inventoryText.setText(`Slots: ${used}/${slots.length}`);
         sprite.destroy();
         this.time.delayedCall(100, () => this.processItemFlyQueue());
       }

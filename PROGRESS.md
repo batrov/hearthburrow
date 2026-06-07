@@ -252,4 +252,5 @@ Limited recipes | ✅ | 5 discoverable recipes
     - Do not reset the pointer location on hit/miss, should continue moving
 7. Elevator
     - Enable player to go directly to floor 0 / 5 / 10 / 15 / 20 once player descended to that floor once in expedition setup menu
-
+8. Reset game
+    - Add force reset progresses option in the expedition setup, once reset the game will be reloaded fresh
