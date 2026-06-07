@@ -77,6 +77,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private selectedObject!: Phaser.GameObjects.Graphics;
   private facingHighlight!: Phaser.GameObjects.Graphics;
   private staminaBar!: Phaser.GameObjects.Graphics;
+  private inventoryGauge!: Phaser.GameObjects.Graphics;
   private staminaText!: Phaser.GameObjects.Text;
   private inventoryText!: Phaser.GameObjects.Text;
   private depthText!: Phaser.GameObjects.Text;
@@ -613,6 +614,10 @@ export class ExpeditionScene extends Phaser.Scene {
     this.staminaBar.setScrollFactor(0);
     this.staminaBar.setDepth(51);
 
+    this.inventoryGauge = this.add.graphics();
+    this.inventoryGauge.setScrollFactor(0);
+    this.inventoryGauge.setDepth(51);
+
     this.staminaText = this.add.text(20, 14, 'Stamina', {
       fontSize: '12px', fontFamily: 'monospace', color: '#8a7a6a',
     }).setScrollFactor(0).setDepth(51);
@@ -623,9 +628,11 @@ export class ExpeditionScene extends Phaser.Scene {
       fontSize: '12px', fontFamily: 'monospace', color: '#7a8a9a',
     }).setScrollFactor(0).setDepth(51);
 
-    this.inventoryText = this.add.text(20, 56, 'Slots: 0/0', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#6a5a4a',
+    this.inventoryText = this.add.text(20, 60, '', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#8a7a6a',
     }).setScrollFactor(0).setDepth(51);
+
+    this.drawInventoryGauge();
 
     this.add.text(20, 92, '[TAB] Inventory', {
       fontSize: '11px', fontFamily: 'monospace', color: '#4a5a4a',
@@ -765,6 +772,31 @@ export class ExpeditionScene extends Phaser.Scene {
     this.staminaBar.fillRoundedRect(x + 1, y + 1, (w - 2) * ratio, h - 2, 2);
 
     this.staminaText.setText(`${this.stamina.remaining}/${this.stamina.maxStamina}`);
+  }
+
+  private drawInventoryGauge(): void {
+    this.inventoryGauge.clear();
+
+    const x = 20;
+    const y = 48;
+    const w = 200;
+    const h = 8;
+
+    const slots = this.inventory.getItems();
+    const used = slots.filter(s => s !== null).length;
+    const max = slots.length;
+    const ratio = max > 0 ? used / max : 0;
+
+    this.inventoryGauge.fillStyle(0x1a1a2a, 1);
+    this.inventoryGauge.fillRoundedRect(x, y, w, h, 2);
+
+    const color = ratio <= 0.5 ? 0x44cc66 : ratio <= 0.75 ? 0xccaa44 : 0xcc4444;
+    this.inventoryGauge.fillStyle(color, 1);
+    if (used > 0) {
+      this.inventoryGauge.fillRoundedRect(x + 1, y + 1, (w - 2) * Math.min(ratio, 1), h - 2, 1);
+    }
+
+    this.inventoryText.setText(`${used}/${max}`);
   }
 
   private setupInput(): void {
@@ -934,9 +966,7 @@ export class ExpeditionScene extends Phaser.Scene {
     }
 
     this.drawStaminaBar();
-    const slots = this.inventory.getItems();
-    const used = slots.filter(s => s !== null).length;
-    this.inventoryText.setText(`Slots: ${used}/${slots.length}`);
+    this.drawInventoryGauge();
     this.updateDarkness();
   }
 
@@ -1513,6 +1543,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     if (tile.durability <= 0) {
       tile.broken = true;
+      const minedResource = tile.resource;
 
       this.spawnStairsOnBreak(tx, ty);
 
@@ -1521,16 +1552,16 @@ export class ExpeditionScene extends Phaser.Scene {
 
       const luckBonus = gameState.getBootEffects().luckBonus;
       if (Math.random() < luckBonus) {
-        this.createItemPopup(tx, ty, tile.resource);
-        this.spawnItemSprite(tx, ty, tile.resource);
+        this.createItemPopup(tx, ty, minedResource);
+        this.spawnItemSprite(tx, ty, minedResource);
       }
 
       this.createHitEffect(tx, ty);
-      this.createMiningParticles(tx, ty, tile.resource);
-      this.createItemPopup(tx, ty, tile.resource);
-      this.spawnItemSprite(tx, ty, tile.resource);
+      this.createMiningParticles(tx, ty, minedResource);
+      this.createItemPopup(tx, ty, minedResource);
+      this.spawnItemSprite(tx, ty, minedResource);
 
-      this.checkRecipeDiscovery(tile.resource);
+      this.checkRecipeDiscovery(minedResource);
 
       this.terrainSprites.clear();
       this.objectSprites.clear();
@@ -2041,9 +2072,7 @@ export class ExpeditionScene extends Phaser.Scene {
       onComplete: () => {
         audio.playResourcePickup(resource);
         this.inventory.addItem(resource, 1);
-        const slots = this.inventory.getItems();
-        const used = slots.filter(s => s !== null).length;
-        this.inventoryText.setText(`Slots: ${used}/${slots.length}`);
+        this.drawInventoryGauge();
         sprite.destroy();
         this.time.delayedCall(100, () => this.processItemFlyQueue());
       }

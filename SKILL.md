@@ -33,3 +33,4 @@ design change not already described in the GDD:
 - Always ask for any uncertainties
 - Give multiple options for the possible actions on uncertainties
 - Commit git changes on every positive feedbacks
+- Plan for next milestones once every commit
