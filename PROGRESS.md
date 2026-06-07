@@ -90,7 +90,8 @@
 | Item popup on break | ✅ | Floating "+1 Stone" text |
 | Durability cracks visual | ✅ | Dark overlay (<66%), cross cracks (<33%) |
 | Tile required tier | 🗑️ | `MiningSystem.requiredTier()` never called by ExpeditionScene; removed as dead code |
-| Item sprite fly-to-backpack | ✅ | On break, ore sprite pops out at tile position, arcs to bottom-right backpack area over 500ms. Luck bonus drops queue sequentially. Reuses existing `ore_*` textures. |
+| Item sprite fly-to-backpack | ✅ | On break, ore sprite pops out at tile position, arcs to top-left inventory area over 500ms. Luck bonus drops queue sequentially. Inventory counted on arrival. |
+| Per-floor ore caps | ✅ | Enforced via `getFloorCaps(depth)`: bronze/silver/gold counts capped per floor (e.g. floor 0: 1 bronze; floor 5: 5 bronze, 1 silver; floor 15+: 15 bronze, 10 silver, 5 gold). Excess ore demoted to next available tier. |
 
 ---
 
@@ -158,7 +159,7 @@
 | Biome-specific color palettes | ✅ | 5 distinct color schemes for wall/floor/corridor across Forest, Cave, Ice Cave, Lava, Ruins |
 | Player sprite (isometric diamond+body) | ✅ | Diamond base + body rectangle |
 | Item/event sprites | ❌ | Drawn via Graphics primitives |
-| Audio / sound effects / music | 🟡 | Web Audio API synthesis; generated tones for mine_hit, item_pickup, step, stairs, combat hit/miss, victory; per-resource pickup sounds (stone thud, ore clicks, gold ping, crystal sparkle, monster squish); no music or ambient tracks |
+| Audio / sound effects / music | 🟡 | Web Audio API synthesis; generated tones for mine_hit, item_pickup, step, stairs, combat hit/miss, victory; per-resource pickup sounds (stone thud, ore clicks, gold ping, crystal sparkle, monster squish), plate press + puzzle complete; no music or ambient tracks |
 | Broken tile rendering | ✅ | Enemy and boss tiles revert to floor style when broken (no more black voids) |
 | Isometric viewport | ✅ | Dungeon and hub both use 80×40 isometric diamond projection |
 | 3D extruded walls | ✅ | Walls render as 3D blocks with visible height (top + left + right faces), height 12 to keep objects visible behind them |
@@ -231,26 +232,18 @@ Limited recipes | ✅ | 5 discoverable recipes
 
 
 ## Feature Requests
-1. Balancing mining node types each floors
-    - Floor 0: max 1 bronze node
-    - Floor 1: max 2 bronze node
-    - Floor 2: max 3 bronze node
-    - Floor 4: max 4 bronze node
-    - Floor 5: max 5 bronze node, 1 silver node
-    - Floor 6: max 6 bronze node, 2 silver node
-    - Floor 7: max 7 bronze node, 3 silver node
-    - Floor 10: max 10 bronze node, 5 silver node, 1 gold node
-    - Floor 15: max 15 bronze node, 10 silver node, 5 gold node
-2. Additional 2 mode of movements to support mobile: 
+1. Additional 2 mode of movements to support mobile: 
     - Click tiles to move (using pathfinding) 
     - Virtual analog
-3. Make result screen more satisfying by showing the item qty gradually
-6. Combat revamp:
+2. Make result screen more satisfying by showing the item qty gradually
+3. Combat revamp:
     - Show player stamina as gauge during combat
     - Show enemy sprite
     - Randomize hit box location on every successful hit
     - Do not reset the pointer location on hit/miss, should continue moving
-7. Elevator
-    - Enable player to go directly to floor 0 / 5 / 10 / 15 / 20 once player descended to that floor once in expedition setup menu
-8. Reset game
-    - Add force reset progresses option in the expedition setup, once reset the game will be reloaded fresh
+4. Building Rebalancing
+    - Balance material needed to build the buildings, sorted from easier to harder
+        1. Villager house
+        2. Laboratory
+        3. Trading Post
+        4. Farm

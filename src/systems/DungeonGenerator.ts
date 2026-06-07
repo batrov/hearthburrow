@@ -80,7 +80,8 @@ export class DungeonGenerator {
 
     if (isBossFloor) {
       rooms = this.placeBossRoom(cols, rows);
-      this.carveRoom(tiles, rooms[0], depth);
+      const counts = { bronze: 0, silver: 0, gold: 0 };
+      this.carveRoom(tiles, rooms[0], depth, counts);
 
       const centerX = Math.floor(rooms[0].x + rooms[0].w / 2);
       const centerY = Math.floor(rooms[0].y + rooms[0].h / 2);
@@ -103,8 +104,9 @@ export class DungeonGenerator {
     } else {
       rooms = this.placeRooms(cols, rows);
 
+      const counts = { bronze: 0, silver: 0, gold: 0 };
       for (const room of rooms) {
-        this.carveRoom(tiles, room, depth);
+        this.carveRoom(tiles, room, depth, counts);
       }
 
       for (let i = 0; i < rooms.length - 1; i++) {
@@ -222,6 +224,24 @@ export class DungeonGenerator {
     return rooms;
   }
 
+  private getFloorCaps(depth: number): { maxBronze: number; maxSilver: number; maxGold: number } {
+    if (depth <= 0) return { maxBronze: 1, maxSilver: 0, maxGold: 0 };
+    if (depth <= 1) return { maxBronze: 2, maxSilver: 0, maxGold: 0 };
+    if (depth <= 3) return { maxBronze: 3, maxSilver: 0, maxGold: 0 };
+    if (depth <= 4) return { maxBronze: 4, maxSilver: 0, maxGold: 0 };
+    if (depth <= 5) return { maxBronze: 5, maxSilver: 1, maxGold: 0 };
+    if (depth <= 6) return { maxBronze: 6, maxSilver: 2, maxGold: 0 };
+    if (depth <= 7) return { maxBronze: 7, maxSilver: 3, maxGold: 0 };
+    if (depth <= 8) return { maxBronze: 8, maxSilver: 4, maxGold: 0 };
+    if (depth <= 9) return { maxBronze: 9, maxSilver: 5, maxGold: 0 };
+    if (depth <= 10) return { maxBronze: 10, maxSilver: 5, maxGold: 1 };
+    if (depth <= 11) return { maxBronze: 11, maxSilver: 6, maxGold: 1 };
+    if (depth <= 12) return { maxBronze: 12, maxSilver: 7, maxGold: 2 };
+    if (depth <= 13) return { maxBronze: 13, maxSilver: 8, maxGold: 3 };
+    if (depth <= 14) return { maxBronze: 14, maxSilver: 9, maxGold: 4 };
+    return { maxBronze: 15, maxSilver: 10, maxGold: 5 };
+  }
+
   private pickResource(depth: number): { id: string; durability: number } {
     const roll = Math.random();
     const biomeFloor = depth % 5;
@@ -254,7 +274,8 @@ export class DungeonGenerator {
     return { id: 'gold_ore', durability: 5 };
   }
 
-  private carveRoom(tiles: DungeonTile[][], room: RoomRect, depth: number): void {
+  private carveRoom(tiles: DungeonTile[][], room: RoomRect, depth: number, counts: { bronze: number; silver: number; gold: number }): void {
+    const caps = this.getFloorCaps(depth);
     for (let y = room.y; y < room.y + room.h; y++) {
       for (let x = room.x; x < room.x + room.w; x++) {
         if (x === room.x || x === room.x + room.w - 1 || y === room.y || y === room.y + room.h - 1) {
@@ -263,11 +284,21 @@ export class DungeonGenerator {
           const roll = Math.random();
           if (roll < 0.18) {
             const res = this.pickResource(depth);
+            let finalId = res.id;
+            if (finalId === 'gold_ore' && counts.gold >= caps.maxGold) finalId = 'silver_ore';
+            if (finalId === 'silver_ore' && counts.silver >= caps.maxSilver) finalId = 'bronze_ore';
+            if (finalId === 'bronze_ore' && counts.bronze >= caps.maxBronze) finalId = 'stone';
+
+            if (finalId === 'gold_ore') counts.gold++;
+            else if (finalId === 'silver_ore') counts.silver++;
+            else if (finalId === 'bronze_ore') counts.bronze++;
+
+            const durMap: Record<string, number> = { stone: 2, bronze_ore: 3, silver_ore: 4, gold_ore: 5 };
             tiles[y][x] = {
               type: 'mineable',
-              resource: res.id,
-              durability: res.durability,
-              maxDurability: res.durability,
+              resource: finalId,
+              durability: durMap[finalId] ?? 2,
+              maxDurability: durMap[finalId] ?? 2,
               broken: false,
               eventId: '',
             };

@@ -66,6 +66,7 @@ class GameState {
   monsterKills: { slime: number; rat: number; bat: number };
   villagersRescued: number;
   foundRelics: string[];
+  maxDepthReached: number;
   masterVolume: number;
   musicVolume: number;
   sfxVolume: number;
@@ -88,6 +89,7 @@ class GameState {
     this.monsterKills = { slime: 0, rat: 0, bat: 0 };
     this.villagersRescued = 0;
     this.foundRelics = [];
+    this.maxDepthReached = 0;
     this.masterVolume = 1;
     this.musicVolume = 0.4;
     this.sfxVolume = 0.6;
@@ -256,6 +258,40 @@ class GameState {
     return map[id];
   }
 
+  getAvailableElevatorFloors(): number[] {
+    const floors: number[] = [];
+    for (let f = 0; f <= this.maxDepthReached; f += 5) {
+      floors.push(f);
+    }
+    return floors;
+  }
+
+  resetProgress(): void {
+    localStorage.removeItem('hearthburrow_save');
+    localStorage.removeItem('researched_upgrades');
+    this.inventory = new InventorySystem(32);
+    this.crafting = new CraftingSystem();
+    this.restoredBuildings = new Set();
+    this.currentPickaxeTier = 1;
+    this.maxStaminaBonus = 0;
+    this.inventorySlotBonus = 0;
+    this.pickaxeRuns = {};
+    this.equippedRings = { ring1: null, ring2: null };
+    this.equippedBoots = null;
+    this.equippedLantern = null;
+    this.itemRuns = {};
+    this.farmPlanted = 0;
+    this.farmHarvest = 0;
+    this.researchedUpgrades = [];
+    this.monsterKills = { slime: 0, rat: 0, bat: 0 };
+    this.villagersRescued = 0;
+    this.foundRelics = [];
+    this.maxDepthReached = 0;
+    this.masterVolume = 1;
+    this.musicVolume = 0.4;
+    this.sfxVolume = 0.6;
+  }
+
   save(): void {
     const data = {
       inventory: this.inventory.getItems().map(s => s ? { itemId: s.itemId, quantity: s.quantity } : null),
@@ -275,6 +311,7 @@ class GameState {
       monsterKills: { ...this.monsterKills },
       villagersRescued: this.villagersRescued,
       foundRelics: this.foundRelics,
+      maxDepthReached: this.maxDepthReached,
       masterVolume: this.masterVolume,
       musicVolume: this.musicVolume,
       sfxVolume: this.sfxVolume,
@@ -314,6 +351,7 @@ class GameState {
       this.monsterKills = data.monsterKills ?? { slime: 0, rat: 0, bat: 0 };
       this.villagersRescued = data.villagersRescued ?? 0;
       this.foundRelics = data.foundRelics ?? [];
+      this.maxDepthReached = data.maxDepthReached ?? 0;
       this.masterVolume = data.masterVolume ?? 1;
       this.musicVolume = data.musicVolume ?? 0.4;
       this.sfxVolume = data.sfxVolume ?? 0.6;

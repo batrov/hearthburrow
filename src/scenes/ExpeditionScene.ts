@@ -126,6 +126,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private rocksBrokenThisRun: number = 0;
   private itemFlyQueue: Array<{ sprite: Phaser.GameObjects.Image; resource: string }> = [];
   private itemFlyBusy: boolean = false;
+  private startFloor: number = 0;
 
   constructor() {
     super({ key: 'ExpeditionScene' });
@@ -136,9 +137,10 @@ export class ExpeditionScene extends Phaser.Scene {
     this.expeditionState = new ExpeditionState();
   }
 
-  init(data: { debug?: boolean; consumables?: Record<string, number> }): void {
+  init(data: { debug?: boolean; consumables?: Record<string, number>; startFloor?: number }): void {
     this.debugMode = data?.debug ?? false;
     this.loadoutConsumables = data?.consumables ?? {};
+    this.startFloor = data?.startFloor ?? 0;
   }
 
   create(): void {
@@ -162,6 +164,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.inventory.addItem('mining_bomb', 5);
     }
     this.expeditionState.reset();
+    this.expeditionState.depth = this.startFloor;
     this.moveTimer = 0;
     this.terrainSprites = this.add.graphics().setDepth(4);
     this.objectSprites = this.add.graphics().setDepth(6);
@@ -1683,6 +1686,9 @@ export class ExpeditionScene extends Phaser.Scene {
     gameState.consumePickaxeRun();
     gameState.consumeEquipmentRun(gameState.equippedBoots);
     gameState.consumeEquipmentRun(gameState.equippedLantern);
+    if (this.expeditionState.depth > gameState.maxDepthReached) {
+      gameState.maxDepthReached = this.expeditionState.depth;
+    }
     gameState.save();
 
     gameState.lastRunResult = { itemsObtained: obtained, itemsLost: lost, extractType, depth: this.expeditionState.depth };

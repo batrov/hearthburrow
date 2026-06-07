@@ -77,6 +77,10 @@ export class HomelandScene extends Phaser.Scene {
   ];
   private consumableLoadout: Record<string, number> = {};
   private consumableSelectionIdx: number = 0;
+  private elevatorFloorOptions: number[] = [];
+  private selectedElevatorFloor: number = 0;
+  private resetConfirm: boolean = false;
+  private maxTab: number = 8;
   private moveTimer: number = 0;
   private moveDelay: number = 150;
   private isMoving: boolean = false;
@@ -401,10 +405,12 @@ export class HomelandScene extends Phaser.Scene {
         } else {
           if (up) {
             this.gateTab = Math.max(0, this.gateTab - 1);
+            if (this.gateTab === 5) this.consumableSelectionIdx = this.consumableTypes.length - 1;
             this.renderGatePanel();
           }
           if (down) {
-            this.gateTab = Math.min(6, this.gateTab + 1);
+            this.gateTab = Math.min(this.maxTab, this.gateTab + 1);
+            if (this.gateTab === 5) this.consumableSelectionIdx = 0;
             this.renderGatePanel();
           }
           if (left) {
@@ -426,6 +432,12 @@ export class HomelandScene extends Phaser.Scene {
             } else if (this.gateTab === 6) {
               this.debugMode = !this.debugMode;
               this.renderGatePanel();
+            } else if (this.gateTab === 7 && this.elevatorFloorOptions.length > 0) {
+              const idx = this.elevatorFloorOptions.indexOf(this.selectedElevatorFloor);
+              if (idx > 0) {
+                this.selectedElevatorFloor = this.elevatorFloorOptions[idx - 1];
+                this.renderGatePanel();
+              }
             }
           }
           if (right) {
@@ -447,6 +459,12 @@ export class HomelandScene extends Phaser.Scene {
             } else if (this.gateTab === 6) {
               this.debugMode = !this.debugMode;
               this.renderGatePanel();
+            } else if (this.gateTab === 7 && this.elevatorFloorOptions.length > 0) {
+              const idx = this.elevatorFloorOptions.indexOf(this.selectedElevatorFloor);
+              if (idx < this.elevatorFloorOptions.length - 1) {
+                this.selectedElevatorFloor = this.elevatorFloorOptions[idx + 1];
+                this.renderGatePanel();
+              }
             }
           }
         }
@@ -455,7 +473,22 @@ export class HomelandScene extends Phaser.Scene {
         if (this.restoreMode) {
           this.tryRestore(this.restoreBuildingId);
         } else if (this.gateMode) {
-          this.startExpedition();
+          if (this.gateTab === 8) {
+            if (this.resetConfirm) {
+              gameState.resetProgress();
+              this.closePanel();
+              this.cameras.main.fadeOut(400, 0, 0, 0);
+              this.cameras.main.once('camerafadeoutcomplete', () => {
+                this.scene.start('HomelandScene');
+              });
+            } else {
+              this.resetConfirm = true;
+              this.renderGatePanel();
+            }
+          } else {
+            this.resetConfirm = false;
+            this.startExpedition();
+          }
         } else {
           this.closePanel();
         }
@@ -536,9 +569,6 @@ export class HomelandScene extends Phaser.Scene {
     let closestDist = Infinity;
 
     for (const b of HUB_BUILDINGS) {
-      const unlocked = !b.buildingId || isRestored(b.buildingId);
-      if (!unlocked) continue;
-
       const bLeft = b.gx - 1;
       const bRight = b.gx + b.gw;
       const bTop = b.gy - 1;
@@ -563,12 +593,13 @@ export class HomelandScene extends Phaser.Scene {
       this.promptText.setPosition(pp.x, pp.y - 32).setScrollFactor(1);
 
       let action = 'Interact';
+      const restored = !closest.buildingId || isRestored(closest.buildingId);
       if (closest.id === 'gate') action = 'Begin expedition';
       else if (closest.id === 'crafting') action = 'Open crafting menu';
       else if (closest.id === 'storage') action = 'Open storage';
+      else if (!restored) action = `Restore ${closest.label}`;
       else if (closest.id === 'villager_house') action = `Visit (${gameState.villagersRescued} rescued)`;
-      else if (!closest.buildingId || isRestored(closest.buildingId)) action = `Visit ${closest.label.split(' ')[0].toLowerCase()}`;
-      else action = `Restore ${closest.label.split(' ')[0].toLowerCase()}`;
+      else action = `Visit ${closest.label.split(' ')[0].toLowerCase()}`;
 
       this.promptText.setText(`[SPACE] ${action}`);
       this.promptText.setAlpha(1);
@@ -727,6 +758,11 @@ export class HomelandScene extends Phaser.Scene {
     }
     this.consumableSelectionIdx = 0;
 
+    this.elevatorFloorOptions = gameState.getAvailableElevatorFloors();
+    this.selectedElevatorFloor = this.elevatorFloorOptions.includes(0) ? 0 : (this.elevatorFloorOptions[0] ?? 0);
+    this.resetConfirm = false;
+    this.maxTab = 8;
+
     this.gateTab = 0;
 
     this.renderGatePanel();
@@ -787,6 +823,13 @@ export class HomelandScene extends Phaser.Scene {
     const dbgMarker = this.gateTab === 6 ? '▶' : ' ';
     const dbgLine = `  ${dbgMarker} Debug Mode: ${this.debugMode ? 'ON' : 'OFF'}`;
 
+    const elevMarker = this.gateTab === 7 ? '▶' : ' ';
+    const elevFloorStr = this.selectedElevatorFloor === 0 ? '0 (Homeland)' : `${this.selectedElevatorFloor}`;
+    const elevLine = `  ${elevMarker} Start Floor: ${elevFloorStr}`;
+
+    const resetMarker = this.gateTab === 8 ? '▶' : ' ';
+    const resetLine = `  ${resetMarker} Reset Game${this.resetConfirm ? '  [SPACE] confirm' : ''}`;
+
     this.panelBg.clear();
     this.panelBg.fillStyle(0x0a0a1a, 0.85);
     this.panelBg.fillRoundedRect(960 / 2 - 260, 640 / 2 - 240, 520, 480, 10);
@@ -804,11 +847,13 @@ export class HomelandScene extends Phaser.Scene {
       `${bootsLine}\n` +
       `${lanternLine}\n\n` +
       `Consumables:\n${consumableLines}\n\n` +
-      `${dbgLine}${relicLine}\n\n` +
+      `${dbgLine}\n` +
+      `${elevLine}\n` +
+      `${resetLine}${relicLine}\n\n` +
       `   [↑/↓] select slot  [←/→] change\n\n` +
       `Max Stamina: ${maxStamina}\n` +
       `Inventory: ${invSlots} slots\n\n` +
-      `[SPACE] Descend  |  [ESC] cancel`
+      `[SPACE] Enter  |  [ESC] cancel`
     );
     this.panelText.setAlpha(1);
   }
@@ -836,7 +881,11 @@ export class HomelandScene extends Phaser.Scene {
     this.closePanel();
     this.cameras.main.fadeOut(500, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.start('ExpeditionScene', { debug: this.debugMode, consumables });
+      this.scene.start('ExpeditionScene', {
+        debug: this.debugMode,
+        consumables,
+        startFloor: this.selectedElevatorFloor,
+      });
     });
   }
 
