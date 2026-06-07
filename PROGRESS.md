@@ -90,6 +90,7 @@
 | Item popup on break | ✅ | Floating "+1 Stone" text |
 | Durability cracks visual | ✅ | Dark overlay (<66%), cross cracks (<33%) |
 | Tile required tier | 🗑️ | `MiningSystem.requiredTier()` never called by ExpeditionScene; removed as dead code |
+| Item sprite fly-to-backpack | ✅ | On break, ore sprite pops out at tile position, arcs to bottom-right backpack area over 500ms. Luck bonus drops queue sequentially. Reuses existing `ore_*` textures. |
 
 ---
 
@@ -157,7 +158,7 @@
 | Biome-specific color palettes | ✅ | 5 distinct color schemes for wall/floor/corridor across Forest, Cave, Ice Cave, Lava, Ruins |
 | Player sprite (isometric diamond+body) | ✅ | Diamond base + body rectangle |
 | Item/event sprites | ❌ | Drawn via Graphics primitives |
-| Audio / sound effects / music | 🟡 | Web Audio API synthesis; generated tones for mine_hit, item_pickup, step, stairs, combat hit/miss, victory; no music or ambient tracks |
+| Audio / sound effects / music | 🟡 | Web Audio API synthesis; generated tones for mine_hit, item_pickup, step, stairs, combat hit/miss, victory; per-resource pickup sounds (stone thud, ore clicks, gold ping, crystal sparkle, monster squish); no music or ambient tracks |
 | Broken tile rendering | ✅ | Enemy and boss tiles revert to floor style when broken (no more black voids) |
 | Isometric viewport | ✅ | Dungeon and hub both use 80×40 isometric diamond projection |
 | 3D extruded walls | ✅ | Walls render as 3D blocks with visible height (top + left + right faces), height 12 to keep objects visible behind them |
@@ -240,12 +241,15 @@ Limited recipes | ✅ | 5 discoverable recipes
     - Floor 7: max 7 bronze node, 3 silver node
     - Floor 10: max 10 bronze node, 5 silver node, 1 gold node
     - Floor 15: max 15 bronze node, 10 silver node, 5 gold node
-3. Additional 2 mode of movements to support mobile: 
+2. Additional 2 mode of movements to support mobile: 
     - Click tiles to move (using pathfinding) 
     - Virtual analog
-4. Make result screen more satisfying by showing the item qty gradually
-5. Make mining more rewarding
-    - Add item sprites
-    - Spawn dropped item sprites on node breaks
-    - Add animation on item sprites to translate into backpack UI
-        - Play sounds on item moved to backpack, different sounds on each item
+3. Make result screen more satisfying by showing the item qty gradually
+6. Combat revamp:
+    - Show player stamina as gauge during combat
+    - Show enemy sprite
+    - Randomize hit box location on every successful hit
+    - Do not reset the pointer location on hit/miss, should continue moving
+7. Elevator
+    - Enable player to go directly to floor 0 / 5 / 10 / 15 / 20 once player descended to that floor once in expedition setup menu
+

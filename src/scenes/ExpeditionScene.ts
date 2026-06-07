@@ -123,6 +123,8 @@ export class ExpeditionScene extends Phaser.Scene {
   private darknessOverlay!: Phaser.GameObjects.Graphics;
   private playerSprite: Phaser.GameObjects.Image | null = null;
   private rocksBrokenThisRun: number = 0;
+  private itemFlyQueue: Array<{ sprite: Phaser.GameObjects.Image; resource: string }> = [];
+  private itemFlyBusy: boolean = false;
 
   constructor() {
     super({ key: 'ExpeditionScene' });
@@ -1512,7 +1514,7 @@ export class ExpeditionScene extends Phaser.Scene {
     if (tile.durability <= 0) {
       tile.broken = true;
       this.inventory.addItem(tile.resource, 1);
-      audio.playItemPickup(tile.maxDurability);
+      audio.playResourcePickup(tile.resource);
 
       this.spawnStairsOnBreak(tx, ty);
 
@@ -1523,11 +1525,13 @@ export class ExpeditionScene extends Phaser.Scene {
       if (Math.random() < luckBonus) {
         this.inventory.addItem(tile.resource, 1);
         this.createItemPopup(tx, ty, tile.resource);
+        this.spawnItemSprite(tx, ty, tile.resource);
       }
 
       this.createHitEffect(tx, ty);
       this.createMiningParticles(tx, ty, tile.resource);
       this.createItemPopup(tx, ty, tile.resource);
+      this.spawnItemSprite(tx, ty, tile.resource);
 
       this.checkRecipeDiscovery(tile.resource);
 
@@ -1924,6 +1928,7 @@ export class ExpeditionScene extends Phaser.Scene {
         this.inventory.addItem(tile.resource, 1);
         this.createMiningParticles(tx, ty, tile.resource);
         this.createItemPopup(tx, ty, tile.resource);
+        this.spawnItemSprite(tx, ty, tile.resource);
         this.checkRecipeDiscovery(tile.resource);
 
           this.rocksBrokenThisRun++;
@@ -1933,6 +1938,7 @@ export class ExpeditionScene extends Phaser.Scene {
           if (Math.random() < luckBonus) {
             this.inventory.addItem(tile.resource, 1);
             this.createItemPopup(tx, ty, tile.resource);
+            this.spawnItemSprite(tx, ty, tile.resource);
           }
         if (!stairsChecked) {
           this.spawnStairsOnBreak(tx, ty);
@@ -1977,5 +1983,71 @@ export class ExpeditionScene extends Phaser.Scene {
     return this.inventory.getItems().reduce((sum, slot) => {
       return sum + (slot ? slot.quantity : 0);
     }, 0);
+  }
+
+  private spawnItemSprite(tx: number, ty: number, resource: string): void {
+    const textureKey = `ore_${resource}`;
+    if (!this.textures.exists(textureKey)) return;
+    const p = gridToIso(tx, ty);
+    const sprite = this.add.image(p.x, p.y, textureKey)
+      .setDepth(26)
+      .setScale(0);
+    this.tweens.add({
+      targets: sprite,
+      scale: 1.2,
+      duration: 150,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        this.tweens.add({
+          targets: sprite,
+          scale: 1,
+          duration: 80,
+          ease: 'Quad.easeIn',
+          onComplete: () => {
+            this.time.delayedCall(200, () => {
+              this.queueItemFly(sprite, resource);
+            });
+          }
+        });
+      }
+    });
+  }
+
+  private queueItemFly(sprite: Phaser.GameObjects.Image, resource: string): void {
+    this.itemFlyQueue.push({ sprite, resource });
+    if (!this.itemFlyBusy) this.processItemFlyQueue();
+  }
+
+  private processItemFlyQueue(): void {
+    if (this.itemFlyQueue.length === 0) {
+      this.itemFlyBusy = false;
+      return;
+    }
+    this.itemFlyBusy = true;
+    const { sprite, resource } = this.itemFlyQueue.shift()!;
+    this.flySpriteToBackpack(sprite, resource);
+  }
+
+  private flySpriteToBackpack(sprite: Phaser.GameObjects.Image, resource: string): void {
+    const cam = this.cameras.main;
+    const screenX = sprite.x - cam.scrollX;
+    const screenY = sprite.y - cam.scrollY;
+    sprite.setScrollFactor(0).setPosition(screenX, screenY);
+    const targetX = 830;
+    const targetY = 560;
+    this.tweens.add({
+      targets: sprite,
+      x: targetX,
+      y: targetY,
+      scale: 0.35,
+      alpha: 0.7,
+      duration: 500,
+      ease: 'Quad.easeIn',
+      onComplete: () => {
+        audio.playResourcePickup(resource);
+        sprite.destroy();
+        this.time.delayedCall(100, () => this.processItemFlyQueue());
+      }
+    });
   }
 }
