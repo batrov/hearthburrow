@@ -26,6 +26,7 @@ export interface DungeonFloor {
   stairsDownY: number;
   depth: number;
   mineableCount: number;
+  puzzle?: { totalPlates: number; pressedPlates: number; room: { x: number; y: number; w: number; h: number } };
 }
 
 interface RoomRect {
@@ -75,6 +76,7 @@ export class DungeonGenerator {
     let entryY: number;
     let exitX: number;
     let exitY: number;
+    let puzzle: { totalPlates: number; pressedPlates: number; room: { x: number; y: number; w: number; h: number } } | undefined;
 
     if (isBossFloor) {
       rooms = this.placeBossRoom(cols, rows);
@@ -123,7 +125,10 @@ export class DungeonGenerator {
       }
 
       if (depth >= 1 && Math.random() < 0.25) {
-        this.placePuzzle(tiles, rooms);
+        const result = this.placePuzzle(tiles, rooms);
+        if (result) {
+          puzzle = { totalPlates: result.totalPlates, pressedPlates: 0, room: result.room };
+        }
       }
 
       if (depth >= 10 && Math.random() < 0.15) {
@@ -161,6 +166,7 @@ export class DungeonGenerator {
       stairsDownY: exitY,
       depth,
       mineableCount,
+      puzzle,
     };
   }
 
@@ -486,7 +492,7 @@ export class DungeonGenerator {
       || tile.type === 'stairs_down';
   }
 
-  private placePuzzle(tiles: DungeonTile[][], rooms: RoomRect[]): void {
+  private placePuzzle(tiles: DungeonTile[][], rooms: RoomRect[]): { totalPlates: number; room: RoomRect } | null {
     const room = rooms[Math.floor(Math.random() * rooms.length)];
 
     const floorTiles: { x: number; y: number }[] = [];
@@ -497,35 +503,27 @@ export class DungeonGenerator {
         }
       }
     }
-    if (floorTiles.length < 4) return;
+    if (floorTiles.length < 8) return null;
 
-    const plateIdx = Math.floor(Math.random() * floorTiles.length);
-    const plate = floorTiles[plateIdx];
+    const numPlates = Math.min(5, Math.max(3, Math.floor(floorTiles.length / 4)));
+    const plates: { x: number; y: number }[] = [];
+    const shuffled = [...floorTiles].sort(() => Math.random() - 0.5);
 
-    const candidates = floorTiles.filter(t =>
-      Math.abs(t.x - plate.x) + Math.abs(t.y - plate.y) >= 3
-    );
-    if (candidates.length === 0) return;
-    const blocked = candidates[Math.floor(Math.random() * candidates.length)];
-
-    const dirs: [number, number][] = [[0, -1], [0, 1], [-1, 0], [1, 0]];
-    const shuffled = dirs.sort(() => Math.random() - 0.5);
-    let placed = false;
-    for (const [bdx, bdy] of shuffled) {
-      const wx = blocked.x + bdx;
-      const wy = blocked.y + bdy;
-      if (wy >= room.y && wy <= room.y + room.h - 1 &&
-          wx >= room.x && wx <= room.x + room.w - 1 &&
-          tiles[wy][wx].type === 'floor') {
-        tiles[wy][wx] = this.makeTile('blocked');
-        tiles[blocked.y][blocked.x] = { ...this.makeTile('floor'), pressurePlateTarget: { x: wx, y: wy } };
-        placed = true;
-        break;
+    for (const tile of shuffled) {
+      if (plates.length >= numPlates) break;
+      const tooClose = plates.some(p => Math.abs(p.x - tile.x) + Math.abs(p.y - tile.y) < 3);
+      if (!tooClose) {
+        plates.push(tile);
       }
     }
-    if (!placed) return;
 
-    tiles[plate.y][plate.x] = this.makeTile('pressure_plate');
+    if (plates.length < 2) return null;
+
+    for (const plate of plates) {
+      tiles[plate.y][plate.x] = this.makeTile('pressure_plate');
+    }
+
+    return { totalPlates: plates.length, room };
   }
 
   private inBounds(tiles: DungeonTile[][], x: number, y: number): boolean {

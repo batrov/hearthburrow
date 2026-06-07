@@ -633,9 +633,9 @@ Farms generate carrots used for trading.
 
 # Puzzle Types
 
-| Puzzle          | Description             |
-| --------------- | ----------------------- |
-| Pressure Plates | Environmental unlocking |
+| Puzzle          | Description                                                                 |
+| --------------- | --------------------------------------------------------------------------- |
+| Pressure Plates | Multi-plate rooms (3–5 plates). All plates must be stepped on to spawn the exit stairs in the room. Mining does not generate stairs on puzzle floors. |
 | Pushable Rocks  | Navigation puzzles      |
 
 ---

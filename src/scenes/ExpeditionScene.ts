@@ -21,6 +21,11 @@ interface Palette {
   corridor: number;
 }
 
+function getWallTextureKey(depth: number): string {
+  const biomes = ['FOREST', 'CAVE', 'ICE', 'LAVA', 'RUINS'];
+  return `wall_${biomes[depth % 5]}`;
+}
+
 function getDepthPalette(depth: number): Palette {
   if (depth <= 4) {
     return {
@@ -116,6 +121,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private interactPrompt!: Phaser.GameObjects.Text;
   private interactTarget: { x: number; y: number; id: string } | null = null;
   private darknessOverlay!: Phaser.GameObjects.Graphics;
+  private playerSprite: Phaser.GameObjects.Image | null = null;
   private rocksBrokenThisRun: number = 0;
 
   constructor() {
@@ -196,7 +202,8 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, true, 0.5, 0.5);
     this.cameras.main.setBounds(xMin, yMin, worldWidth(floor.cols, floor.rows), worldHeight(floor.cols, floor.rows));
 
-    this.drawMinimap();
+    this.expeditionState.initExplored(floor.cols, floor.rows);
+    this.revealSurroundings(8);
     this.updateDarkness();
   }
 
@@ -266,6 +273,8 @@ export class ExpeditionScene extends Phaser.Scene {
     const floor = this.currentFloor;
     if (!floor) return;
     const pal = getDepthPalette(floor.depth);
+    const wallKey = getWallTextureKey(floor.depth);
+    const hasWallTexture = this.textures.exists(wallKey);
 
     const tiles: { x: number; y: number }[] = [];
     for (let y = 0; y < floor.rows; y++) {
@@ -542,29 +551,51 @@ export class ExpeditionScene extends Phaser.Scene {
 
   private createPlayer(): void {
     const p = gridToIso(this.playerX, this.playerY);
-    const container = this.add.container(p.x, p.y);
+    const hasImage = this.textures.exists('player_bottom_left');
+    if (hasImage) {
+      this.playerSprite = this.add.image(p.x, p.y, 'player_bottom_left').setDepth(8);
+      this.player = this.playerSprite as unknown as Phaser.GameObjects.Container;
+      this.updatePlayerSprite();
+    } else {
+      const container = this.add.container(p.x, p.y);
+      const base = this.add.graphics();
+      base.fillStyle(0x6699cc, 1);
+      base.beginPath();
+      base.moveTo(0, -10);
+      base.lineTo(14, 0);
+      base.lineTo(0, 10);
+      base.lineTo(-14, 0);
+      base.closePath();
+      base.fill();
+      container.add(base);
+      const body = this.add.rectangle(0, -20, 12, 20, 0x88ccff);
+      container.add(body);
+      container.setDepth(8);
+      this.player = container;
+    }
+  }
 
-    const base = this.add.graphics();
-    base.fillStyle(0x6699cc, 1);
-    base.beginPath();
-    base.moveTo(0, -10);
-    base.lineTo(14, 0);
-    base.lineTo(0, 10);
-    base.lineTo(-14, 0);
-    base.closePath();
-    base.fill();
-    container.add(base);
-
-    const body = this.add.rectangle(0, -20, 12, 20, 0x88ccff);
-    container.add(body);
-
-    container.setDepth(8);
-    this.player = container;
+  private updatePlayerSprite(): void {
+    if (!this.playerSprite) return;
+    const isUpFacing = this.facingY < 0 || (this.facingY === 0 && this.facingX < 0);
+    const key = isUpFacing ? 'player_top_right' : 'player_bottom_left';
+    const flipX = this.facingX !== 0 && this.facingY === 0;
+    if (this.textures.exists(key)) {
+      this.playerSprite.setTexture(key);
+      this.playerSprite.setFlipX(flipX);
+    }
   }
 
   private repositionPlayer(): void {
     const p = gridToIso(this.playerX, this.playerY);
     this.player.setPosition(p.x, p.y);
+  }
+
+  private revealSurroundings(radius: number = 10): void {
+    const floor = this.currentFloor;
+    if (!floor) return;
+    this.expeditionState.reveal(this.playerX, this.playerY, radius);
+    this.drawMinimap();
   }
 
   private createHUD(): void {
@@ -608,6 +639,7 @@ export class ExpeditionScene extends Phaser.Scene {
       1: 'Common Pickaxe',
       2: 'Bronze Pickaxe',
       3: 'Silver Pickaxe',
+      4: 'Gold Pickaxe',
     };
     const pName = pickaxeNames[gameState.currentPickaxeTier] ?? `Tier ${gameState.currentPickaxeTier}`;
 
@@ -664,6 +696,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     for (let y = 0; y < floor.rows; y++) {
       for (let x = 0; x < floor.cols; x++) {
+        if (!this.expeditionState.explored[y]?.[x]) continue;
         const tile = floor.tiles[y][x];
         const px = mapX + x * cell;
         const py = mapY + y * cell;
@@ -891,6 +924,7 @@ export class ExpeditionScene extends Phaser.Scene {
       if (dx !== 0 || dy !== 0) {
         this.facingX = dx;
         this.facingY = dy;
+        this.updatePlayerSprite();
         this.tryMove(dx, dy);
         this.updateFacingHighlight();
         this.moveTimer = 0;
@@ -1272,6 +1306,8 @@ export class ExpeditionScene extends Phaser.Scene {
     this.playerX = floor.entryX;
     this.playerY = floor.entryY;
     this.rebuildFloor();
+    this.expeditionState.initExplored(floor.cols, floor.rows);
+    this.revealSurroundings(8);
   }
 
   private handleAscend(): void {
@@ -1285,6 +1321,8 @@ export class ExpeditionScene extends Phaser.Scene {
       this.playerX = floor.stairsDownX;
       this.playerY = floor.stairsDownY;
       this.rebuildFloor();
+      this.expeditionState.initExplored(floor.cols, floor.rows);
+      this.revealSurroundings(8);
     }
   }
 
@@ -1410,21 +1448,47 @@ export class ExpeditionScene extends Phaser.Scene {
     this.activatePressurePlate(nx, ny);
 
     audio.playStep();
+    this.revealSurroundings();
   }
 
   private activatePressurePlate(x: number, y: number): void {
     const floor = this.currentFloor;
     if (!floor) return;
     const tile = floor.tiles[y][x];
-    if (tile.type !== 'pressure_plate') return;
-    if (tile.broken) return;
-    const target = tile.pressurePlateTarget;
-    if (!target) return;
-    const targetTile = floor.tiles[target.y][target.x];
-    if (targetTile.type !== 'blocked') return;
-    targetTile.type = 'floor';
+    if (tile.type !== 'pressure_plate' || tile.broken) return;
     tile.broken = true;
+    audio.playPlatePress();
+    if (floor.puzzle) {
+      floor.puzzle.pressedPlates++;
+      if (floor.puzzle.pressedPlates >= floor.puzzle.totalPlates) {
+        audio.playPuzzleComplete();
+        this.completePuzzle(floor);
+      }
+    }
     this.drawFloor();
+  }
+
+  private completePuzzle(floor: DungeonFloor): void {
+    const room = floor.puzzle!.room;
+    const candidates: { x: number; y: number }[] = [];
+    for (let y = room.y + 1; y < room.y + room.h - 1; y++) {
+      for (let x = room.x + 1; x < room.x + room.w - 1; x++) {
+        if (floor.tiles[y][x].type === 'floor') {
+          candidates.push({ x, y });
+        }
+      }
+    }
+    if (candidates.length === 0) return;
+    const pos = candidates[Math.floor(Math.random() * candidates.length)];
+    floor.tiles[pos.y][pos.x].type = 'stairs_down';
+    floor.tiles[pos.y][pos.x].resource = '';
+    for (let y = room.y; y < room.y + room.h; y++) {
+      for (let x = room.x; x < room.x + room.w; x++) {
+        if (floor.tiles[y][x].type === 'blocked') {
+          floor.tiles[y][x].type = 'floor';
+        }
+      }
+    }
   }
 
   private tryMine(): void {
@@ -1609,7 +1673,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const w = cam.width;
     const h = cam.height;
     const pad = 2000;
-    this.darknessOverlay.fillStyle(0x000000, 0.85);
+    this.darknessOverlay.fillStyle(0x000000, 1);
     this.darknessOverlay.fillRect(sx - pad, sy - pad, w + pad * 2, cy - r - sy + pad);
     this.darknessOverlay.fillRect(sx - pad, cy + r, w + pad * 2, sy + h + pad - (cy + r));
     this.darknessOverlay.fillRect(sx - pad, cy - r, cx - r - sx + pad, 2 * r);
@@ -1821,6 +1885,7 @@ export class ExpeditionScene extends Phaser.Scene {
     if (this.expeditionState.depth % 5 === 4) return;
     const floor = this.currentFloor;
     if (!floor) return;
+    if (floor.puzzle) return;
     const stairMult = gameState.getBootEffects().stairMultiplier;
     const chance = Math.min(0.5, floor.mineableCount * 0.003 * stairMult);
     if (Math.random() < chance) {

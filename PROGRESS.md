@@ -113,7 +113,7 @@
 | Homeland restoration | ✅ | Building restoration with material costs |
 | Recipe discovery | ✅ | 5 discoverable recipes via events/milestones (bronze pick, iron pick, stamina potion, teleport scroll, mining bomb) |
 | Rescued villagers | 🟡 | Event exists (+2 max stamina) but no persistent tracking system |
-| Relics | 🗑️ | Data file exists on disk but no gameplay integration |
+| Relics | ✅ | 3 types (stamina +20, inventory +4, luck +1). Found in relic chambers (depth ≥10, 15% chance per floor). Each found once permanently. |
 | Building unlocks | ✅ | All 4 buildings restorable (housing, trading_post, laboratory, farm); each unlocks distinct gameplay |
 | Permanent stat upgrades | ✅ | Max stamina (+20 from housing, +10 per research) and inventory slots (+8 from storage, +2 per research) |
 | Temporary run buffs | ✅ | Ring effects applied per run; consumables provide on-demand effects |
@@ -143,7 +143,7 @@
 | 5 event interactions | ✅ | Treasure, Fountain, Trader, Villager, Goblin |
 | Event tiles require proximity + SPACE | ✅ | Checks 5 tiles around player |
 | Event panel with W/S/SPACE navigation | ✅ | Navigate choices, confirm with SPACE |
-| Pressure plate puzzle | ✅ | `pressure_plate` tile activates paired `blocked` tile → converts to `floor` on step; 25% chance per floor (depth 1+) |
+| Pressure plate puzzle | ✅ | Multi-plate rooms (3–5 plates). All plates must be stepped on to spawn `stairs_down` in puzzle room. Mining does not spawn stairs on puzzle floors. Placed via `placePuzzle()` with min Manhattan distance 3. |
 | Pushable rocks | ❌ | Not implemented |
 
 ---
@@ -162,6 +162,11 @@
 | Isometric viewport | ✅ | Dungeon and hub both use 80×40 isometric diamond projection |
 | 3D extruded walls | ✅ | Walls render as 3D blocks with visible height (top + left + right faces), height 12 to keep objects visible behind them |
 | Depth sorting (painter's algorithm) | ✅ | Tiles sorted by `x + y` (back-to-front) for correct overlap |
+| Wall sprites (per-tile depth) | ✅ | Walls converted from single Graphics to individual `Image` sprites at depth `6 + (x+y)*0.001`, sharing painter's algorithm range with object sprites |
+| Player directional sprites | ✅ | Player changed from Container to Image; `player_top_right`/`player_bottom_left` textures; flipX for horizontal direction |
+| Sprite system (PNG + fallback) | ✅ | 28+ placeholder PNGs in `public/assets/sprites/`; BootScene loads PNGs first; `TextureGenerator` provides runtime fallback for missing files |
+| Real loading progress bar | ✅ | Changed from fake 1200ms tween to real `this.load.on('progress')` event + 3s fallback timeout |
+| Minimap fog of war | ✅ | `expored` boolean grid on ExpeditionState; 10-tile reveal radius around player per move; entry room revealed immediately (radius 8); unexplored tiles hidden on minimap; player dot always visible; resets per floor |
 
 ---
 
@@ -172,15 +177,15 @@
 | Phaser 3 framework | ✅ | v3.80.1 |
 | TypeScript | ✅ | Strict mode |
 | Vite build | ✅ | Dev server + production build |
-| Data-driven JSON files | 🟡 | 3 files used (`items.json`, `recipes.json`, `buildings.json`); `rooms.json`, `relics.json`, `events.json` exist on disk but are not imported |
-| Procedural generation | ✅ | Room carving, corridor stitching, event placement, biome-scaled ore distribution |
+| Data-driven JSON files | 🟡 | 3 files used (`items.json`, `recipes.json`, `buildings.json`); `rooms.json`, `events.json` exist on disk but are not imported |
+| Procedural generation | ✅ | Room carving, corridor stitching, event placement, biome-scaled ore distribution, relic chambers, puzzle rooms |
 | Seed-based generation | ❌ | Not implemented (no seed, no replays) |
 | Scene management | ✅ | Boot → Homeland → Expedition → Recap |
 | Singleton game state | ✅ | `GameState` persists across scenes |
 | Local storage persistence | ✅ | Auto-save on expedition finish, crafting, building restore; load on boot |
 | Isometric projection system | ✅ | `IsoUtils.ts` with `gridToIso()`, diamond/extruded drawing, world bounds |
-| Homeland grid-based movement | ✅ | Turn-based grid movement (150ms) matching dungeon |
-| No image assets | ✅ | Entire game rendered with Phaser Graphics; no `.png`, `.svg`, or sprite assets |
+| Homelad grid-based movement | ✅ | Turn-based grid movement (150ms) matching dungeon |
+| PNG sprite assets | ✅ | 28+ placeholder PNGs loaded in BootScene with runtime fallbacks |
 
 ---
 
@@ -207,7 +212,7 @@ Limited recipes | ✅ | 5 discoverable recipes
 
 ## Known Bugs & Issues
 
-(none)
+1. NPC interactions is not working
 
 ## Resolved Bugs
 
@@ -220,3 +225,27 @@ Limited recipes | ✅ | 5 discoverable recipes
 7. **Corridor dead-end (post-carve entry widening)** — The L-shaped corridor could terminate at a room's corner wall tile where both adjacent cardinal tiles inside the room were still wall perimeter tiles, creating a dead-end. Fixed by adding `fixCorridorEntries()`: after all corridors are carved (including vault/puzzle corridors), scan every corridor tile; for each adjacent wall tile that separates the corridor from a walkable tile (floor/mineable/corridor/stairs), convert that wall to floor — effectively punching a doorway through thin room-perimeter walls.
 8. **Pressure plate puzzle implemented** — New `pressure_plate` and `blocked` tile types. 25% chance per floor (depth 1+) to place a puzzle room: a pressure plate linked to a blocked barrier. Stepping on the plate converts the paired blocked tile to floor. Adds visual indicators (green circle on plate, stone slab with X on blocker).
 9. **Basic audio system added** — `AudioSystem.ts` using Web Audio API to generate sounds programmatically (no asset files). Sounds: mine_hit (percussive square wave), item_pickup (ascending sine chime), stairs (sine sweep up/down), step (noise burst), combat hit/miss, victory (ascending arpeggio). Initialized in BootScene, wired into ExpeditionScene (mining, movement, stairs, events, combat) and HomelandScene (movement).
+10. **Player sprite direction fixed** — `updatePlayerSprite()` now uses `isUpFacing = facingY < 0 || (facingY === 0 && facingX < 0)` to correctly map LEFT direction to `player_top_right` flipped. Facing change triggers sprite update immediately.
+11. **Multi-plate puzzle redesign** — Replaced single-plate+blocker puzzle with N-plate (3–5) rooms. All plates must be stepped on to spawn `stairs_down` in the puzzle room. Mining does not spawn stairs on puzzle floors. Placed via `placePuzzle()` with min Manhattan distance 3 between plates.
+
+
+## Feature Requests
+1. Balancing mining node types each floors
+    - Floor 0: max 1 bronze node
+    - Floor 1: max 2 bronze node
+    - Floor 2: max 3 bronze node
+    - Floor 4: max 4 bronze node
+    - Floor 5: max 5 bronze node, 1 silver node
+    - Floor 6: max 6 bronze node, 2 silver node
+    - Floor 7: max 7 bronze node, 3 silver node
+    - Floor 10: max 10 bronze node, 5 silver node, 1 gold node
+    - Floor 15: max 15 bronze node, 10 silver node, 5 gold node
+3. Additional 2 mode of movements to support mobile: 
+    - Click tiles to move (using pathfinding) 
+    - Virtual analog
+4. Make result screen more satisfying by showing the item qty gradually
+5. Make mining more rewarding
+    - Add item sprites
+    - Spawn dropped item sprites on node breaks
+    - Add animation on item sprites to translate into backpack UI
+        - Play sounds on item moved to backpack, different sounds on each item

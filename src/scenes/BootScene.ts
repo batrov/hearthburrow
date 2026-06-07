@@ -89,33 +89,31 @@ export class BootScene extends Phaser.Scene {
 
     this.loadingBar = this.add.graphics();
 
-    this.progressText = this.add.text(cx, barY + barHeight + 12, '0%', {
+    this.progressText = this.add.text(cx, barY + barHeight + 12, 'Loading...', {
       fontSize: '14px',
       fontFamily: 'monospace',
       color: '#6a5a4a',
     }).setOrigin(0.5);
 
-    this.tweens.addCounter({
-      from: 0,
-      to: 100,
-      duration: 1200,
-      ease: 'Sine.easeInOut',
-      onUpdate: (tween) => {
-        const val = Math.floor(tween.getValue() ?? 0);
-        this.loadingBar.clear();
-        this.loadingBar.fillStyle(0xe8d5b7, 1);
-        this.loadingBar.fillRoundedRect(barX + 2, barY + 2, (barWidth - 4) * (val / 100), barHeight - 4, 3);
-        this.progressText.setText(`${val}%`);
-      },
-      onComplete: () => {
-        this.progressText.setText('ready!');
-        this.time.delayedCall(300, () => {
-          this.cameras.main.fadeOut(400, 0, 0, 0);
-          this.cameras.main.once('camerafadeoutcomplete', () => {
-            this.scene.start('HomelandScene');
-          });
+    const startGame = () => {
+      this.progressText.setText('Ready!');
+      this.time.delayedCall(300, () => {
+        this.cameras.main.fadeOut(400, 0, 0, 0);
+        this.cameras.main.once('camerafadeoutcomplete', () => {
+          this.scene.start('HomelandScene');
         });
-      },
+      });
+    };
+
+    this.load.on('progress', (progress: number) => {
+      const pct = Math.floor(progress * 100);
+      this.loadingBar.clear();
+      this.loadingBar.fillStyle(0xe8d5b7, 1);
+      this.loadingBar.fillRoundedRect(barX + 2, barY + 2, (barWidth - 4) * progress, barHeight - 4, 3);
+      this.progressText.setText(`${pct}%`);
     });
+
+    this.load.once('complete', startGame);
+    this.time.delayedCall(3000, startGame);
   }
 }
