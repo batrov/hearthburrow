@@ -123,8 +123,20 @@ export class ExpeditionRecapScene extends Phaser.Scene {
         fontSize: '13px', fontFamily: 'monospace', color: nameColor,
       });
 
-      this.add.text(x + labelW, y, `x${item.quantity}`, {
+      const qtyText = this.add.text(x + labelW, y, 'x0', {
         fontSize: '13px', fontFamily: 'monospace', color: qtyColor,
+      });
+
+      const data = { count: 0 };
+      this.tweens.add({
+        targets: data,
+        count: item.quantity,
+        duration: 500,
+        delay: 80 * i,
+        ease: 'Quad.easeOut',
+        onUpdate: () => {
+          qtyText.setText(`x${Math.round(data.count)}`);
+        },
       });
     }
 

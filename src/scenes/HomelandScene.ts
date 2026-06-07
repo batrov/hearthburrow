@@ -89,6 +89,7 @@ export class HomelandScene extends Phaser.Scene {
   private tradePanel!: TradePanel;
   private researchPanel!: ResearchPanel;
   private farmPanel!: FarmPanel;
+  private buildingsContainer!: Phaser.GameObjects.Container;
 
   constructor() {
     super({ key: 'HomelandScene' });
@@ -101,6 +102,7 @@ export class HomelandScene extends Phaser.Scene {
     this.currentBuilding = null;
     this.moveTimer = 0;
 
+    this.buildingsContainer = this.add.container(0, 0).setDepth(5);
     this.drawHubTerrain();
     this.drawHubBuildings();
     this.drawHubGate();
@@ -137,6 +139,7 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private drawHubBuildings(): void {
+    this.buildingsContainer.removeAll(true);
     const buildingColors: Record<string, [number, number, number]> = {
       trading_post: [0x8a6a3a, 0x6a4a2a, 0x5a3a1a],
       crafting: [0x6a7a8a, 0x4a5a6a, 0x3a4a5a],
@@ -157,14 +160,16 @@ export class HomelandScene extends Phaser.Scene {
         for (let dx = 0; dx < b.gw; dx++) {
           const p = gridToIso(b.gx + dx, b.gy + dy);
           const g = this.add.graphics().setAlpha(alpha);
+          this.buildingsContainer.add(g);
           drawExtrudedTile(g, p.x, p.y, top, left, right, 24);
         }
       }
 
       const c = gridToIso(b.gx + b.gw / 2, b.gy + b.gh / 2);
-      this.add.text(c.x, c.y - 48, b.label, {
+      const label = this.add.text(c.x, c.y - 48, b.label, {
         fontSize: '11px', fontFamily: 'monospace', color: ul ? '#e8d5b7' : '#6a5a4a',
       }).setOrigin(0.5).setAlpha(alpha);
+      this.buildingsContainer.add(label);
     }
 
     const rescued = gameState.villagersRescued;
@@ -714,6 +719,8 @@ export class HomelandScene extends Phaser.Scene {
     this.closePanel();
 
     if (success) {
+      this.drawHubBuildings();
+
       const name = building?.name ?? buildingId.replace(/_/g, ' ');
       const popup = this.add.text(960 / 2, 640 / 2, `${name} Restored!`, {
         fontSize: '18px', fontFamily: 'monospace', color: '#44cc66', fontStyle: 'bold', align: 'center',
@@ -727,7 +734,6 @@ export class HomelandScene extends Phaser.Scene {
         ease: 'Quad.easeOut',
         onComplete: () => {
           popup.destroy();
-          this.scene.restart();
         },
       });
     }

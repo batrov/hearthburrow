@@ -67,6 +67,7 @@ class GameState {
   villagersRescued: number;
   foundRelics: string[];
   maxDepthReached: number;
+  exhaustionCount: number;
   masterVolume: number;
   musicVolume: number;
   sfxVolume: number;
@@ -90,6 +91,7 @@ class GameState {
     this.villagersRescued = 0;
     this.foundRelics = [];
     this.maxDepthReached = 0;
+    this.exhaustionCount = 0;
     this.masterVolume = 1;
     this.musicVolume = 0.4;
     this.sfxVolume = 0.6;
@@ -287,6 +289,7 @@ class GameState {
     this.villagersRescued = 0;
     this.foundRelics = [];
     this.maxDepthReached = 0;
+    this.exhaustionCount = 0;
     this.masterVolume = 1;
     this.musicVolume = 0.4;
     this.sfxVolume = 0.6;
@@ -312,6 +315,7 @@ class GameState {
       villagersRescued: this.villagersRescued,
       foundRelics: this.foundRelics,
       maxDepthReached: this.maxDepthReached,
+      exhaustionCount: this.exhaustionCount,
       masterVolume: this.masterVolume,
       musicVolume: this.musicVolume,
       sfxVolume: this.sfxVolume,
@@ -352,6 +356,7 @@ class GameState {
       this.villagersRescued = data.villagersRescued ?? 0;
       this.foundRelics = data.foundRelics ?? [];
       this.maxDepthReached = data.maxDepthReached ?? 0;
+      this.exhaustionCount = data.exhaustionCount ?? 0;
       this.masterVolume = data.masterVolume ?? 1;
       this.musicVolume = data.musicVolume ?? 0.4;
       this.sfxVolume = data.sfxVolume ?? 0.6;

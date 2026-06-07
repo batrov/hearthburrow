@@ -468,6 +468,14 @@ export class ExpeditionScene extends Phaser.Scene {
         g.fillStyle(0x88ccff, 0.7);
         g.fillRect(cx - 2, cy - 2, 4, 4);
         break;
+      case 'event_relic':
+        g.fillStyle(0xaa44cc, 0.8);
+        g.fillCircle(cx, cy - 4, 12);
+        g.fillStyle(0xdd66ff, 0.6);
+        g.fillCircle(cx, cy - 4, 8);
+        g.fillStyle(0xffffff, 0.4);
+        g.fillCircle(cx - 2, cy - 6, 3);
+        break;
     }
   }
 
@@ -1058,10 +1066,10 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private buildEventConfig(id: string): EventConfig | null {
-    const stone = () => gameState.inventory.count('stone');
-    const removeStone = (n: number) => gameState.inventory.removeItem('stone', n);
+    const stone = () => this.inventory.count('stone');
+    const removeStone = (n: number) => this.inventory.removeItem('stone', n);
     const addItem = (id: string, qty: number) => {
-      gameState.inventory.addItem(id, qty);
+      this.inventory.addItem(id, qty);
       audio.playItemPickup();
     };
 
@@ -1182,7 +1190,7 @@ export class ExpeditionScene extends Phaser.Scene {
       }
 
       case 'midrun_shop': {
-        const hasCarrots = (n: number) => gameState.inventory.count('carrot') >= n;
+        const hasCarrots = (n: number) => this.inventory.count('carrot') >= n;
         return {
           title: 'Wandering Shop',
           description: 'A merchant has set up shop mid-dungeon. What catches your eye?',
@@ -1272,9 +1280,9 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private buyAtShop(itemId: string, cost: number): void {
-    if (gameState.inventory.count('carrot') >= cost) {
-      gameState.inventory.removeItem('carrot', cost);
-      gameState.inventory.addItem(itemId, 1);
+    if (this.inventory.count('carrot') >= cost) {
+      this.inventory.removeItem('carrot', cost);
+      this.inventory.addItem(itemId, 1);
     }
   }
 
@@ -1692,6 +1700,14 @@ export class ExpeditionScene extends Phaser.Scene {
     gameState.save();
 
     gameState.lastRunResult = { itemsObtained: obtained, itemsLost: lost, extractType, depth: this.expeditionState.depth };
+
+    if (extractType === 'emergency') {
+      gameState.exhaustionCount++;
+      if (gameState.exhaustionCount >= 3 && !gameState.crafting.isDiscovered('teleport_scroll')) {
+        gameState.crafting.discover('teleport_scroll');
+        this.showRecipeDiscovery('Teleport Scroll');
+      }
+    }
 
     this.time.delayedCall(800, () => {
       this.scene.start('ExpeditionRecapScene');

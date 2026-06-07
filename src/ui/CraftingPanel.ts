@@ -170,7 +170,7 @@ export class CraftingPanel {
       960 / 2, 640 / 2,
       `Crafted: ${itemDisplayName(itemId)}`,
       { fontSize: '20px', fontFamily: 'monospace', color: '#44cc66', fontStyle: 'bold' }
-    ).setOrigin(0.5).setDepth(250);
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(250);
 
     this.scene.tweens.add({
       targets: popup,
@@ -188,7 +188,7 @@ export class CraftingPanel {
       960 / 2, 640 / 2,
       'No craftable recipe — need more materials!',
       { fontSize: '16px', fontFamily: 'monospace', color: '#cc6644' }
-    ).setOrigin(0.5).setDepth(250);
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(250);
 
     this.scene.tweens.add({
       targets: popup,

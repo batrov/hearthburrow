@@ -215,6 +215,7 @@ Limited recipes | ✅ | 5 discoverable recipes
 ## Known Bugs & Issues
 
 1. NPC interactions is not working
+2. UI Bug: max inventory capacity can show more than max cap when it is overcapacity
 
 ## Resolved Bugs
 
@@ -249,3 +250,19 @@ Limited recipes | ✅ | 5 discoverable recipes
         4. Farm
 5. Unlocking recipe rebalancing
     - Teleport scroll recipe unlocked after 3 times getting exhausted OR emergency exit
+6. Revamp laboratory:
+    - Can upgrade backpack max slots, material needed scales
+        - lv 1: 100 stones, + 2 slots
+        - lv 2: 200 stones, 50 bronze, + 3 slots
+        - lv 3: 300 stones, 100 bronze, 50 silver, + 4 slots
+        - lv 4: 400 stones, 150 bronze, 100 silver, + 5 slots
+        - lv 5: 500 stones, 200 bronze, 150 silver, 50 gold, + 6 slots
+    - Upgrade max stamina using materials
+        - lv 1: 1 crystal, + 5 stamina
+        - lv 2: 3 crystal, + 5 stamina
+        - lv 3: 5 crystal, + 5 stamina
+        - lv 4: 7 crystal, + 5 stamina
+        - lv 5: 10 crystal, + 5 stamina
+7. Crafting improvement
+    - Add selected item descriptions, render info UI in the bottom of the screen, should fit for 1 line of text
+    - For undiscovered recipe, the info UI should show how to obtain them
