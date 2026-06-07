@@ -131,7 +131,7 @@ export class ExpeditionRecapScene extends Phaser.Scene {
       this.tweens.add({
         targets: data,
         count: item.quantity,
-        duration: 500,
+        duration: 2000,
         delay: 80 * i,
         ease: 'Quad.easeOut',
         onUpdate: () => {

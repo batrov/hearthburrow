@@ -25,6 +25,7 @@ export interface DungeonFloor {
   stairsDownX: number;
   stairsDownY: number;
   depth: number;
+  initialMineableCount: number;
   mineableCount: number;
   puzzle?: { totalPlates: number; pressedPlates: number; room: { x: number; y: number; w: number; h: number } };
 }
@@ -157,6 +158,7 @@ export class DungeonGenerator {
         if (tiles[y][x].type === 'mineable') mineableCount++;
       }
     }
+    const initialMineableCount = mineableCount;
 
     return {
       tiles,
@@ -167,6 +169,7 @@ export class DungeonGenerator {
       stairsDownX: exitX,
       stairsDownY: exitY,
       depth,
+      initialMineableCount,
       mineableCount,
       puzzle,
     };
@@ -248,30 +251,30 @@ export class DungeonGenerator {
     if (depth <= 4) {
       if (roll < 0.65 - biomeFloor * 0.03) return { id: 'stone', durability: 2 };
       if (roll < 0.95 - biomeFloor * 0.02) return { id: 'bronze_ore', durability: 3 };
-      if (biomeFloor >= 2 && roll < 0.98 - biomeFloor * 0.01) return { id: 'silver_ore', durability: 4 };
+      if (biomeFloor >= 2 && roll < 0.98 - biomeFloor * 0.01) return { id: 'silver_ore', durability: 5 };
       return { id: 'stone', durability: 2 };
     }
     if (depth <= 9) {
       if (roll < 0.30 - biomeFloor * 0.02) return { id: 'stone', durability: 2 };
       if (roll < 0.80 - biomeFloor * 0.03) return { id: 'bronze_ore', durability: 3 };
-      return { id: 'silver_ore', durability: 4 };
+      return { id: 'silver_ore', durability: 5 };
     }
     if (depth <= 14) {
       if (roll < 0.15 - biomeFloor * 0.01) return { id: 'stone', durability: 2 };
       if (roll < 0.45 - biomeFloor * 0.02) return { id: 'bronze_ore', durability: 3 };
-      if (roll < 0.85 - biomeFloor * 0.02) return { id: 'silver_ore', durability: 4 };
-      return { id: 'gold_ore', durability: 5 };
+      if (roll < 0.85 - biomeFloor * 0.02) return { id: 'silver_ore', durability: 5 };
+      return { id: 'gold_ore', durability: 7 };
     }
     if (depth <= 19) {
       if (roll < 0.10 - biomeFloor * 0.01) return { id: 'stone', durability: 2 };
       if (roll < 0.25 - biomeFloor * 0.01) return { id: 'bronze_ore', durability: 3 };
-      if (roll < 0.55 - biomeFloor * 0.02) return { id: 'silver_ore', durability: 4 };
-      return { id: 'gold_ore', durability: 5 };
+      if (roll < 0.55 - biomeFloor * 0.02) return { id: 'silver_ore', durability: 5 };
+      return { id: 'gold_ore', durability: 7 };
     }
     if (roll < 0.05) return { id: 'stone', durability: 2 };
     if (roll < 0.10) return { id: 'bronze_ore', durability: 3 };
-    if (roll < 0.30) return { id: 'silver_ore', durability: 4 };
-    return { id: 'gold_ore', durability: 5 };
+    if (roll < 0.30) return { id: 'silver_ore', durability: 5 };
+    return { id: 'gold_ore', durability: 7 };
   }
 
   private carveRoom(tiles: DungeonTile[][], room: RoomRect, depth: number, counts: { bronze: number; silver: number; gold: number }): void {

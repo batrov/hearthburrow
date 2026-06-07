@@ -219,8 +219,8 @@ Limited recipes | ✅ | 5 discoverable recipes
 ---
 
 ## Known Bugs & Issues
-
-(none)
+- Sometime stair not spawned after all pressure plates pressed
+- Enemies sprite not rendered in expedition
 
 ## Resolved Bugs
 
@@ -241,6 +241,14 @@ Limited recipes | ✅ | 5 discoverable recipes
 15. **Inventory gauge overcapacity display** — `drawInventoryGauge()` used `getItems()` which inflates array length when over capacity (overflow items appended beyond maxSlots). Fixed by using `capacityUsed()`/`capacityMax()` instead.
 
 ## Ad-Hoc Feature Requests (Remaining)
-1. Additional 2 mode of movements to support mobile: 
+- Additional 2 mode of movements to support mobile: 
     - Click tiles to move (using pathfinding) 
     - Virtual analog
+- Crafting page improvement
+    - Set font color based on below
+        - dark yellow: insufficient materials, not crafted yet
+        - light yellow: sufficient materials, not crafted yet
+        - dark blue: insufficient materials, crafted
+        - light blue: sufficient materials, crafted
+- Info UI for item in storage and inventory
+- Documentations on functions to save some tokens and better context

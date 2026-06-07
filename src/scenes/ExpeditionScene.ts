@@ -152,6 +152,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const bootStaminaBonus = gameState.getBootEffects().maxStaminaBonus;
     const staminaMax = this.debugMode ? 10000 : 100 + gameState.maxStaminaBonus + bootStaminaBonus;
     this.rocksBrokenThisRun = 0;
+    this.stairsSpawned = false;
     this.stamina = new StaminaSystem(staminaMax);
     this.mining = new MiningSystem();
     this.mining.setPickaxeTier(gameState.currentPickaxeTier);
@@ -1554,7 +1555,7 @@ export class ExpeditionScene extends Phaser.Scene {
     if (tile.durability <= 0) {
       tile.broken = true;
       const minedResource = tile.resource;
-
+      floor.mineableCount--;
       this.spawnStairsOnBreak(tx, ty);
 
       this.rocksBrokenThisRun++;
@@ -1941,8 +1942,9 @@ export class ExpeditionScene extends Phaser.Scene {
     if (!floor) return;
     if (floor.puzzle) return;
     const stairMult = gameState.getBootEffects().stairMultiplier;
-    const chance = Math.min(0.5, floor.mineableCount * 0.003 * stairMult);
-    if (Math.random() < chance) {
+    const chance = (0.1 + (1 - (0.9 * (floor.mineableCount / floor.initialMineableCount)))) * stairMult;
+    const rd = Math.random()
+    if (rd < chance) {
       const tile = floor.tiles[y][x];
       tile.type = 'stairs_down';
       tile.resource = '';
