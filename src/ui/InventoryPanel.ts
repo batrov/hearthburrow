@@ -48,6 +48,7 @@ export class InventoryPanel {
   private selectionIndex: number = 0;
   private onUse: ((itemId: string) => void) | null = null;
   private onTrash: ((itemId: string) => void) | null = null;
+  private clickZones: Phaser.GameObjects.Zone[] = [];
   private dirty: boolean = true;
 
   constructor(
@@ -201,8 +202,23 @@ export class InventoryPanel {
       const namePadded = item.name.padEnd(18);
       lines.push(` ${cursor} ${namePadded} ${item.qty}`);
     }
-
     this.contentText.setText(lines.length > 0 ? lines.join('\n') : '  (empty)');
+
+    this.clickZones.forEach(z => z.destroy());
+    this.clickZones = [];
+    for (let i = 0; i < this.items.length; i++) {
+      const zone = this.scene.add.zone(480, 80 + i * 20, 860, 20)
+        .setDepth(210)
+        .setInteractive();
+      zone.on('pointerdown', () => {
+        this.selectionIndex = i;
+        this.dirty = true;
+        this.handleInput('SPACE');
+      });
+      this.container.add(zone);
+      this.clickZones.push(zone);
+    }
+
 
     const hints: string[] = [];
     if (this.items.length > 0 && (this.onUse || this.onTrash)) {

@@ -338,9 +338,17 @@ export class HomelandScene extends Phaser.Scene {
 
       let adx = 0;
       let ady = 0;
-      if (Math.abs(dx) > Math.abs(dy)) {
+      if (dx > 0 && dy < 0) {
+        ady = -1;
+      } else if (dx < 0 && dy < 0) {
+        adx = -1;
+      } else if (dx > 0 && dy > 0) {
+        adx = 1;
+      } else if (dx < 0 && dy > 0) {
+        ady = 1;
+      } else if (dx !== 0) {
         adx = dx > 0 ? 1 : -1;
-      } else {
+      } else if (dy !== 0) {
         ady = dy > 0 ? 1 : -1;
       }
 

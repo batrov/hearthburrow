@@ -36,6 +36,7 @@ export class CraftingPanel {
   private visible: boolean = false;
   private recipes: { id: string; name: string }[] = [];
   private selectedIndex: number = 0;
+  private clickZones: Phaser.GameObjects.Zone[] = [];
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -146,6 +147,9 @@ export class CraftingPanel {
 
   private renderContent(): void {
     this.recipeLines.removeAll(true);
+    this.clickZones.forEach(z => z.destroy());
+    this.clickZones = [];
+
 
     const lineSpacing = 20;
     const startY = 80;
@@ -188,6 +192,17 @@ export class CraftingPanel {
         align: 'left',
       }).setOrigin(0.5, 0);
       this.recipeLines.add(line);
+
+      const zone = this.scene.add.zone(960 / 2, startY + i * lineSpacing + 10, 860, 20)
+        .setDepth(210)
+        .setInteractive();
+      zone.on('pointerdown', () => {
+        this.selectedIndex = i;
+        this.renderContent();
+        this.craftSelected();
+      });
+      this.recipeLines.add(zone);
+      this.clickZones.push(zone);
     }
 
     if (this.recipes.length === 0) {

@@ -40,6 +40,7 @@ export class ResearchPanel {
   private text: Phaser.GameObjects.Text;
   private visible: boolean = false;
   private selectionIndex: number = 0;
+  private clickZones: Phaser.GameObjects.Zone[] = [];
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -143,6 +144,9 @@ export class ResearchPanel {
     this.bg.lineStyle(1, 0x3a3a4a, 0.5);
     this.bg.strokeRect(40, 40, 880, 560);
 
+    this.clickZones.forEach(z => z.destroy());
+    this.clickZones = [];
+
     const lines: string[] = [
       '--- Laboratory ---',
       '',
@@ -151,6 +155,7 @@ export class ResearchPanel {
       '',
       '',
     ];
+
 
     for (let i = 0; i < PROJECTS.length; i++) {
       const p = PROJECTS[i];
@@ -176,8 +181,18 @@ export class ResearchPanel {
         lines.push(`    Cost: ${costStr}  ${bonusStr}`);
       }
       lines.push('');
-    }
 
+      const zone = this.scene.add.zone(480, 50 + 6 * 20 + i * 80, 860, 80)
+        .setDepth(210)
+        .setInteractive();
+      zone.on('pointerdown', () => {
+        this.selectionIndex = i;
+        this.render();
+        this.confirm();
+      });
+      this.container.add(zone);
+      this.clickZones.push(zone);
+    }
     lines.push('  [W/S] navigate  [SPACE] research  [ESC] close');
     this.text.setText(lines.join('\n'));
   }

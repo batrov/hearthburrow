@@ -27,6 +27,7 @@ export class TradePanel {
   private text: Phaser.GameObjects.Text;
   private visible: boolean = false;
   private selectionIndex: number = 0;
+  private clickZones: Phaser.GameObjects.Zone[] = [];
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -109,6 +110,9 @@ export class TradePanel {
     this.bg.lineStyle(1, 0x3a3a4a, 0.5);
     this.bg.strokeRect(40, 40, 880, 560);
 
+    this.clickZones.forEach(z => z.destroy());
+    this.clickZones = [];
+
     const carrot = gameState.inventory.count('carrot');
     const lines: string[] = [
       '--- Trading Post ---',
@@ -117,6 +121,7 @@ export class TradePanel {
       '',
       '',
     ];
+
 
     for (let i = 0; i < TRADE_ITEMS.length; i++) {
       const item = TRADE_ITEMS[i];
@@ -127,6 +132,17 @@ export class TradePanel {
       const have = gameState.inventory.count(item.id);
       const haveText = item.type === 'buy' ? '' : `  (have ${have})`;
       lines.push(` ${cursor} ${label} ${price}${haveText}`);
+
+      const zone = this.scene.add.zone(480, 50 + 5 * 20 + i * 20, 860, 20)
+        .setDepth(210)
+        .setInteractive();
+      zone.on('pointerdown', () => {
+        this.selectionIndex = i;
+        this.render();
+        this.confirm();
+      });
+      this.container.add(zone);
+      this.clickZones.push(zone);
     }
 
     lines.push('', '', '  [W/S] navigate  [SPACE] trade  [ESC] close');

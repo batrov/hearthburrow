@@ -883,9 +883,17 @@ export class ExpeditionScene extends Phaser.Scene {
 
       let adx = 0;
       let ady = 0;
-      if (Math.abs(dx) > Math.abs(dy)) {
+      if (dx > 0 && dy < 0) {
+        ady = -1;
+      } else if (dx < 0 && dy < 0) {
+        adx = -1;
+      } else if (dx > 0 && dy > 0) {
+        adx = 1;
+      } else if (dx < 0 && dy > 0) {
+        ady = 1;
+      } else if (dx !== 0) {
         adx = dx > 0 ? 1 : -1;
-      } else {
+      } else if (dy !== 0) {
         ady = dy > 0 ? 1 : -1;
       }
 
@@ -917,9 +925,48 @@ export class ExpeditionScene extends Phaser.Scene {
       if (!pointerDragged) {
         const floor = this.currentFloor;
         if (floor) {
+          const g = isoToGrid(pointer.worldX, pointer.worldY);
+          if (g.x >= 0 && g.x < floor.cols && g.y >= 0 && g.y < floor.rows) {
+            const tx = this.playerX + this.facingX;
+            const ty = this.playerY + this.facingY;
+            if (g.x === tx && g.y === ty) {
+              const tile = floor.tiles[ty][tx];
+              const interactive = tile.type === 'wall' || tile.type === 'blocked'
+                || (tile.type === 'mineable' && !tile.broken)
+                || ((tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken)
+                || (tile.type.startsWith('event_') && !tile.broken)
+                || tile.type === 'stairs_down' || tile.type === 'stairs_up' || tile.type === 'pressure_plate';
+              
+              if (interactive) {
+                this.movePath = [];
+                this.analogActive = false;
+                if (tile.type === 'mineable' && !tile.broken) {
+                  this.tryMine();
+                } else if (tile.type === 'enemy' || tile.type === 'event_boss') {
+                  if (!tile.broken && this.stamina.remaining > 10) {
+                    this.startCombat(tx, ty, tile);
+                  }
+                } else if (tile.type.startsWith('event_')) {
+                  if (!tile.broken) {
+                    this.triggerTileEvent(tx, ty, tile.eventId);
+                  }
+                } else if (tile.type === 'stairs_down' || tile.type === 'stairs_up') {
+                  // Stairs will be handled by the existing prompt system or a direct call
+                  // For now, just let the prompt show if adjacent
+                  this.checkEventProximity();
+                } else if (tile.type === 'pressure_plate') {
+                  // Plate interaction is handled by tryMove's plate check
+                  // but since we're just clicking, we should manually trigger a step if possible
+                  this.tryMove(this.facingX, this.facingY);
+                }
+                return;
+              }
+            }
+          }
           this.doClickToMove(pointer.worldX, pointer.worldY, floor);
         }
       }
+
 
       this.analogActive = false;
       this.analogDx = 0;
@@ -942,12 +989,31 @@ export class ExpeditionScene extends Phaser.Scene {
       || ((tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken)
       || (tile.type.startsWith('event_') && !tile.broken);
 
-    const targetX = blocked ? this.playerX : g.x;
-    const targetY = blocked ? this.playerY : g.y;
+    const interactive = blocked || tile.type === 'stairs_down' || tile.type === 'stairs_up' || tile.type === 'pressure_plate';
+
+    const fdx = Math.sign(g.x - this.playerX);
+    const fdy = Math.sign(g.y - this.playerY);
+    let faceX = fdx;
+    let faceY = fdy;
+    if (fdx !== 0 && fdy !== 0) {
+      if (Math.abs(g.x - this.playerX) > Math.abs(g.y - this.playerY)) {
+        faceY = 0;
+      } else {
+        faceX = 0;
+      }
+    }
+    this.facingX = faceX;
+    this.facingY = faceY;
+    this.updatePlayerSprite();
+    this.updateFacingHighlight();
+
+    if (interactive) {
+      return;
+    }
 
     const path = findPath(
       this.playerX, this.playerY,
-      targetX, targetY,
+      g.x, g.y,
       floor.cols, floor.rows,
       (x, y) => {
         if (x === this.playerX && y === this.playerY) return true;
