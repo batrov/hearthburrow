@@ -1,6 +1,7 @@
 import { getBuilding } from './DataRegistry';
 import { gameState } from './GameState';
 
+/** Check if a building can be restored (has materials, not already restored). */
 export function canRestore(buildingId: string): boolean {
   if (gameState.restoredBuildings.has(buildingId)) return false;
   const building = getBuilding(buildingId);
@@ -11,6 +12,7 @@ export function canRestore(buildingId: string): boolean {
   return true;
 }
 
+/** Deduct materials and mark a building as restored. Applies stat bonuses. */
 export function restoreBuilding(buildingId: string): boolean {
   if (!canRestore(buildingId)) return false;
   const building = getBuilding(buildingId);
@@ -42,6 +44,7 @@ export function restoreBuilding(buildingId: string): boolean {
   return true;
 }
 
+/** Check if a building has been restored. */
 export function isRestored(buildingId: string): boolean {
   return gameState.restoredBuildings.has(buildingId);
 }

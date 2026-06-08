@@ -30,7 +30,7 @@ export class CraftingPanel {
   private container: Phaser.GameObjects.Container;
   private overlay: Phaser.GameObjects.Graphics;
   private titleText: Phaser.GameObjects.Text;
-  private contentText: Phaser.GameObjects.Text;
+  private recipeLines: Phaser.GameObjects.Container;
   private hintText: Phaser.GameObjects.Text;
   private descriptionText: Phaser.GameObjects.Text;
   private visible: boolean = false;
@@ -50,11 +50,8 @@ export class CraftingPanel {
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
-    this.contentText = scene.add.text(960 / 2, 80, '', {
-      fontSize: '13px', fontFamily: 'monospace', color: '#c8b898',
-      align: 'left', lineSpacing: 5,
-    }).setOrigin(0.5, 0);
-    this.container.add(this.contentText);
+    this.recipeLines = scene.add.container(0, 0);
+    this.container.add(this.recipeLines);
 
     this.descriptionText = scene.add.text(960 / 2, 585, '', {
       fontSize: '12px', fontFamily: 'monospace', color: '#b8a898',
@@ -148,42 +145,65 @@ export class CraftingPanel {
   }
 
   private renderContent(): void {
-    const lines: string[] = [];
+    this.recipeLines.removeAll(true);
+
+    const lineSpacing = 20;
+    const startY = 80;
 
     for (let i = 0; i < this.recipes.length; i++) {
       const r = this.recipes[i];
       const discovered = gameState.crafting.isDiscovered(r.id);
       const marker = i === this.selectedIndex ? '▸' : ' ';
+      let text: string;
+      let color: string;
+
       if (discovered) {
         const recipe = gameState.crafting.getDiscoveredRecipes().find(d => d.id === r.id);
         const canCraft = recipe ? gameState.crafting.canCraft(r.id) : false;
+        const craftedBefore = gameState.hasCraftedItem(recipe?.result ?? '');
+
         const ings = recipe ? Object.entries(recipe.ingredients)
           .map(([id, qty]) => {
             const have = gameState.inventory.count(id);
             return `${itemDisplayName(id)} ${have}/${qty}`;
           })
           .join(', ') : '';
-        lines.push(`  ${marker} ${r.name.padEnd(20)} ${ings}${canCraft ? '  ✓' : ''}`);
+
+        text = `  ${marker} ${r.name.padEnd(20)} ${ings}${canCraft ? '  ✓' : ''}`;
+
+        if (canCraft) {
+          color = craftedBefore ? '#e8d080' : '#b8a040';
+        } else {
+          color = craftedBefore ? '#8ab0d0' : '#6a7a9a';
+        }
       } else {
         const info = RECIPE_INFO[r.id];
         const unlockStr = info?.unlock ? ` (${info.unlock})` : '';
-        lines.push(`  ${marker} ???${unlockStr}`);
+        text = `  ${marker} ???${unlockStr}`;
+        color = '#6a7a9a';
       }
+
+      const line = this.scene.add.text(960 / 2, startY + i * lineSpacing, text, {
+        fontSize: '13px', fontFamily: 'monospace', color,
+        align: 'left',
+      }).setOrigin(0.5, 0);
+      this.recipeLines.add(line);
     }
 
     if (this.recipes.length === 0) {
-      lines.push('  (no recipes)');
+      const line = this.scene.add.text(960 / 2, startY, '  (no recipes)', {
+        fontSize: '13px', fontFamily: 'monospace', color: '#6a7a9a',
+        align: 'left',
+      }).setOrigin(0.5, 0);
+      this.recipeLines.add(line);
     }
 
-    this.contentText.setText(lines.join('\n'));
-
-    // update description bar
     if (this.recipes.length > 0 && this.selectedIndex < this.recipes.length) {
       const selectedId = this.recipes[this.selectedIndex].id;
-      const discovered = gameState.crafting.isDiscovered(selectedId);
+      const disc = gameState.crafting.isDiscovered(selectedId);
       const info = RECIPE_INFO[selectedId];
       if (info) {
-        if (discovered) {
+        if (disc) {
           this.descriptionText.setText(info.desc);
           this.descriptionText.setColor('#b8a898');
         } else {

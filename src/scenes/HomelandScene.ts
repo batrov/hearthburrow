@@ -9,7 +9,8 @@ import { canRestore, restoreBuilding, isRestored } from '../systems/BuildingSyst
 import { getBuilding } from '../systems/DataRegistry';
 import { audio } from '../systems/AudioSystem';
 import {
-  gridToIso, drawDiamond, drawDiamondAt, drawExtrudedAt, drawExtrudedTile,
+  gridToIso, isoToGrid, findPath,
+  drawDiamond, drawDiamondAt, drawExtrudedAt, drawExtrudedTile,
   HALF_W, HALF_H, WALL_HEIGHT, worldWidth, worldHeight,
 } from '../systems/IsoUtils';
 
@@ -90,6 +91,10 @@ export class HomelandScene extends Phaser.Scene {
   private researchPanel!: ResearchPanel;
   private farmPanel!: FarmPanel;
   private buildingsContainer!: Phaser.GameObjects.Container;
+  private movePath: { x: number; y: number }[] = [];
+  private analogDx: number = 0;
+  private analogDy: number = 0;
+  private analogActive: boolean = false;
 
   constructor() {
     super({ key: 'HomelandScene' });
@@ -109,6 +114,7 @@ export class HomelandScene extends Phaser.Scene {
     this.drawPlayer();
     this.createInteractionUI();
     this.setupInput();
+    this.setupPointerInput();
 
     const xMin = -HUB_ROWS * HALF_W;
     const yMin = -HALF_H;
@@ -287,6 +293,115 @@ export class HomelandScene extends Phaser.Scene {
       X: kb.addKey(Phaser.Input.Keyboard.KeyCodes.X),
       Z: kb.addKey(Phaser.Input.Keyboard.KeyCodes.Z),
     };
+  }
+
+  private setupPointerInput(): void {
+    let stickCenterX = 0;
+    let stickCenterY = 0;
+    let pointerDragged = false;
+    const stickRadius = 40;
+    const deadZone = 12;
+    let analogGfx: Phaser.GameObjects.Graphics | null = null;
+
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (this.panelVisible || this.restoreMode) return;
+      if (this.craftingPanel.isVisible() || this.inventoryPanel.isVisible()) return;
+      if (this.tradePanel.isVisible() || this.researchPanel.isVisible() || this.farmPanel.isVisible()) return;
+
+      stickCenterX = pointer.x;
+      stickCenterY = pointer.y;
+      pointerDragged = false;
+      this.analogActive = false;
+      this.analogDx = 0;
+      this.analogDy = 0;
+    });
+
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (!pointer.isDown) return;
+      if (this.panelVisible || this.restoreMode) return;
+      if (this.craftingPanel.isVisible() || this.inventoryPanel.isVisible()) return;
+      if (this.tradePanel.isVisible() || this.researchPanel.isVisible() || this.farmPanel.isVisible()) return;
+
+      const dx = pointer.x - stickCenterX;
+      const dy = pointer.y - stickCenterY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < deadZone) {
+        if (this.analogActive) {
+          this.analogActive = false;
+          this.analogDx = 0;
+          this.analogDy = 0;
+        }
+        return;
+      }
+
+      pointerDragged = true;
+
+      let adx = 0;
+      let ady = 0;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        adx = dx > 0 ? 1 : -1;
+      } else {
+        ady = dy > 0 ? 1 : -1;
+      }
+
+      if (adx !== this.analogDx || ady !== this.analogDy) {
+        this.analogDx = adx;
+        this.analogDy = ady;
+      }
+      this.analogActive = true;
+      this.movePath = [];
+
+      if (!analogGfx) {
+        analogGfx = this.add.graphics().setScrollFactor(0).setDepth(250);
+      }
+      analogGfx.clear();
+      analogGfx.lineStyle(2, 0xffffff, 0.25);
+      analogGfx.strokeCircle(stickCenterX, stickCenterY, stickRadius);
+      analogGfx.fillStyle(0x000000, 0.2);
+      analogGfx.fillCircle(stickCenterX, stickCenterY, stickRadius);
+
+      const clamp = Math.min(dist, stickRadius);
+      const angle = Math.atan2(dy, dx);
+      const thumbX = stickCenterX + Math.cos(angle) * clamp;
+      const thumbY = stickCenterY + Math.sin(angle) * clamp;
+      analogGfx.fillStyle(0xffffff, 0.5);
+      analogGfx.fillCircle(thumbX, thumbY, 12);
+    });
+
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      if (!pointerDragged) {
+        this.doClickToMove(pointer.worldX, pointer.worldY);
+      }
+
+      this.analogActive = false;
+      this.analogDx = 0;
+      this.analogDy = 0;
+      if (analogGfx) {
+        analogGfx.destroy();
+        analogGfx = null;
+      }
+    });
+  }
+
+  private doClickToMove(worldX: number, worldY: number): void {
+    const g = isoToGrid(worldX, worldY);
+    if (g.x < 0 || g.x >= HUB_COLS || g.y < 0 || g.y >= HUB_ROWS) return;
+    if (g.x === this.playerGx && g.y === this.playerGy) return;
+    if (this.isSolid(g.x, g.y)) return;
+
+    const path = findPath(
+      this.playerGx, this.playerGy,
+      g.x, g.y,
+      HUB_COLS, HUB_ROWS,
+      (x, y) => {
+        if (x === this.playerGx && y === this.playerGy) return true;
+        return !this.isSolid(x, y);
+      },
+    );
+
+    if (path && path.length > 0) {
+      this.movePath = path;
+    }
   }
 
   update(_time: number, delta: number): void {
@@ -557,10 +672,26 @@ export class HomelandScene extends Phaser.Scene {
     let dx = 0;
     let dy = 0;
 
-    if (this.keys.A.isDown || this.keys.LEFT.isDown) dx = -1;
-    else if (this.keys.D.isDown || this.keys.RIGHT.isDown) dx = 1;
-    if (this.keys.W.isDown || this.keys.UP.isDown) dy = -1;
-    else if (this.keys.S.isDown || this.keys.DOWN.isDown) dy = 1;
+    const kbA = this.keys.A.isDown || this.keys.LEFT.isDown;
+    const kbD = this.keys.D.isDown || this.keys.RIGHT.isDown;
+    const kbW = this.keys.W.isDown || this.keys.UP.isDown;
+    const kbS = this.keys.S.isDown || this.keys.DOWN.isDown;
+
+    if (kbA || kbD || kbW || kbS) {
+      this.movePath = [];
+      this.analogActive = false;
+      if (kbA) dx = -1;
+      else if (kbD) dx = 1;
+      if (kbW) dy = -1;
+      else if (kbS) dy = 1;
+    } else if (this.analogActive && (this.analogDx !== 0 || this.analogDy !== 0)) {
+      dx = this.analogDx;
+      dy = this.analogDy;
+    } else if (this.movePath.length > 0) {
+      const next = this.movePath.shift()!;
+      dx = next.x - this.playerGx;
+      dy = next.y - this.playerGy;
+    }
 
     if (dx !== 0 && dy !== 0) dy = 0;
 
@@ -617,6 +748,8 @@ export class HomelandScene extends Phaser.Scene {
   private handleInteraction(): void {
     if (!Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) return;
     if (!this.currentBuilding) return;
+    this.movePath = [];
+    this.analogActive = false;
 
     const b = this.currentBuilding;
 

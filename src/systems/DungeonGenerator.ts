@@ -127,6 +127,8 @@ export class DungeonGenerator {
         this.placeTreasureVault(tiles, rooms);
       }
 
+      this.fixCorridorEntries(tiles);
+
       if (depth >= 1 && Math.random() < 0.25) {
         const result = this.placePuzzle(tiles, rooms);
         if (result) {
@@ -137,8 +139,6 @@ export class DungeonGenerator {
       if (depth >= 10 && Math.random() < 0.15) {
         this.placeRelicChamber(tiles, rooms);
       }
-
-      this.fixCorridorEntries(tiles);
 
       const entryRoom = rooms[0];
       const exitRoom = rooms[exitRoomIndex];

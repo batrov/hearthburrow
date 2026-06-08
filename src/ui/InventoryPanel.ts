@@ -2,6 +2,36 @@ import Phaser from 'phaser';
 import { InventorySystem } from '../systems/InventorySystem';
 import { itemDisplayName } from '../systems/GameState';
 
+const ITEM_INFO: Record<string, { desc: string }> = {
+  stone: { desc: 'Common stone. Used for building and basic crafting.' },
+  bronze_ore: { desc: 'Bronze ore. Smelt into tools and equipment.' },
+  silver_ore: { desc: 'Silver ore. Used for advanced equipment upgrades.' },
+  gold_ore: { desc: 'Gold ore. A rare resource for high-tier gear.' },
+  crystal: { desc: 'A shimmering crystal. Required for research and scrolls.' },
+  monster_drop: { desc: 'Essence from defeated monsters. Used in rings and potions.' },
+  carrot: { desc: 'A crunchy vegetable. Currency at the Trading Post.' },
+  stamina_potion: { desc: 'Restores 30 stamina during an expedition.' },
+  teleport_scroll: { desc: 'Instantly escape the dungeon to safety.' },
+  mining_bomb: { desc: 'Destroys 8 surrounding tiles in one blast.' },
+  ring_critical: { desc: '20% chance to deal double damage in combat.' },
+  ring_damage: { desc: '+1 base damage on every combat strike.' },
+  ring_precision: { desc: '30% wider hit zone for easier strikes.' },
+  ring_hunter: { desc: 'Combines critical and damage bonuses.' },
+  pickaxe_1: { desc: 'A basic wooden pickaxe. Unlimited uses.' },
+  pickaxe_2: { desc: 'A bronze pickaxe. 5 runs, mines bronze ore.' },
+  pickaxe_3: { desc: 'A silver pickaxe. 5 runs, mines silver ore.' },
+  boots_stamina_bronze: { desc: '+10 max stamina for 5 expeditions. Requires bronze version first.' },
+  boots_stamina_silver: { desc: '+20 max stamina for 5 expeditions. Requires bronze version first.' },
+  boots_stamina_gold: { desc: '+30 max stamina for 5 expeditions. Requires silver version first.' },
+  boots_luck_bronze: { desc: '10% double-drop chance for 5 expeditions.' },
+  boots_luck_silver: { desc: '25% double-drop chance for 5 expeditions.' },
+  boots_luck_gold: { desc: '40% double-drop chance for 5 expeditions.' },
+  boots_regen: { desc: '+1 stamina per 5 rocks broken for 5 expeditions.' },
+  lantern_bronze: { desc: 'Extends light radius by 60px for 5 expeditions.' },
+  lantern_silver: { desc: 'Extends light radius by 60px for 5 expeditions.' },
+  lantern_gold: { desc: 'Extends light radius by 60px for 5 expeditions.' },
+};
+
 export class InventoryPanel {
   private scene: Phaser.Scene;
   private container: Phaser.GameObjects.Container;
@@ -10,6 +40,7 @@ export class InventoryPanel {
   private contentText: Phaser.GameObjects.Text;
   private hintText: Phaser.GameObjects.Text;
   private warnText: Phaser.GameObjects.Text;
+  private descriptionText: Phaser.GameObjects.Text;
   private visible: boolean = false;
   private inventory: InventorySystem;
 
@@ -55,9 +86,15 @@ export class InventoryPanel {
     this.container.add(this.contentText);
 
     this.hintText = scene.add.text(960 / 2, 620, '', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#5a4a6a',
+      fontSize: '11px', fontFamily: 'monospace', color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
+
+    this.descriptionText = scene.add.text(960 / 2, 595, '', {
+      fontSize: '12px', fontFamily: 'monospace', color: '#8a8a9a',
+      align: 'center',
+    }).setOrigin(0.5);
+    this.container.add(this.descriptionText);
 
     this.container.setVisible(false);
   }
@@ -177,6 +214,11 @@ export class InventoryPanel {
       hints.push('[ESC/TAB] close');
     }
     this.hintText.setText(hints.join('    '));
+
+    const selectedItem = this.items[this.selectionIndex];
+    const info = selectedItem ? ITEM_INFO[selectedItem.id] : null;
+    this.descriptionText.setText(info?.desc ?? '');
+    this.descriptionText.setColor(info ? '#8a8a9a' : '#3a3a4a');
   }
 
   draw(): void {

@@ -10,7 +10,8 @@ import { EventPanel, EventChoice, EventConfig } from '../ui/EventPanel';
 import { CombatPanel, CombatResult, EnemyConfig } from '../ui/CombatPanel';
 import { audio } from '../systems/AudioSystem';
 import {
-  gridToIso, tileSortKey, drawDiamond, drawDiamondAt,
+  gridToIso, isoToGrid, findPath,
+  tileSortKey, drawDiamond, drawDiamondAt,
   drawExtrudedAt,
   HALF_W, HALF_H, WALL_HEIGHT, worldWidth, worldHeight,
 } from '../systems/IsoUtils';
@@ -127,6 +128,11 @@ export class ExpeditionScene extends Phaser.Scene {
   private itemFlyQueue: Array<{ sprite: Phaser.GameObjects.Image; resource: string }> = [];
   private itemFlyBusy: boolean = false;
   private startFloor: number = 0;
+  private movePath: { x: number; y: number }[] = [];
+  private analogDx: number = 0;
+  private analogDy: number = 0;
+  private analogActive: boolean = false;
+  private analogGfx: Phaser.GameObjects.Graphics | null = null;
 
   constructor() {
     super({ key: 'ExpeditionScene' });
@@ -203,6 +209,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.createPlayer();
     this.createHUD();
     this.setupInput();
+    this.setupPointerInput();
 
     const xMin = -floor.rows * HALF_W;
     const yMin = -HALF_H;
@@ -328,7 +335,7 @@ export class ExpeditionScene extends Phaser.Scene {
           this.objectSprites.lineBetween(p.x - 8, p.y + 4, p.x + 8, p.y - 4);
           break;
         default:
-          if (tile.type.startsWith('event_') && !tile.broken) {
+          if (tile.type.startsWith('event_') && tile.type !== 'event_boss' && !tile.broken) {
             this.drawEventTileIso(this.objectSprites, p.x, p.y, tile.type, tile.broken);
           } else if (tile.type === 'enemy' && !tile.broken) {
             this.drawEnemyTileIso(this.objectSprites, p.x, p.y, tile.resource);
@@ -830,6 +837,134 @@ export class ExpeditionScene extends Phaser.Scene {
     };
   }
 
+  private setupPointerInput(): void {
+    let stickCenterX = 0;
+    let stickCenterY = 0;
+    let pointerDragged = false;
+    const stickRadius = 40;
+    const deadZone = 12;
+
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (this.inventoryPanel.isVisible()) return;
+      if (this.combatActive) return;
+      if (this.eventActive) return;
+      if (this.stairAction) return;
+      if (this.exhausted) return;
+
+      stickCenterX = pointer.x;
+      stickCenterY = pointer.y;
+      pointerDragged = false;
+      this.analogActive = false;
+      this.analogDx = 0;
+      this.analogDy = 0;
+    });
+
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (!pointer.isDown) return;
+      if (this.inventoryPanel.isVisible()) return;
+      if (this.combatActive) return;
+      if (this.eventActive) return;
+      if (this.stairAction) return;
+      if (this.exhausted) return;
+
+      const dx = pointer.x - stickCenterX;
+      const dy = pointer.y - stickCenterY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < deadZone) {
+        if (this.analogActive) {
+          this.analogActive = false;
+          this.analogDx = 0;
+          this.analogDy = 0;
+        }
+        return;
+      }
+
+      pointerDragged = true;
+
+      let adx = 0;
+      let ady = 0;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        adx = dx > 0 ? 1 : -1;
+      } else {
+        ady = dy > 0 ? 1 : -1;
+      }
+
+      if (adx !== this.analogDx || ady !== this.analogDy) {
+        this.analogDx = adx;
+        this.analogDy = ady;
+      }
+      this.analogActive = true;
+      this.movePath = [];
+
+      if (!this.analogGfx) {
+        this.analogGfx = this.add.graphics().setScrollFactor(0).setDepth(250);
+      }
+      this.analogGfx.clear();
+      this.analogGfx.lineStyle(2, 0xffffff, 0.25);
+      this.analogGfx.strokeCircle(stickCenterX, stickCenterY, stickRadius);
+      this.analogGfx.fillStyle(0x000000, 0.2);
+      this.analogGfx.fillCircle(stickCenterX, stickCenterY, stickRadius);
+
+      const clamp = Math.min(dist, stickRadius);
+      const angle = Math.atan2(dy, dx);
+      const thumbX = stickCenterX + Math.cos(angle) * clamp;
+      const thumbY = stickCenterY + Math.sin(angle) * clamp;
+      this.analogGfx.fillStyle(0xffffff, 0.5);
+      this.analogGfx.fillCircle(thumbX, thumbY, 12);
+    });
+
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      if (!pointerDragged) {
+        const floor = this.currentFloor;
+        if (floor) {
+          this.doClickToMove(pointer.worldX, pointer.worldY, floor);
+        }
+      }
+
+      this.analogActive = false;
+      this.analogDx = 0;
+      this.analogDy = 0;
+      if (this.analogGfx) {
+        this.analogGfx.destroy();
+        this.analogGfx = null;
+      }
+    });
+  }
+
+  private doClickToMove(worldX: number, worldY: number, floor: DungeonFloor): void {
+    const g = isoToGrid(worldX, worldY);
+    if (g.x < 0 || g.x >= floor.cols || g.y < 0 || g.y >= floor.rows) return;
+    if (g.x === this.playerX && g.y === this.playerY) return;
+
+    const tile = floor.tiles[g.y][g.x];
+    const blocked = tile.type === 'wall' || tile.type === 'blocked'
+      || (tile.type === 'mineable' && !tile.broken)
+      || ((tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken)
+      || (tile.type.startsWith('event_') && !tile.broken);
+
+    const targetX = blocked ? this.playerX : g.x;
+    const targetY = blocked ? this.playerY : g.y;
+
+    const path = findPath(
+      this.playerX, this.playerY,
+      targetX, targetY,
+      floor.cols, floor.rows,
+      (x, y) => {
+        if (x === this.playerX && y === this.playerY) return true;
+        const t = floor.tiles[y][x];
+        if (t.type === 'wall' || t.type === 'blocked') return false;
+        if (t.type === 'mineable' && !t.broken) return false;
+        if ((t.type === 'enemy' || t.type === 'event_boss') && !t.broken) return false;
+        if (t.type.startsWith('event_') && !t.broken) return false;
+        return true;
+      },
+    );
+
+    if (path && path.length > 0) {
+      this.movePath = path;
+    }
+  }
+
   update(_time: number, delta: number): void {
     if (Phaser.Input.Keyboard.JustDown(this.keys.TAB)) {
       this.inventoryPanel.refresh();
@@ -930,6 +1065,8 @@ export class ExpeditionScene extends Phaser.Scene {
     this.checkEventProximity();
 
     if (this.interactTarget && Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
+      this.movePath = [];
+      this.analogActive = false;
       const tile = this.currentFloor?.tiles[this.interactTarget.y]?.[this.interactTarget.x];
       if (tile && (tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken) {
         if (this.stamina.remaining > 10) {
@@ -941,16 +1078,20 @@ export class ExpeditionScene extends Phaser.Scene {
       return;
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.keys.Q)) { this.tryUseConsumable('stamina_potion'); return; }
-    if (Phaser.Input.Keyboard.JustDown(this.keys.E)) { this.tryUseConsumable('teleport_scroll'); return; }
-    if (Phaser.Input.Keyboard.JustDown(this.keys.F)) { this.tryUseConsumable('mining_bomb'); return; }
+    if (Phaser.Input.Keyboard.JustDown(this.keys.Q)) { this.movePath = []; this.analogActive = false; this.tryUseConsumable('stamina_potion'); return; }
+    if (Phaser.Input.Keyboard.JustDown(this.keys.E)) { this.movePath = []; this.analogActive = false; this.tryUseConsumable('teleport_scroll'); return; }
+    if (Phaser.Input.Keyboard.JustDown(this.keys.F)) { this.movePath = []; this.analogActive = false; this.tryUseConsumable('mining_bomb'); return; }
 
     if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
+      this.movePath = [];
+      this.analogActive = false;
       this.emergencyExtract();
       return;
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
+      this.movePath = [];
+      this.analogActive = false;
       this.tryMine();
       return;
     }
@@ -959,10 +1100,26 @@ export class ExpeditionScene extends Phaser.Scene {
       let dx = 0;
       let dy = 0;
 
-      if (this.keys.A.isDown || this.keys.LEFT.isDown) dx = -1;
-      else if (this.keys.D.isDown || this.keys.RIGHT.isDown) dx = 1;
-      if (this.keys.W.isDown || this.keys.UP.isDown) dy = -1;
-      else if (this.keys.S.isDown || this.keys.DOWN.isDown) dy = 1;
+      const kbA = this.keys.A.isDown || this.keys.LEFT.isDown;
+      const kbD = this.keys.D.isDown || this.keys.RIGHT.isDown;
+      const kbW = this.keys.W.isDown || this.keys.UP.isDown;
+      const kbS = this.keys.S.isDown || this.keys.DOWN.isDown;
+
+      if (kbA || kbD || kbW || kbS) {
+        this.movePath = [];
+        this.analogActive = false;
+        if (kbA) dx = -1;
+        else if (kbD) dx = 1;
+        if (kbW) dy = -1;
+        else if (kbS) dy = 1;
+      } else if (this.analogActive && (this.analogDx !== 0 || this.analogDy !== 0)) {
+        dx = this.analogDx;
+        dy = this.analogDy;
+      } else if (this.movePath.length > 0) {
+        const next = this.movePath.shift()!;
+        dx = next.x - this.playerX;
+        dy = next.y - this.playerY;
+      }
 
       if (dx !== 0 && dy !== 0) dy = 0;
 
@@ -1521,17 +1678,15 @@ export class ExpeditionScene extends Phaser.Scene {
         }
       }
     }
-    if (candidates.length === 0) return;
-    const pos = candidates[Math.floor(Math.random() * candidates.length)];
+    let pos: { x: number; y: number };
+    if (candidates.length > 0) {
+      pos = candidates[Math.floor(Math.random() * candidates.length)];
+    } else {
+      pos = { x: Math.floor(room.x + room.w / 2), y: Math.floor(room.y + room.h / 2) };
+    }
     floor.tiles[pos.y][pos.x].type = 'stairs_down';
     floor.tiles[pos.y][pos.x].resource = '';
-    for (let y = room.y; y < room.y + room.h; y++) {
-      for (let x = room.x; x < room.x + room.w; x++) {
-        if (floor.tiles[y][x].type === 'blocked') {
-          floor.tiles[y][x].type = 'floor';
-        }
-      }
-    }
+    this.stairsSpawned = true;
   }
 
   private tryMine(): void {

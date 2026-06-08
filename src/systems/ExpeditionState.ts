@@ -1,3 +1,4 @@
+/** Tracks expedition depth and per-floor fog-of-war exploration grid. */
 export class ExpeditionState {
   depth: number;
   explored: boolean[][];

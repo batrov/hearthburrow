@@ -12,6 +12,7 @@ const TIER_UPGRADE_REQUIRES: Record<string, string> = {
   'lantern_gold': 'lantern_silver',
 };
 
+/** Manages recipe discovery and crafting. */
 export class CraftingSystem {
   private discovered: Set<string>;
 
@@ -24,26 +25,32 @@ export class CraftingSystem {
     }
   }
 
+  /** Mark a recipe as discovered (unlocked). */
   discover(id: string): void {
     this.discovered.add(id);
   }
 
+  /** Check whether a recipe has been discovered. */
   isDiscovered(id: string): boolean {
     return this.discovered.has(id);
   }
 
+  /** Get array of all discovered recipe IDs. */
   getDiscoveredIds(): string[] {
     return Array.from(this.discovered);
   }
 
+  /** Get full recipe data for all discovered recipes. */
   getDiscoveredRecipes(): RecipeData[] {
     return getAllRecipes().filter(r => this.discovered.has(r.id));
   }
 
+  /** Get full recipe data for all undiscovered recipes. */
   getUndiscoveredRecipes(): RecipeData[] {
     return getAllRecipes().filter(r => !this.discovered.has(r.id));
   }
 
+  /** Check if a discovered recipe has sufficient materials + meets tier prerequisites. */
   canCraft(recipeId: string): boolean {
     const recipe = getRecipe(recipeId);
     if (!recipe || !this.discovered.has(recipeId)) return false;
@@ -66,6 +73,7 @@ export class CraftingSystem {
     const hadItem = gameState.inventory.count(recipe.result) > 0;
 
     gameState.inventory.addItem(recipe.result, recipe.quantity);
+    gameState.addCraftedItem(recipe.result);
 
     const equip = getEquipment(recipe.result);
     if (equip) {

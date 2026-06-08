@@ -1,8 +1,10 @@
+/** An inventory slot holding an item stack. */
 export interface Slot {
   itemId: string;
   quantity: number;
 }
 
+/** Slot-based inventory with optional stacking and overflow support. */
 export class InventorySystem {
   private slots: (Slot | null)[];
   private maxSlots: number;
@@ -16,6 +18,7 @@ export class InventorySystem {
     this.overflow = [];
   }
 
+  /** Add items. Returns remaining quantity that couldn't fit (0 if all placed). */
   addItem(itemId: string, quantity: number = 1): number {
     if (this.stacked) {
       let remaining = quantity;
@@ -43,6 +46,7 @@ export class InventorySystem {
     return 0;
   }
 
+  /** Remove up to `quantity` of an item. Returns true if the full amount was removed. */
   removeItem(itemId: string, quantity: number = 1): boolean {
     let remaining = quantity;
 
@@ -85,6 +89,7 @@ export class InventorySystem {
     return remaining === 0;
   }
 
+  /** Remove an entire slot by index. Promotes from overflow if available. */
   removeSlot(index: number): boolean {
     if (index < 0 || index >= this.slots.length) return false;
     if (!this.slots[index]) return false;
@@ -96,18 +101,22 @@ export class InventorySystem {
     return true;
   }
 
+  /** Whether overflow items exist (capacity exceeded). */
   overCapacity(): boolean {
     return this.overflow.length > 0;
   }
 
+  /** Number of filled slots. */
   capacityUsed(): number {
     return this.slots.filter(s => s !== null).length;
   }
 
+  /** Maximum number of slots. */
   capacityMax(): number {
     return this.maxSlots;
   }
 
+  /** Total quantity of a given item across all slots and overflow. */
   count(itemId: string): number {
     let total = this.slots.reduce((sum, slot) => {
       return slot && slot.itemId === itemId ? sum + slot.quantity : sum;
@@ -118,14 +127,17 @@ export class InventorySystem {
     return total;
   }
 
+  /** Whether the inventory contains at least 1 of the given item. */
   has(itemId: string): boolean {
     return this.count(itemId) > 0;
   }
 
+  /** Whether every slot is occupied. */
   isFull(): boolean {
     return this.slots.every(slot => slot !== null);
   }
 
+  /** Get all items including overflow (null for empty slots). */
   getItems(): (Slot | null)[] {
     const all = [...this.slots];
     for (const o of this.overflow) {
@@ -139,6 +151,7 @@ export class InventorySystem {
     return all;
   }
 
+  /** Increase maximum slot count (from research upgrades, relics, etc.). */
   expandSlots(additional: number): void {
     this.maxSlots += additional;
     this.slots.push(...new Array(additional).fill(null));

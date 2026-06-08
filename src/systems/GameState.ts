@@ -3,6 +3,7 @@ import { CraftingSystem } from './CraftingSystem';
 
 const SAVE_KEY = 'hearthburrow_save';
 
+/** Result of a completed expedition run — items gained/lost and extract method. */
 export interface RunResult {
   itemsObtained: { id: string; quantity: number }[];
   itemsLost: { id: string; quantity: number }[];
@@ -40,6 +41,7 @@ const ITEM_NAMES: Record<string, string> = {
   lantern_gold: 'Gold Lantern',
 };
 
+/** Get the human-readable display name for an item ID. Falls back to replacing underscores with spaces. */
 export function itemDisplayName(id: string): string {
   return ITEM_NAMES[id] ?? id.replace(/_/g, ' ');
 }
@@ -68,6 +70,7 @@ class GameState {
   foundRelics: string[];
   maxDepthReached: number;
   exhaustionCount: number;
+  craftedItems: Set<string>;
   masterVolume: number;
   musicVolume: number;
   sfxVolume: number;
@@ -92,19 +95,23 @@ class GameState {
     this.foundRelics = [];
     this.maxDepthReached = 0;
     this.exhaustionCount = 0;
+    this.craftedItems = new Set();
     this.masterVolume = 1;
     this.musicVolume = 0.4;
     this.sfxVolume = 0.6;
   }
 
+  /** Get the current research level for a project (0 if not started). */
   getResearchLevel(id: string): number {
     return this.researchLevels[id] ?? 0;
   }
 
+  /** Set the research level for a project. */
   setResearchLevel(id: string, level: number): void {
     this.researchLevels[id] = level;
   }
 
+  /** Remaining runs for a pickaxe tier (Infinity for tier 1). */
   remainingPickaxeRuns(tier?: number): number {
     const t = tier ?? this.currentPickaxeTier;
     if (t === 1) return Infinity;
@@ -112,10 +119,12 @@ class GameState {
     return Math.max(0, MAX_PICKAXE_RUNS - used);
   }
 
+  /** Set the currently equipped pickaxe tier. */
   equipPickaxe(tier: number): void {
     this.currentPickaxeTier = tier;
   }
 
+  /** Decrement current pickaxe runs. If depleted, drops to tier 1 and removes item. */
   consumePickaxeRun(): void {
     if (this.currentPickaxeTier === 1) return;
     this.pickaxeRuns[this.currentPickaxeTier] = (this.pickaxeRuns[this.currentPickaxeTier] ?? 0) + 1;
@@ -131,6 +140,7 @@ class GameState {
     }
   }
 
+  /** Get all pickaxes the player owns (including default tier 1). */
   getAvailablePickaxes(): { id: string; tier: number }[] {
     const result: { id: string; tier: number }[] = [];
     result.push({ id: 'pickaxe_1', tier: 1 });
@@ -143,6 +153,7 @@ class GameState {
     return result.sort((a, b) => a.tier - b.tier);
   }
 
+  /** Get rings available for equipment (owned + currently equipped). */
   getAvailableRings(): { id: string; name: string }[] {
     const ringIds = ['ring_critical', 'ring_damage', 'ring_precision', 'ring_hunter'];
     const result: { id: string; name: string }[] = [];
@@ -154,6 +165,7 @@ class GameState {
     return result;
   }
 
+  /** Sum effects from both equipped ring slots into a single result. */
   getRingEffects(): { critChance: number; bonusDamage: number; precisionMult: number; doubleLoot: boolean } {
     const effects = { critChance: 0, bonusDamage: 0, precisionMult: 1, doubleLoot: false };
     for (const slot of [this.equippedRings.ring1, this.equippedRings.ring2]) {
@@ -167,6 +179,7 @@ class GameState {
     return effects;
   }
 
+  /** Get the combined effects from currently equipped boots. */
   getBootEffects(): { maxStaminaBonus: number; luckBonus: number; stairMultiplier: number } {
     switch (this.equippedBoots) {
       case 'boots_stamina_bronze': return { maxStaminaBonus: 10, luckBonus: 0, stairMultiplier: 1 };
@@ -179,6 +192,7 @@ class GameState {
     }
   }
 
+  /** Get visibility radius in pixels for the current lantern + dark floor status. */
   getLanternRange(depth: number): number {
     const isDarkFloor = depth > 0 && depth % 5 === 3;
     const tierRanges: Record<string, number> = {
@@ -191,15 +205,18 @@ class GameState {
     return bonus * 60;
   }
 
+  /** Check if an item has per-run durability (boots, lanterns). */
   hasUsageLimit(id: string): boolean {
     return id.startsWith('boots_') || id.startsWith('lantern_');
   }
 
+  /** Remaining expeditions an equipment item can be used (max 5). */
   remainingEquipmentRuns(itemId: string): number {
     if (!this.hasUsageLimit(itemId)) return Infinity;
     return Math.max(0, MAX_EQUIP_RUNS - (this.itemRuns[itemId] ?? 0));
   }
 
+  /** Decrement equipment run counter. Removes item + clears slot when depleted. */
   consumeEquipmentRun(itemId: string | null): void {
     if (!itemId || !this.hasUsageLimit(itemId)) return;
     this.itemRuns[itemId] = (this.itemRuns[itemId] ?? 0) + 1;
@@ -213,6 +230,7 @@ class GameState {
     }
   }
 
+  /** Get boots available for equipping (owned or currently equipped). */
   getAvailableBoots(): { id: string; name: string; runs: number }[] {
     const bootIds = ['boots_stamina_bronze', 'boots_stamina_silver', 'boots_stamina_gold',
       'boots_luck_bronze', 'boots_luck_silver', 'boots_luck_gold', 'boots_regen'];
@@ -225,6 +243,7 @@ class GameState {
     return result;
   }
 
+  /** Get lanterns available for equipping (owned or currently equipped). */
   getAvailableLanterns(): { id: string; name: string; runs: number }[] {
     const lanternIds = ['lantern_bronze', 'lantern_silver', 'lantern_gold'];
     const result: { id: string; name: string; runs: number }[] = [];
@@ -236,6 +255,15 @@ class GameState {
     return result;
   }
 
+  addCraftedItem(id: string): void {
+    this.craftedItems.add(id);
+  }
+
+  hasCraftedItem(id: string): boolean {
+    return this.craftedItems.has(id);
+  }
+
+  /** Permanently acquire a relic and apply its stat bonus (stamina, inventory, or luck). */
   addFoundRelic(id: string): void {
     if (!this.foundRelics.includes(id)) {
       this.foundRelics.push(id);
@@ -251,10 +279,12 @@ class GameState {
     }
   }
 
+  /** Check if a specific relic has been found already. */
   hasFoundRelic(id: string): boolean {
     return this.foundRelics.includes(id);
   }
 
+  /** Get list of all relics found this run. */
   getFoundRelics(): string[] {
     return [...this.foundRelics];
   }
@@ -268,6 +298,7 @@ class GameState {
     return map[id];
   }
 
+  /** Get floor numbers reachable via elevator (multiples of 5 up to maxDepthReached). */
   getAvailableElevatorFloors(): number[] {
     const floors: number[] = [];
     for (let f = 0; f <= this.maxDepthReached; f += 5) {
@@ -276,6 +307,7 @@ class GameState {
     return floors;
   }
 
+  /** Wipe all save data and reinitialize to defaults. */
   resetProgress(): void {
     localStorage.removeItem('hearthburrow_save');
     localStorage.removeItem('researched_upgrades');
@@ -298,11 +330,13 @@ class GameState {
     this.foundRelics = [];
     this.maxDepthReached = 0;
     this.exhaustionCount = 0;
+    this.craftedItems = new Set();
     this.masterVolume = 1;
     this.musicVolume = 0.4;
     this.sfxVolume = 0.6;
   }
 
+  /** Persist entire game state to localStorage. */
   save(): void {
     const data = {
       inventory: this.inventory.getItems().map(s => s ? { itemId: s.itemId, quantity: s.quantity } : null),
@@ -324,6 +358,7 @@ class GameState {
       foundRelics: this.foundRelics,
       maxDepthReached: this.maxDepthReached,
       exhaustionCount: this.exhaustionCount,
+      craftedItems: Array.from(this.craftedItems),
       masterVolume: this.masterVolume,
       musicVolume: this.musicVolume,
       sfxVolume: this.sfxVolume,
@@ -335,6 +370,7 @@ class GameState {
     }
   }
 
+  /** Restore game state from localStorage. Handles migration from legacy formats. */
   load(): void {
     try {
       const raw = localStorage.getItem(SAVE_KEY);
@@ -364,6 +400,7 @@ class GameState {
       this.foundRelics = data.foundRelics ?? [];
       this.maxDepthReached = data.maxDepthReached ?? 0;
       this.exhaustionCount = data.exhaustionCount ?? 0;
+      this.craftedItems = new Set(data.craftedItems ?? []);
       this.masterVolume = data.masterVolume ?? 1;
       this.musicVolume = data.musicVolume ?? 0.4;
       this.sfxVolume = data.sfxVolume ?? 0.6;

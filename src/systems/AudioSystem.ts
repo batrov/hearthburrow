@@ -1,3 +1,4 @@
+/** Procedural audio engine using Web Audio API synthesis (no asset files). */
 export class AudioSystem {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
@@ -9,16 +10,19 @@ export class AudioSystem {
   get masterVolume(): number { return this._masterVolume; }
   get sfxVolume(): number { return this._sfxVolume; }
 
+  /** Set master volume (0-1). */
   setMasterVolume(v: number): void {
     this._masterVolume = v;
     if (this.masterGain) this.masterGain.gain.setValueAtTime(v, this.ctx!.currentTime);
   }
 
+  /** Set SFX volume (0-1). */
   setSfxVolume(v: number): void {
     this._sfxVolume = v;
     if (this.sfxGain) this.sfxGain.gain.setValueAtTime(v, this.ctx!.currentTime);
   }
 
+  /** Initialize Web Audio context and gain nodes. Call once on boot. */
   init(): void {
     try {
       this.ctx = new AudioContext();
@@ -41,6 +45,7 @@ export class AudioSystem {
     return this.ctx;
   }
 
+  /** Short percussive square wave — pitch scales with tile durability. */
   playMineHit(durability: number = 3): void {
     const ctx = this.ensureContext();
     if (!ctx) return;
@@ -58,6 +63,7 @@ export class AudioSystem {
     osc.stop(ctx.currentTime + 0.08);
   }
 
+  /** Ascending sine chime for generic item pickup. */
   playItemPickup(durability?: number): void {
     const ctx = this.ensureContext();
     if (!ctx) return;
@@ -76,6 +82,7 @@ export class AudioSystem {
     osc.stop(ctx.currentTime + 0.2);
   }
 
+  /** Sine sweep up (descend) or down (ascend). */
   playStairs(ascending: boolean = true): void {
     const ctx = this.ensureContext();
     if (!ctx) return;
@@ -97,6 +104,7 @@ export class AudioSystem {
     osc.stop(ctx.currentTime + 0.35);
   }
 
+  /** Short noise burst for footsteps. */
   playStep(): void {
     const ctx = this.ensureContext();
     if (!ctx) return;
@@ -116,6 +124,7 @@ export class AudioSystem {
     source.start(ctx.currentTime);
   }
 
+  /** Sharp mid-frequency hit. */
   playCombatHit(): void {
     const ctx = this.ensureContext();
     if (!ctx) return;
@@ -132,6 +141,7 @@ export class AudioSystem {
     osc.stop(ctx.currentTime + 0.1);
   }
 
+  /** Low buzz for missed strikes. */
   playCombatMiss(): void {
     const ctx = this.ensureContext();
     if (!ctx) return;
@@ -148,6 +158,7 @@ export class AudioSystem {
     osc.stop(ctx.currentTime + 0.15);
   }
 
+  /** Ascending arpeggio on combat victory. */
   playVictory(): void {
     const ctx = this.ensureContext();
     if (!ctx) return;
@@ -182,6 +193,7 @@ export class AudioSystem {
     osc.stop(ctx.currentTime + 0.2);
   }
 
+  /** Low noise burst for mining bomb detonation. */
   playExplosion(): void {
     const ctx = this.ensureContext();
     if (!ctx) return;
@@ -276,6 +288,7 @@ export class AudioSystem {
     }
   }
 
+  /** Descending tone for stamina exhaustion. */
   playExhaustion(): void {
     const ctx = this.ensureContext();
     if (!ctx) return;
