@@ -4,7 +4,7 @@ export type TileType = 'wall' | 'floor' | 'mineable' | 'stairs_up' | 'stairs_dow
   | 'event_treasure_vault'
   | 'event_relic'
   | 'enemy' | 'event_boss'
-  | 'pressure_plate' | 'blocked';
+  | 'pressure_plate' | 'blocked' | 'boss_body';
 
 export interface DungeonTile {
   type: TileType;
@@ -99,6 +99,24 @@ export class DungeonGenerator {
         broken: false,
         eventId: 'boss',
       };
+
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const by = centerY + dy;
+          const bx = centerX + dx;
+          if (by >= 0 && by < rows && bx >= 0 && bx < cols) {
+            tiles[by][bx] = {
+              type: 'boss_body',
+              resource: '',
+              durability: 0,
+              maxDurability: 0,
+              broken: false,
+              eventId: '',
+            };
+          }
+        }
+      }
 
       exitX = entryX;
       exitY = entryY;

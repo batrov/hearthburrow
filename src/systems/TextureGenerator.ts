@@ -102,17 +102,28 @@ export function generateAll(scene: Phaser.Scene): void {
     });
   }
 
-  // --- Boss ---
-  make(scene, g, 'enemy_boss', 40, 40, () => {
-    const { cx, cy } = centered(40, 40);
+  // --- Boss (large, 3x3 tiles) ---
+  make(scene, g, 'enemy_boss', 120, 120, () => {
+    const { cx, cy } = centered(120, 120);
     g.fillStyle(0xcc4444, 1);
-    g.fillCircle(cx, cy, 14);
+    g.fillCircle(cx, cy, 42);
     g.fillStyle(0xaa2222, 0.5);
-    g.fillCircle(cx, cy, 10);
-    g.lineStyle(2, 0xff6644, 0.8);
-    g.strokeCircle(cx, cy, 14);
+    g.fillCircle(cx, cy, 30);
+    g.lineStyle(4, 0xff6644, 0.8);
+    g.strokeCircle(cx, cy, 42);
     g.fillStyle(0xffff00, 0.6);
-    g.fillTriangle(cx - 4, cy - 8, cx, cy - 14, cx + 4, cy - 8);
+    g.fillTriangle(cx - 12, cy - 24, cx, cy - 42, cx + 12, cy - 24);
+  });
+
+  // --- Boss body (surrounding tiles) ---
+  make(scene, g, 'boss_body', 40, 40, () => {
+    const { cx, cy } = centered(40, 40);
+    g.fillStyle(0x5a1a1a, 0.8);
+    g.fillCircle(cx, cy, 12);
+    g.fillStyle(0x3a0a0a, 0.4);
+    g.fillCircle(cx, cy, 8);
+    g.lineStyle(1, 0xcc4444, 0.3);
+    g.strokeCircle(cx, cy, 12);
   });
 
   // --- Events ---

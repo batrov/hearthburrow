@@ -273,7 +273,7 @@ export class ExpeditionScene extends Phaser.Scene {
           drawDiamondAt(this.terrainSprites, x, y, 0x2a2a3a);
           break;
         default:
-          if (tile.type.startsWith('event_') || tile.type === 'enemy' || tile.type === 'event_boss') {
+          if (tile.type.startsWith('event_') || tile.type === 'enemy' || tile.type === 'event_boss' || tile.type === 'boss_body') {
             drawDiamondAt(this.terrainSprites, x, y, tile.broken ? pal.floor[0] : 0x1a1a2a);
             if (tile.broken && checker) drawDiamondAt(this.terrainSprites, x, y, pal.floor[1], 0.5);
           }
@@ -353,7 +353,12 @@ export class ExpeditionScene extends Phaser.Scene {
           } else if (tile.type === 'enemy' && !tile.broken) {
             if (this.textures.exists('enemy_' + tile.resource)) makeImg('enemy_' + tile.resource);
           } else if (tile.type === 'event_boss' && !tile.broken) {
-            if (this.textures.exists('enemy_boss')) makeImg('enemy_boss');
+            if (this.textures.exists('enemy_boss')) {
+              const img = this.add.image(p.x, p.y, 'enemy_boss')
+                .setDepth(6 + (x + y + 3) * 0.001);
+              img.setData('gx', x).setData('gy', y);
+              this.tileObjects.push(img);
+            }
           }
           break;
       }
@@ -391,7 +396,7 @@ export class ExpeditionScene extends Phaser.Scene {
         drawDiamondAt(this.selectedObject, tx, ty, 0x2a2a3a);
         break;
       default:
-        if (tile.type.startsWith('event_') || tile.type === 'enemy' || tile.type === 'event_boss') {
+        if (tile.type.startsWith('event_') || tile.type === 'enemy' || tile.type === 'event_boss' || tile.type === 'boss_body') {
           drawDiamondAt(this.selectedObject, tx, ty, 0x1a1a2a);
         }
         break;
@@ -416,14 +421,25 @@ export class ExpeditionScene extends Phaser.Scene {
       case 'pressure_plate': texKey = 'pressure_plate'; break;
       case 'blocked': texKey = 'blocked'; break;
       case 'enemy': texKey = 'enemy_' + tile.resource; break;
-      case 'event_boss': texKey = 'enemy_boss'; break;
+      case 'event_boss':
+      case 'boss_body': texKey = 'enemy_boss'; break;
       default:
         if (tile.type.startsWith('event_')) texKey = tile.type;
         break;
     }
 
     if (texKey && this.textures.exists(texKey)) {
-      this.previewTile = this.add.image(p.x, p.y, texKey).setDepth(7.1);
+      let previewX = p.x;
+      let previewY = p.y;
+      if (tile.type === 'boss_body') {
+        const center = this.findBossCenter(tx, ty);
+        if (center) {
+          const cp = gridToIso(center.x, center.y);
+          previewX = cp.x;
+          previewY = cp.y;
+        }
+      }
+      this.previewTile = this.add.image(previewX, previewY, texKey).setDepth(7.1);
       if (tile.type === 'mineable') {
         this.previewTile.setScale(1.5);
         if (tile.maxDurability > 0) {
@@ -615,7 +631,7 @@ export class ExpeditionScene extends Phaser.Scene {
             this.minimapGfx.fillStyle(0x8866cc, 1);
             break;
           default:
-            if ((tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken) {
+            if ((tile.type === 'enemy' || tile.type === 'event_boss' || tile.type === 'boss_body') && !tile.broken) {
               this.minimapGfx.fillStyle(0xcc4444, 1);
             } else if (tile.type.startsWith('event_') && !tile.broken) {
               this.minimapGfx.fillStyle(0xccaa44, 1);
@@ -799,7 +815,7 @@ export class ExpeditionScene extends Phaser.Scene {
             const ty = this.playerY + this.facingY;
             if (g.x === tx && g.y === ty) {
               const tile = floor.tiles[ty][tx];
-              const interactive = tile.type === 'wall' || tile.type === 'blocked'
+              const interactive = tile.type === 'wall' || tile.type === 'blocked' || tile.type === 'boss_body'
                 || (tile.type === 'mineable' && !tile.broken)
                 || ((tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken)
                 || (tile.type.startsWith('event_') && !tile.broken)
@@ -813,6 +829,14 @@ export class ExpeditionScene extends Phaser.Scene {
                 } else if (tile.type === 'enemy' || tile.type === 'event_boss') {
                   if (!tile.broken && this.stamina.remaining > 10) {
                     this.startCombat(tx, ty, tile);
+                  }
+                } else if (tile.type === 'boss_body') {
+                  const center = this.findBossCenter(tx, ty);
+                  if (center) {
+                    const bossTile = floor.tiles[center.y][center.x];
+                    if (!bossTile.broken && this.stamina.remaining > 10) {
+                      this.startCombat(center.x, center.y, bossTile);
+                    }
                   }
                 } else if (tile.type.startsWith('event_')) {
                   if (!tile.broken) {
@@ -852,7 +876,7 @@ export class ExpeditionScene extends Phaser.Scene {
     if (g.x === this.playerX && g.y === this.playerY) return;
 
     const tile = floor.tiles[g.y][g.x];
-    const blocked = tile.type === 'wall' || tile.type === 'blocked'
+    const blocked = tile.type === 'wall' || tile.type === 'blocked' || tile.type === 'boss_body'
       || (tile.type === 'mineable' && !tile.broken)
       || ((tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken)
       || (tile.type.startsWith('event_') && !tile.broken);
@@ -886,7 +910,7 @@ export class ExpeditionScene extends Phaser.Scene {
       (x, y) => {
         if (x === this.playerX && y === this.playerY) return true;
         const t = floor.tiles[y][x];
-        if (t.type === 'wall' || t.type === 'blocked') return false;
+        if (t.type === 'wall' || t.type === 'blocked' || t.type === 'boss_body') return false;
         if (t.type === 'mineable' && !t.broken) return false;
         if ((t.type === 'enemy' || t.type === 'event_boss') && !t.broken) return false;
         if (t.type.startsWith('event_') && !t.broken) return false;
@@ -1096,8 +1120,16 @@ export class ExpeditionScene extends Phaser.Scene {
       this.interactPrompt.setAlpha(1);
       return;
     }
-    if (tile.type === 'event_boss' && !tile.broken) {
-      this.interactTarget = { x: tx, y: ty, id: 'boss' };
+    if ((tile.type === 'event_boss' || tile.type === 'boss_body') && !tile.broken) {
+      let bossX = tx;
+      let bossY = ty;
+      if (tile.type === 'boss_body') {
+        const center = this.findBossCenter(tx, ty);
+        if (!center) { this.interactTarget = null; this.interactPrompt.setAlpha(0); return; }
+        bossX = center.x;
+        bossY = center.y;
+      }
+      this.interactTarget = { x: bossX, y: bossY, id: 'boss' };
       if (this.stamina.remaining <= 10) {
         this.interactPrompt.setText('Not enough stamina!');
       } else {
@@ -1542,6 +1574,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const tile = floor.tiles[ny][nx];
     if (tile.type === 'wall') return;
     if (tile.type === 'blocked') return;
+    if (tile.type === 'boss_body') return;
     if (tile.type === 'mineable' && !tile.broken) return;
     if ((tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken) return;
     if (tile.type.startsWith('event_') && !tile.broken) return;
@@ -1888,7 +1921,10 @@ export class ExpeditionScene extends Phaser.Scene {
 
   private updateDarkness(): void {
     this.darknessOverlay.clear();
-    const range = gameState.getLanternRange(this.expeditionState.depth);
+    const depth = this.expeditionState.depth;
+    const isDarkFloor = depth > 0 && depth % 5 === 3;
+    if (!isDarkFloor) return;
+    const range = gameState.getLanternRange(depth);
     if (range <= 0) return;
     const r = range;
     const cx = this.player.x;
@@ -2003,6 +2039,21 @@ export class ExpeditionScene extends Phaser.Scene {
     });
   }
 
+  private findBossCenter(tx: number, ty: number): { x: number; y: number } | null {
+    const floor = this.currentFloor;
+    if (!floor) return null;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const nx = tx + dx;
+        const ny = ty + dy;
+        if (nx >= 0 && nx < floor.cols && ny >= 0 && ny < floor.rows) {
+          if (floor.tiles[ny][nx].type === 'event_boss') return { x: nx, y: ny };
+        }
+      }
+    }
+    return null;
+  }
+
   private startCombat(tx: number, ty: number, tile: any): void {
     const isBoss = tile.type === 'event_boss';
     const enemyType = tile.eventId || 'slime';
@@ -2053,9 +2104,25 @@ export class ExpeditionScene extends Phaser.Scene {
         }
 
         if (isBoss) {
-          tile.type = 'stairs_down';
-          tile.resource = '';
-          tile.broken = false;
+          const floor = this.currentFloor;
+          if (floor) {
+            for (let dy = -1; dy <= 1; dy++) {
+              for (let dx = -1; dx <= 1; dx++) {
+                const nx = tx + dx;
+                const ny = ty + dy;
+                if (nx >= 0 && nx < floor.cols && ny >= 0 && ny < floor.rows) {
+                  const bt = floor.tiles[ny][nx];
+                  if (bt.type === 'boss_body' || (bt.type === 'event_boss' && !bt.broken)) {
+                    bt.type = 'floor';
+                    bt.resource = '';
+                    bt.broken = false;
+                  }
+                }
+              }
+            }
+          }
+          floor!.tiles[ty][tx].type = 'stairs_down';
+          floor!.tiles[ty][tx].resource = '';
           this.drawFloor();
           this.drawMinimap();
 
