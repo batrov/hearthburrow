@@ -81,8 +81,8 @@ export class DungeonGenerator {
 
     if (isBossFloor) {
       rooms = this.placeBossRoom(cols, rows);
-      const counts = { bronze: 0, silver: 0, gold: 0 };
-      this.carveRoom(tiles, rooms[0], depth, counts);
+      const caps = this.getFloorCaps(depth);
+      this.carveRoom(tiles, rooms[0], depth, { bronze: 0, silver: 0, gold: 0 }, caps);
 
       const centerX = Math.floor(rooms[0].x + rooms[0].w / 2);
       const centerY = Math.floor(rooms[0].y + rooms[0].h / 2);
@@ -105,9 +105,25 @@ export class DungeonGenerator {
     } else {
       rooms = this.placeRooms(cols, rows);
 
-      const counts = { bronze: 0, silver: 0, gold: 0 };
-      for (const room of rooms) {
-        this.carveRoom(tiles, room, depth, counts);
+      const caps = this.getFloorCaps(depth);
+      const n = rooms.length;
+      const distribute = (total: number): number[] => {
+        const base = Math.floor(total / n);
+        const rem = total % n;
+        const arr = Array(n).fill(base);
+        const indices = Array.from({ length: n }, (_, i) => i).sort(() => Math.random() - 0.5);
+        for (let r = 0; r < rem; r++) arr[indices[r]]++;
+        return arr;
+      };
+      const bronzePerRoom = distribute(caps.maxBronze);
+      const silverPerRoom = distribute(caps.maxSilver);
+      const goldPerRoom = distribute(caps.maxGold);
+      for (let i = 0; i < n; i++) {
+        this.carveRoom(tiles, rooms[i], depth, { bronze: 0, silver: 0, gold: 0 }, {
+          maxBronze: bronzePerRoom[i],
+          maxSilver: silverPerRoom[i],
+          maxGold: goldPerRoom[i],
+        });
       }
 
       for (let i = 0; i < rooms.length - 1; i++) {
@@ -277,8 +293,11 @@ export class DungeonGenerator {
     return { id: 'gold_ore', durability: 7 };
   }
 
-  private carveRoom(tiles: DungeonTile[][], room: RoomRect, depth: number, counts: { bronze: number; silver: number; gold: number }): void {
-    const caps = this.getFloorCaps(depth);
+  private carveRoom(
+    tiles: DungeonTile[][], room: RoomRect, depth: number,
+    counts: { bronze: number; silver: number; gold: number },
+    roomCaps: { maxBronze: number; maxSilver: number; maxGold: number }
+  ): void {
     for (let y = room.y; y < room.y + room.h; y++) {
       for (let x = room.x; x < room.x + room.w; x++) {
         if (x === room.x || x === room.x + room.w - 1 || y === room.y || y === room.y + room.h - 1) {
@@ -288,9 +307,9 @@ export class DungeonGenerator {
           if (roll < 0.18) {
             const res = this.pickResource(depth);
             let finalId = res.id;
-            if (finalId === 'gold_ore' && counts.gold >= caps.maxGold) finalId = 'silver_ore';
-            if (finalId === 'silver_ore' && counts.silver >= caps.maxSilver) finalId = 'bronze_ore';
-            if (finalId === 'bronze_ore' && counts.bronze >= caps.maxBronze) finalId = 'stone';
+            if (finalId === 'gold_ore' && counts.gold >= roomCaps.maxGold) finalId = 'silver_ore';
+            if (finalId === 'silver_ore' && counts.silver >= roomCaps.maxSilver) finalId = 'bronze_ore';
+            if (finalId === 'bronze_ore' && counts.bronze >= roomCaps.maxBronze) finalId = 'stone';
 
             if (finalId === 'gold_ore') counts.gold++;
             else if (finalId === 'silver_ore') counts.silver++;
