@@ -124,6 +124,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private darknessOverlay!: Phaser.GameObjects.Graphics;
   private playerSprite: Phaser.GameObjects.Image | null = null;
   private previewTile: Phaser.GameObjects.Image | null = null;
+  private oreImageMap: Map<string, Phaser.GameObjects.Image> = new Map();
   private rocksBrokenThisRun: number = 0;
   private itemFlyQueue: Array<{ sprite: Phaser.GameObjects.Image; resource: string }> = [];
   private itemFlyBusy: boolean = false;
@@ -224,6 +225,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.terrainSprites.clear();
     this.tileObjects.forEach(o => o.destroy());
     this.tileObjects = [];
+    this.oreImageMap.clear();
     if (this.previewTile) { this.previewTile.destroy(); this.previewTile = null; }
     this.facingHighlight.clear();
     this.selectedObject.clear();
@@ -320,16 +322,15 @@ export class ExpeditionScene extends Phaser.Scene {
           break;
         case 'mineable':
           if (!tile.broken && this.textures.exists('ore_' + tile.resource)) {
-            makeImg('ore_' + tile.resource);
+            const img = makeImg('ore_' + tile.resource);
+            img.setScale(1.5);
+            this.oreImageMap.set(`${x},${y}`, img);
             if (tile.maxDurability > 0) {
               const ratio = tile.durability / tile.maxDurability;
-              if (ratio <= 0.66 && this.textures.exists('overlay_damage')) {
-                const dmg = this.add.image(p.x, p.y, 'overlay_damage').setDepth(depth + 0.0005);
-                this.tileObjects.push(dmg);
-              }
-              if (ratio <= 0.33 && this.textures.exists('overlay_crack')) {
-                const crack = this.add.image(p.x, p.y, 'overlay_crack').setDepth(depth + 0.0009);
-                this.tileObjects.push(crack);
+              if (ratio <= 0.33) {
+                img.setTint(0x777777);
+              } else if (ratio <= 0.66) {
+                img.setTint(0xaaaaaa);
               }
             }
           }
@@ -423,6 +424,17 @@ export class ExpeditionScene extends Phaser.Scene {
 
     if (texKey && this.textures.exists(texKey)) {
       this.previewTile = this.add.image(p.x, p.y, texKey).setDepth(7.1);
+      if (tile.type === 'mineable') {
+        this.previewTile.setScale(1.5);
+        if (tile.maxDurability > 0) {
+          const ratio = tile.durability / tile.maxDurability;
+          if (ratio <= 0.33) {
+            this.previewTile.setTint(0x777777);
+          } else if (ratio <= 0.66) {
+            this.previewTile.setTint(0xaaaaaa);
+          }
+        }
+      }
     }
   }
 
@@ -1622,6 +1634,27 @@ export class ExpeditionScene extends Phaser.Scene {
     audio.playMineHit(tile.maxDurability);
     this.cameras.main.shake(50, 0.006);
 
+    // Update damage appearance on the existing ore image
+    const hitImg = this.oreImageMap.get(`${tx},${ty}`);
+    if (hitImg && tile.maxDurability > 0) {
+      const ratio = tile.durability / tile.maxDurability;
+      if (ratio <= 0.33) {
+        hitImg.setTint(0x777777);
+      } else if (ratio <= 0.66) {
+        hitImg.setTint(0xaaaaaa);
+      }
+    }
+
+    // Sync preview tile tint if player is facing this tile
+    if (this.previewTile && tile.maxDurability > 0) {
+      const ratio = tile.durability / tile.maxDurability;
+      if (ratio <= 0.33) {
+        this.previewTile.setTint(0x777777);
+      } else if (ratio <= 0.66) {
+        this.previewTile.setTint(0xaaaaaa);
+      }
+    }
+
     if (!this.stamina.consume(5)) {
       this.handleExhaustion();
     }
@@ -1662,7 +1695,7 @@ export class ExpeditionScene extends Phaser.Scene {
         onComplete: () => ring.destroy(),
       });
 
-      const oreImg = this.tileObjects.find(o => o.getData('gx') === tx && o.getData('gy') === ty);
+      const oreImg = this.oreImageMap.get(`${tx},${ty}`);
       if (oreImg) {
         this.tweens.add({
           targets: oreImg,
