@@ -11,9 +11,8 @@ import { CombatPanel, CombatResult, EnemyConfig } from '../ui/CombatPanel';
 import { audio } from '../systems/AudioSystem';
 import {
   gridToIso, isoToGrid, findPath,
-  tileSortKey, drawDiamond, drawDiamondAt,
-  drawExtrudedAt,
-  HALF_W, HALF_H, WALL_HEIGHT, worldWidth, worldHeight,
+  tileSortKey, drawDiamondAt,
+  HALF_W, HALF_H, worldWidth, worldHeight,
 } from '../systems/IsoUtils';
 
 interface Palette {
@@ -24,7 +23,7 @@ interface Palette {
 
 function getWallTextureKey(depth: number): string {
   const biomes = ['FOREST', 'CAVE', 'ICE', 'LAVA', 'RUINS'];
-  return `wall_${biomes[depth % 5]}`;
+  return `wall_${biomes[Math.floor(depth / 5) % 5]}`;
 }
 
 function getDepthPalette(depth: number): Palette {
@@ -74,7 +73,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private expeditionState: ExpeditionState;
   private currentFloor: DungeonFloor | null = null;
   private terrainSprites!: Phaser.GameObjects.Graphics;
-  private objectSprites!: Phaser.GameObjects.Graphics;
+  private tileObjects: Phaser.GameObjects.Image[] = [];
   private selectedObject!: Phaser.GameObjects.Graphics;
   private facingHighlight!: Phaser.GameObjects.Graphics;
   private staminaBar!: Phaser.GameObjects.Graphics;
@@ -124,6 +123,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private interactTarget: { x: number; y: number; id: string } | null = null;
   private darknessOverlay!: Phaser.GameObjects.Graphics;
   private playerSprite: Phaser.GameObjects.Image | null = null;
+  private previewTile: Phaser.GameObjects.Image | null = null;
   private rocksBrokenThisRun: number = 0;
   private itemFlyQueue: Array<{ sprite: Phaser.GameObjects.Image; resource: string }> = [];
   private itemFlyBusy: boolean = false;
@@ -174,7 +174,6 @@ export class ExpeditionScene extends Phaser.Scene {
     this.expeditionState.depth = this.startFloor;
     this.moveTimer = 0;
     this.terrainSprites = this.add.graphics().setDepth(4);
-    this.objectSprites = this.add.graphics().setDepth(6);
     this.facingHighlight = this.add.graphics().setDepth(12);
     this.selectedObject = this.add.graphics().setDepth(7);
     this.darknessOverlay = this.add.graphics().setDepth(48);
@@ -199,7 +198,7 @@ export class ExpeditionScene extends Phaser.Scene {
       fontSize: '12px', fontFamily: 'monospace', color: '#ffdd88',
     }).setOrigin(0.5).setAlpha(0).setDepth(55);
 
-    this.currentFloor = this.dungeonGen.generateFloor(0);
+    this.currentFloor = this.dungeonGen.generateFloor(this.startFloor);
 
     const floor = this.currentFloor;
     this.playerX = floor.entryX;
@@ -223,7 +222,9 @@ export class ExpeditionScene extends Phaser.Scene {
 
   private drawFloor(): void {
     this.terrainSprites.clear();
-    this.objectSprites.clear();
+    this.tileObjects.forEach(o => o.destroy());
+    this.tileObjects = [];
+    if (this.previewTile) { this.previewTile.destroy(); this.previewTile = null; }
     this.facingHighlight.clear();
     this.selectedObject.clear();
 
@@ -283,12 +284,12 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private drawInteractiveTiles(): void {
-    this.objectSprites.clear();
+    this.tileObjects.forEach(o => o.destroy());
+    this.tileObjects = [];
     const floor = this.currentFloor;
     if (!floor) return;
-    const pal = getDepthPalette(floor.depth);
     const wallKey = getWallTextureKey(floor.depth);
-    const hasWallTexture = this.textures.exists(wallKey);
+    const hasWallTex = this.textures.exists(wallKey);
 
     const tiles: { x: number; y: number }[] = [];
     for (let y = 0; y < floor.rows; y++) {
@@ -301,46 +302,56 @@ export class ExpeditionScene extends Phaser.Scene {
     for (const { x, y } of tiles) {
       const tile = floor.tiles[y][x];
       const p = gridToIso(x, y);
+      const depth = 6 + (x + y) * 0.001;
+
+      const makeImg = (key: string, originY?: number) => {
+        const img = this.add.image(p.x, p.y, key).setDepth(depth);
+        if (originY !== undefined) img.setOrigin(0.5, originY);
+        this.tileObjects.push(img);
+        return img;
+      };
 
       switch (tile.type) {
         case 'wall':
-          drawExtrudedAt(this.objectSprites, x, y, pal.wall[0], pal.wall[1], pal.wall[2], WALL_HEIGHT);
+          if (hasWallTex) {
+            makeImg(wallKey, 0.6875);
+          }
           break;
         case 'mineable':
-          if (!tile.broken) {
-            this.drawOreIso(this.objectSprites, p.x, p.y, tile.resource, tile.durability, tile.maxDurability);
+          if (!tile.broken && this.textures.exists('ore_' + tile.resource)) {
+            makeImg('ore_' + tile.resource);
+            if (tile.maxDurability > 0) {
+              const ratio = tile.durability / tile.maxDurability;
+              if (ratio <= 0.66 && this.textures.exists('overlay_damage')) {
+                const dmg = this.add.image(p.x, p.y, 'overlay_damage').setDepth(depth + 0.0005);
+                this.tileObjects.push(dmg);
+              }
+              if (ratio <= 0.33 && this.textures.exists('overlay_crack')) {
+                const crack = this.add.image(p.x, p.y, 'overlay_crack').setDepth(depth + 0.0009);
+                this.tileObjects.push(crack);
+              }
+            }
           }
           break;
         case 'stairs_up':
-          this.objectSprites.fillStyle(0x44cc66, 0.7);
-          this.objectSprites.fillTriangle(p.x - 10, p.y + 8, p.x, p.y - 12, p.x + 10, p.y + 8);
+          if (this.textures.exists('stairs_up')) makeImg('stairs_up');
           break;
         case 'stairs_down':
-          this.objectSprites.fillStyle(0x8866cc, 0.7);
-          this.objectSprites.fillTriangle(p.x - 10, p.y - 8, p.x, p.y + 12, p.x + 10, p.y - 8);
+          if (this.textures.exists('stairs_down')) makeImg('stairs_down');
           break;
         case 'pressure_plate':
-          if (!tile.broken) {
-            this.objectSprites.lineStyle(1, 0x88cc88, 0.6);
-            this.objectSprites.strokeCircle(p.x - 3, p.y - 3, 10);
-            this.objectSprites.fillStyle(0x88cc88, 0.3);
-            this.objectSprites.fillCircle(p.x - 3, p.y - 3, 6);
-          }
+          if (!tile.broken && this.textures.exists('pressure_plate')) makeImg('pressure_plate');
           break;
         case 'blocked':
-          this.objectSprites.fillStyle(0x5a4a3a, 0.9);
-          this.objectSprites.fillRect(p.x - 12, p.y - 8, 24, 16);
-          this.objectSprites.lineStyle(2, 0xcc6644, 0.8);
-          this.objectSprites.lineBetween(p.x - 8, p.y - 4, p.x + 8, p.y + 4);
-          this.objectSprites.lineBetween(p.x - 8, p.y + 4, p.x + 8, p.y - 4);
+          if (this.textures.exists('blocked')) makeImg('blocked');
           break;
         default:
           if (tile.type.startsWith('event_') && tile.type !== 'event_boss' && !tile.broken) {
-            this.drawEventTileIso(this.objectSprites, p.x, p.y, tile.type, tile.broken);
+            if (this.textures.exists(tile.type)) makeImg(tile.type);
           } else if (tile.type === 'enemy' && !tile.broken) {
-            this.drawEnemyTileIso(this.objectSprites, p.x, p.y, tile.resource);
+            if (this.textures.exists('enemy_' + tile.resource)) makeImg('enemy_' + tile.resource);
           } else if (tile.type === 'event_boss' && !tile.broken) {
-            this.drawBossTileIso(this.objectSprites, p.x, p.y);
+            if (this.textures.exists('enemy_boss')) makeImg('enemy_boss');
           }
           break;
       }
@@ -393,183 +404,27 @@ export class ExpeditionScene extends Phaser.Scene {
     this.facingHighlight.closePath();
     this.facingHighlight.strokePath();
 
+    if (this.previewTile) { this.previewTile.destroy(); this.previewTile = null; }
+
+    let texKey = '';
     switch (tile.type) {
-      case 'mineable':
-        this.drawOreIso(this.selectedObject, p.x, p.y, tile.resource, tile.durability, tile.maxDurability);
-        break;
-      case 'stairs_up':
-        this.selectedObject.fillStyle(0x44cc66, 0.7);
-        this.selectedObject.fillTriangle(p.x - 10, p.y + 8, p.x, p.y - 12, p.x + 10, p.y + 8);
-        break;
-      case 'stairs_down':
-        this.selectedObject.fillStyle(0x8866cc, 0.7);
-        this.selectedObject.fillTriangle(p.x - 10, p.y - 8, p.x, p.y + 12, p.x + 10, p.y - 8);
-        break;
-      case 'pressure_plate':
-        this.selectedObject.lineStyle(1, 0x88cc88, 0.6);
-        this.selectedObject.strokeCircle(p.x - 3, p.y - 3, 10);
-        this.selectedObject.fillStyle(0x88cc88, 0.3);
-        this.selectedObject.fillCircle(p.x - 3, p.y - 3, 6);
-        break;
-      case 'blocked':
-        this.selectedObject.fillStyle(0x5a4a3a, 0.9);
-        this.selectedObject.fillRect(p.x - 12, p.y - 8, 24, 16);
-        this.selectedObject.lineStyle(2, 0xcc6644, 0.8);
-        this.selectedObject.lineBetween(p.x - 8, p.y - 4, p.x + 8, p.y + 4);
-        this.selectedObject.lineBetween(p.x - 8, p.y + 4, p.x + 8, p.y - 4);
-        break;
+      case 'mineable': texKey = 'ore_' + tile.resource; break;
+      case 'stairs_up': texKey = 'stairs_up'; break;
+      case 'stairs_down': texKey = 'stairs_down'; break;
+      case 'pressure_plate': texKey = 'pressure_plate'; break;
+      case 'blocked': texKey = 'blocked'; break;
+      case 'enemy': texKey = 'enemy_' + tile.resource; break;
+      case 'event_boss': texKey = 'enemy_boss'; break;
       default:
-        if (tile.type.startsWith('event_') && tile.type !== 'event_boss') {
-          this.drawEventTileIso(this.selectedObject, p.x, p.y, tile.type, false);
-        } else if (tile.type === 'event_boss') {
-          this.drawBossTileIso(this.selectedObject, p.x, p.y);
-        } else if (tile.type === 'enemy') {
-          this.drawEnemyTileIso(this.selectedObject, p.x, p.y, tile.resource);
-        }
-        break;
-    }
-  }
-
-
-  private drawEventTileIso(g: Phaser.GameObjects.Graphics, cx: number, cy: number, type: string, used: boolean): void {
-    if (used) return;
-
-    switch (type) {
-      case 'event_chest':
-        g.fillStyle(0x8a6a3a, 1);
-        g.fillRoundedRect(cx - 14, cy - 12, 28, 20, 3);
-        g.fillStyle(0xccaa44, 1);
-        g.fillRect(cx - 4, cy - 6, 8, 4);
-        break;
-      case 'event_merchant':
-        g.fillStyle(0x3a5a8a, 1);
-        g.fillCircle(cx, cy - 10, 6);
-        g.fillRect(cx - 10, cy - 4, 20, 16);
-        break;
-      case 'event_goblin':
-        g.fillStyle(0x5a8a3a, 1);
-        g.fillCircle(cx, cy - 10, 6);
-        g.fillRect(cx - 10, cy - 4, 20, 16);
-        break;
-      case 'event_villager':
-        g.fillStyle(0xcc8844, 1);
-        g.fillCircle(cx, cy - 10, 6);
-        g.fillRect(cx - 10, cy - 4, 20, 16);
-        break;
-      case 'event_fountain':
-        g.fillStyle(0x3a5a8a, 1);
-        g.fillRoundedRect(cx - 14, cy - 12, 28, 20, 6);
-        g.fillStyle(0x5a8acc, 0.6);
-        g.fillRoundedRect(cx - 10, cy - 8, 20, 12, 4);
-        break;
-      case 'event_shop':
-        g.fillStyle(0x8a6a3a, 1);
-        g.fillRect(cx - 14, cy - 4, 28, 16);
-        g.fillStyle(0xccaa44, 1);
-        g.fillTriangle(cx - 6, cy + 8, cx + 6, cy + 8, cx, cy - 8);
-        break;
-      case 'event_treasure_vault':
-        g.fillStyle(0xccaa44, 1);
-        g.fillRoundedRect(cx - 14, cy - 10, 28, 20, 4);
-        g.fillStyle(0xffdd66, 1);
-        g.fillRect(cx - 4, cy - 4, 8, 8);
-        g.fillStyle(0x88ccff, 0.7);
-        g.fillRect(cx - 2, cy - 2, 4, 4);
-        break;
-      case 'event_relic':
-        g.fillStyle(0xaa44cc, 0.8);
-        g.fillCircle(cx, cy - 4, 12);
-        g.fillStyle(0xdd66ff, 0.6);
-        g.fillCircle(cx, cy - 4, 8);
-        g.fillStyle(0xffffff, 0.4);
-        g.fillCircle(cx - 2, cy - 6, 3);
-        break;
-    }
-  }
-
-  private drawEnemyTileIso(g: Phaser.GameObjects.Graphics, cx: number, cy: number, type: string): void {
-    const colors: Record<string, number> = {
-      slime: 0x44aa44,
-      rat: 0x8a6a3a,
-      bat: 0x6a4a7a,
-    };
-    const color = colors[type] ?? 0xaa4444;
-
-    g.fillStyle(0x000000, 0.3);
-    g.fillCircle(cx - 3, cy + 5, 10);
-
-    g.fillStyle(color, 0.7);
-    g.fillCircle(cx - 3, cy - 3, 9);
-  }
-
-  private drawBossTileIso(g: Phaser.GameObjects.Graphics, cx: number, cy: number): void {
-    g.fillStyle(0xcc4444, 1);
-    g.fillCircle(cx, cy, 14);
-
-    g.fillStyle(0xaa2222, 0.5);
-    g.fillCircle(cx, cy, 10);
-
-    g.lineStyle(2, 0xff6644, 0.8);
-    g.strokeCircle(cx, cy, 14);
-
-    g.fillStyle(0xffff00, 0.6);
-    g.fillTriangle(cx - 4, cy - 8, cx, cy - 14, cx + 4, cy - 8);
-  }
-
-  private drawOreIso(g: Phaser.GameObjects.Graphics, cx: number, cy: number, resource: string, durability: number, maxDurability: number): void {
-    const ratio = maxDurability > 0 ? durability / maxDurability : 1;
-
-    drawDiamond(g, cx, cy, 0x000000, 0.2);
-
-    switch (resource) {
-      case 'stone':
-        g.fillStyle(0x5a5a6a, 1);
-        g.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
-        g.fillStyle(0x6a6a7a, 1);
-        g.fillRoundedRect(cx - 8, cy - 8, 10, 10, 2);
-        break;
-      case 'bronze_ore':
-        g.fillStyle(0x8a6a3a, 1);
-        g.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
-        g.fillStyle(0xaa8a4a, 1);
-        g.fillRect(cx - 6, cy - 6, 12, 12);
-        break;
-      case 'silver_ore':
-        g.fillStyle(0x7a8a9a, 1);
-        g.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
-        g.fillStyle(0x9aaabc, 1);
-        g.fillRect(cx - 6, cy - 6, 12, 12);
-        break;
-      case 'gold_ore':
-        g.fillStyle(0x8a7a2a, 1);
-        g.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
-        g.fillStyle(0xccaa44, 1);
-        g.fillRect(cx - 6, cy - 6, 12, 12);
-        break;
-      case 'crystal':
-        g.fillStyle(0x6a4a8a, 1);
-        g.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
-        g.fillStyle(0x9a6acc, 1);
-        g.fillRect(cx - 6, cy - 6, 12, 12);
-        break;
-      case 'monster_drop':
-        g.fillStyle(0x8a3a3a, 1);
-        g.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
+        if (tile.type.startsWith('event_')) texKey = tile.type;
         break;
     }
 
-    if (ratio <= 0.66) {
-      const darken = ratio <= 0.33 ? 0.45 : 0.25;
-      g.fillStyle(0x000000, darken);
-      g.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
-    }
-
-    if (ratio <= 0.33) {
-      g.lineStyle(1, 0x000000, 0.5);
-      g.lineBetween(cx - 10, cy - 12, cx + 10, cy + 12);
-      g.lineBetween(cx + 10, cy - 12, cx - 10, cy + 12);
+    if (texKey && this.textures.exists(texKey)) {
+      this.previewTile = this.add.image(p.x, p.y, texKey).setDepth(7.1);
     }
   }
+
 
   private createPlayer(): void {
     const p = gridToIso(this.playerX, this.playerY);
@@ -643,7 +498,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.drawStaminaBar();
 
-    this.depthText = this.add.text(20, 76, 'Floor: 0', {
+    this.depthText = this.add.text(20, 76, `Floor: ${this.expeditionState.depth}`, {
       fontSize: '12px', fontFamily: 'monospace', color: '#7a8a9a',
     }).setScrollFactor(0).setDepth(51);
 
@@ -1281,8 +1136,6 @@ export class ExpeditionScene extends Phaser.Scene {
       tile.broken = true;
       this.interactTarget = null;
       this.interactPrompt.setAlpha(0);
-      this.terrainSprites.clear();
-      this.objectSprites.clear();
       this.drawFloor();
       this.drawMinimap();
     });
@@ -1647,8 +1500,6 @@ export class ExpeditionScene extends Phaser.Scene {
     this.interactTarget = null;
     this.interactPrompt.setAlpha(0);
 
-    this.terrainSprites.clear();
-    this.objectSprites.clear();
     this.drawFloor();
     this.repositionPlayer();
     this.cameras.main.stopFollow();
@@ -1795,8 +1646,6 @@ export class ExpeditionScene extends Phaser.Scene {
 
       this.checkRecipeDiscovery(minedResource);
 
-      this.terrainSprites.clear();
-      this.objectSprites.clear();
       this.drawFloor();
       this.drawMinimap();
     } else {
@@ -2105,8 +1954,6 @@ export class ExpeditionScene extends Phaser.Scene {
           tile.type = 'stairs_down';
           tile.resource = '';
           tile.broken = false;
-          this.terrainSprites.clear();
-          this.objectSprites.clear();
           this.drawFloor();
           this.drawMinimap();
 
@@ -2116,8 +1963,6 @@ export class ExpeditionScene extends Phaser.Scene {
           }
         } else {
           tile.broken = true;
-          this.terrainSprites.clear();
-          this.objectSprites.clear();
           this.drawFloor();
           this.drawMinimap();
         }
@@ -2220,8 +2065,6 @@ export class ExpeditionScene extends Phaser.Scene {
     }
 
     if (changed) {
-      this.terrainSprites.clear();
-      this.objectSprites.clear();
       this.drawFloor();
       this.drawMinimap();
     }
