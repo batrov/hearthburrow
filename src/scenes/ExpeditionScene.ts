@@ -306,6 +306,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
       const makeImg = (key: string, originY?: number) => {
         const img = this.add.image(p.x, p.y, key).setDepth(depth);
+        img.setData('gx', x).setData('gy', y);
         if (originY !== undefined) img.setOrigin(0.5, originY);
         this.tileObjects.push(img);
         return img;
@@ -1619,6 +1620,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     tile.durability -= this.mining.getDamage();
     audio.playMineHit(tile.maxDurability);
+    this.cameras.main.shake(50, 0.006);
 
     if (!this.stamina.consume(5)) {
       this.handleExhaustion();
@@ -1646,8 +1648,38 @@ export class ExpeditionScene extends Phaser.Scene {
 
       this.checkRecipeDiscovery(minedResource);
 
-      this.drawFloor();
-      this.drawMinimap();
+      this.cameras.main.shake(120, 0.015);
+
+      // Shockwave ring
+      const pp = gridToIso(tx, ty);
+      const ring = this.add.circle(pp.x, pp.y, 5, 0xffffff, 0.4).setDepth(14);
+      this.tweens.add({
+        targets: ring,
+        radius: HALF_W * 1.5,
+        alpha: 0,
+        duration: 350,
+        ease: 'Quad.easeOut',
+        onComplete: () => ring.destroy(),
+      });
+
+      const oreImg = this.tileObjects.find(o => o.getData('gx') === tx && o.getData('gy') === ty);
+      if (oreImg) {
+        this.tweens.add({
+          targets: oreImg,
+          scaleX: 2.0, scaleY: 2.0,
+          alpha: 0,
+          angle: Phaser.Math.Between(-15, 15),
+          duration: 250,
+          ease: 'Quad.easeOut',
+          onComplete: () => {
+            this.drawFloor();
+            this.drawMinimap();
+          },
+        });
+      } else {
+        this.drawFloor();
+        this.drawMinimap();
+      }
     } else {
       this.createHitEffect(tx, ty);
     }
@@ -1668,20 +1700,35 @@ export class ExpeditionScene extends Phaser.Scene {
     };
     const color = colors[resource] ?? 0xaa8844;
 
-    for (let i = 0; i < 6; i++) {
-      const p = this.add.rectangle(
-        cx, cy,
-        Phaser.Math.Between(3, 6), Phaser.Math.Between(3, 6),
-        color
-      ).setDepth(15);
+    // Large core chunks
+    for (let i = 0; i < 4; i++) {
+      const radius = Phaser.Math.FloatBetween(4, 7);
+      const p = this.add.circle(cx, cy, radius, color, 0.9).setDepth(15);
 
       this.tweens.add({
         targets: p,
-        x: cx + Phaser.Math.Between(-30, 30),
-        y: cy + Phaser.Math.Between(-30, 30),
+        x: cx + Phaser.Math.Between(-20, 20),
+        y: cy + Phaser.Math.Between(-20, 20),
+        alpha: 0,
+        scale: 0.3,
+        duration: 450,
+        ease: 'Quad.easeOut',
+        onComplete: () => p.destroy(),
+      });
+    }
+
+    // Small debris burst
+    for (let i = 0; i < 10; i++) {
+      const radius = Phaser.Math.FloatBetween(1.5, 3.5);
+      const p = this.add.circle(cx, cy, radius, color, 0.7).setDepth(15);
+
+      this.tweens.add({
+        targets: p,
+        x: cx + Phaser.Math.Between(-55, 55),
+        y: cy + Phaser.Math.Between(-55, 55),
         alpha: 0,
         scale: 0,
-        duration: 400,
+        duration: Phaser.Math.Between(350, 550),
         ease: 'Quad.easeOut',
         onComplete: () => p.destroy(),
       });
@@ -1693,11 +1740,33 @@ export class ExpeditionScene extends Phaser.Scene {
     const cx = p.x;
     const cy = p.y;
 
-    const flash = this.add.rectangle(cx, cy, HALF_W * 2, HALF_H * 2, 0xffffff, 0.3).setDepth(15);
+    // Radial burst
+    for (let i = 0; i < 8; i++) {
+      const angle = (Math.PI * 2 / 8) * i + Phaser.Math.FloatBetween(-0.2, 0.2);
+      const dist = Phaser.Math.Between(8, 22);
+      const radius = Phaser.Math.FloatBetween(2, 4);
+      const particle = this.add.circle(cx, cy, radius, 0xffffff, 0.7).setDepth(15);
+
+      this.tweens.add({
+        targets: particle,
+        x: cx + Math.cos(angle) * dist,
+        y: cy + Math.sin(angle) * dist,
+        alpha: 0,
+        scale: 0,
+        duration: 180,
+        ease: 'Quad.easeOut',
+        onComplete: () => particle.destroy(),
+      });
+    }
+
+    // Central flash
+    const flash = this.add.circle(cx, cy, HALF_W * 0.8, 0xffffff, 0.25).setDepth(14);
     this.tweens.add({
       targets: flash,
+      scale: 1.5,
       alpha: 0,
-      duration: 150,
+      duration: 120,
+      ease: 'Quad.easeOut',
       onComplete: () => flash.destroy(),
     });
   }
@@ -2023,6 +2092,48 @@ export class ExpeditionScene extends Phaser.Scene {
     if (!floor) return;
 
     audio.playExplosion();
+    this.cameras.main.shake(200, 0.02);
+
+    const pp = gridToIso(this.playerX, this.playerY);
+
+    // Expansion ring
+    const ring = this.add.circle(pp.x, pp.y, 5, 0xff6600, 0.3).setDepth(14);
+    this.tweens.add({
+      targets: ring,
+      radius: HALF_W * 2,
+      alpha: 0,
+      duration: 400,
+      ease: 'Quad.easeOut',
+      onComplete: () => ring.destroy(),
+    });
+
+    // Inner flash
+    const flash = this.add.circle(pp.x, pp.y, HALF_W, 0xffffff, 0.4).setDepth(20);
+    this.tweens.add({
+      targets: flash,
+      scale: 2,
+      alpha: 0,
+      duration: 200,
+      ease: 'Quad.easeOut',
+      onComplete: () => flash.destroy(),
+    });
+
+    // Debris burst
+    for (let i = 0; i < 8; i++) {
+      const angle = (Math.PI * 2 / 8) * i + Phaser.Math.FloatBetween(-0.3, 0.3);
+      const radius = Phaser.Math.FloatBetween(3, 6);
+      const debris = this.add.circle(pp.x, pp.y, radius, 0xff6600, 0.6).setDepth(20);
+      this.tweens.add({
+        targets: debris,
+        x: pp.x + Math.cos(angle) * Phaser.Math.Between(30, 60),
+        y: pp.y + Math.sin(angle) * Phaser.Math.Between(30, 60),
+        alpha: 0,
+        scale: 0,
+        duration: 400,
+        ease: 'Quad.easeOut',
+        onComplete: () => debris.destroy(),
+      });
+    }
 
     const damage = this.mining.getDamage();
     const dirs = [
