@@ -32,6 +32,8 @@ export function restoreBuilding(buildingId: string): boolean {
       gameState.inventorySlotBonus += 8;
       gameState.inventory.expandSlots(8);
       break;
+    case 'crafting_station':
+      break;
     case 'trading_post':
       break;
     case 'laboratory':

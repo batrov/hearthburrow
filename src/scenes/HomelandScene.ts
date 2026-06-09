@@ -32,13 +32,13 @@ const HUB_ROWS = 12;
 const HUB_BUILDINGS: HubBuildingDef[] = [
   { id: 'trading_post', label: 'Trading Post', gx: 1, gy: 1, gw: 3, gh: 2, buildingId: 'trading_post',
     description: 'Trade resources with wandering merchants.', solid: true },
-  { id: 'crafting', label: 'Crafting Station', gx: 1, gy: 4, gw: 3, gh: 2, buildingId: '',
+  { id: 'crafting', label: 'Crafting Station', gx: 1, gy: 4, gw: 3, gh: 2, buildingId: 'crafting_station',
     description: 'Craft tools and equipment from mined materials.', solid: true },
   { id: 'farm', label: 'Farm', gx: 1, gy: 7, gw: 3, gh: 2, buildingId: 'farm',
     description: 'Plant carrots and harvest more carrots.', solid: true },
   { id: 'villager_house', label: 'Villager House', gx: 12, gy: 1, gw: 3, gh: 2, buildingId: 'housing',
     description: 'A cozy home. Increases max stamina when restored.', solid: true },
-  { id: 'storage', label: 'Storage', gx: 12, gy: 4, gw: 3, gh: 2, buildingId: '',
+  { id: 'storage', label: 'Storage', gx: 12, gy: 4, gw: 3, gh: 2, buildingId: 'storage',
     description: 'Store and manage your collected resources.', solid: true },
   { id: 'laboratory', label: 'Laboratory', gx: 12, gy: 7, gw: 3, gh: 2, buildingId: 'laboratory',
     description: 'Research advanced upgrades and recipes.', solid: true },
@@ -739,8 +739,6 @@ export class HomelandScene extends Phaser.Scene {
       let action = 'Interact';
       const restored = !closest.buildingId || isRestored(closest.buildingId);
       if (closest.id === 'gate') action = 'Begin expedition';
-      else if (closest.id === 'crafting') action = 'Open crafting menu';
-      else if (closest.id === 'storage') action = 'Open storage';
       else if (!restored) action = `Restore ${closest.label}`;
       else if (closest.id === 'villager_house') action = `Visit (${gameState.villagersRescued} rescued)`;
       else action = `Visit ${closest.label.split(' ')[0].toLowerCase()}`;
@@ -766,15 +764,25 @@ export class HomelandScene extends Phaser.Scene {
       return;
     }
 
-    if (b.id === 'crafting') {
-      this.craftingPanel.refresh();
-      this.craftingPanel.show();
+    if (b.id === 'storage') {
+      if (isRestored('storage')) {
+        this.inventoryPanel.refresh();
+        this.inventoryPanel.show();
+      } else {
+        this.showRestorePanel('storage');
+        this.restoreBuildingId = 'storage';
+      }
       return;
     }
 
-    if (b.id === 'storage') {
-      this.inventoryPanel.refresh();
-      this.inventoryPanel.show();
+    if (b.id === 'crafting') {
+      if (isRestored('crafting_station')) {
+        this.craftingPanel.refresh();
+        this.craftingPanel.show();
+      } else {
+        this.showRestorePanel('crafting_station');
+        this.restoreBuildingId = 'crafting_station';
+      }
       return;
     }
 
