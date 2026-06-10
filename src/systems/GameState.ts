@@ -29,6 +29,7 @@ const ITEM_NAMES: Record<string, string> = {
   pickaxe_1: 'Common Pickaxe',
   pickaxe_2: 'Bronze Pickaxe',
   pickaxe_3: 'Silver Pickaxe',
+  pickaxe_4: 'Gold Pickaxe',
   boots_stamina_bronze: 'Stamina Boots (Bronze)',
   boots_stamina_silver: 'Stamina Boots (Silver)',
   boots_stamina_gold: 'Stamina Boots (Gold)',
@@ -144,7 +145,7 @@ class GameState {
   getAvailablePickaxes(): { id: string; tier: number }[] {
     const result: { id: string; tier: number }[] = [];
     result.push({ id: 'pickaxe_1', tier: 1 });
-    for (let t = 2; t <= 3; t++) {
+    for (let t = 2; t <= 4; t++) {
       const id = `pickaxe_${t}`;
       if (this.inventory.count(id) > 0) {
         result.push({ id, tier: t });

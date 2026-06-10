@@ -1,17 +1,14 @@
 import Phaser from 'phaser';
 import { gameState } from '../systems/GameState';
 import { audio } from '../systems/AudioSystem';
+import { BasePanel } from './BasePanel';
 
-export class FarmPanel {
-  private scene: Phaser.Scene;
-  private container: Phaser.GameObjects.Container;
+export class FarmPanel extends BasePanel {
   private bg: Phaser.GameObjects.Graphics;
   private text: Phaser.GameObjects.Text;
-  private visible: boolean = false;
 
   constructor(scene: Phaser.Scene) {
-    this.scene = scene;
-    this.container = scene.add.container(0, 0).setDepth(200).setScrollFactor(0);
+    super(scene);
 
     this.bg = scene.add.graphics();
     this.container.add(this.bg);
@@ -21,23 +18,15 @@ export class FarmPanel {
       align: 'center', lineSpacing: 6,
     }).setOrigin(0.5, 0);
     this.container.add(this.text);
-
-    this.container.setVisible(false);
   }
 
   show(): void {
-    this.visible = true;
+    this.setVisible(true);
     this.render();
-    this.container.setVisible(true);
   }
 
   hide(): void {
-    this.visible = false;
-    this.container.setVisible(false);
-  }
-
-  isVisible(): boolean {
-    return this.visible;
+    this.setVisible(false);
   }
 
   plant(): void {

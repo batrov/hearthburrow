@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
-import { gameState } from '../systems/GameState';
+import { gameState, itemDisplayName } from '../systems/GameState';
 import { audio } from '../systems/AudioSystem';
-import { itemDisplayName } from '../systems/GameState';
+import { BasePanel } from './BasePanel';
 
 interface ResearchProject {
   id: string;
@@ -33,18 +33,14 @@ const PROJECTS: ResearchProject[] = [
   },
 ];
 
-export class ResearchPanel {
-  private scene: Phaser.Scene;
-  private container: Phaser.GameObjects.Container;
+export class ResearchPanel extends BasePanel {
   private bg: Phaser.GameObjects.Graphics;
   private text: Phaser.GameObjects.Text;
-  private visible: boolean = false;
   private selectionIndex: number = 0;
   private clickZones: Phaser.GameObjects.Zone[] = [];
 
   constructor(scene: Phaser.Scene) {
-    this.scene = scene;
-    this.container = scene.add.container(0, 0).setDepth(200).setScrollFactor(0);
+    super(scene);
 
     this.bg = scene.add.graphics();
     this.container.add(this.bg);
@@ -54,24 +50,16 @@ export class ResearchPanel {
       align: 'center', lineSpacing: 6,
     }).setOrigin(0.5, 0);
     this.container.add(this.text);
-
-    this.container.setVisible(false);
   }
 
   show(): void {
-    this.visible = true;
+    this.setVisible(true);
     this.selectionIndex = 0;
     this.render();
-    this.container.setVisible(true);
   }
 
   hide(): void {
-    this.visible = false;
-    this.container.setVisible(false);
-  }
-
-  isVisible(): boolean {
-    return this.visible;
+    this.setVisible(false);
   }
 
   navigateUp(): void {

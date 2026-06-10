@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { audio } from '../systems/AudioSystem';
+import { BasePanel } from './BasePanel';
 
 export interface EventChoice {
   label: string;
@@ -12,22 +13,17 @@ export interface EventConfig {
   choices: EventChoice[];
 }
 
-export class EventPanel {
-  private scene: Phaser.Scene;
-  private container: Phaser.GameObjects.Container;
+export class EventPanel extends BasePanel {
   private overlay: Phaser.GameObjects.Graphics;
   private titleText: Phaser.GameObjects.Text;
   private descText: Phaser.GameObjects.Text;
   private choicesText: Phaser.GameObjects.Text;
   private hintText: Phaser.GameObjects.Text;
-  private visible: boolean = false;
   private onComplete: (() => void) | null = null;
   private selectedIndex: number = 0;
 
   constructor(scene: Phaser.Scene) {
-    this.scene = scene;
-
-    this.container = scene.add.container(0, 0).setDepth(200).setScrollFactor(0);
+    super(scene);
 
     this.overlay = scene.add.graphics();
     this.overlay.setInteractive(new Phaser.Geom.Rectangle(0, 0, 960, 640), Phaser.Geom.Rectangle.Contains);
@@ -54,30 +50,28 @@ export class EventPanel {
       fontSize: '12px', fontFamily: 'monospace', color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
-
-    this.container.setVisible(false);
   }
 
   confirm(): void {
-    if (!this.visible) return;
+    if (!this._visible) return;
     this.selectChoice(this.selectedIndex);
   }
 
   navigateUp(): void {
-    if (!this.visible || this.currentChoices.length < 2) return;
+    if (!this._visible || this.currentChoices.length < 2) return;
     this.selectedIndex = (this.selectedIndex - 1 + this.currentChoices.length) % this.currentChoices.length;
     this.renderChoices();
   }
 
   navigateDown(): void {
-    if (!this.visible || this.currentChoices.length < 2) return;
+    if (!this._visible || this.currentChoices.length < 2) return;
     this.selectedIndex = (this.selectedIndex + 1) % this.currentChoices.length;
     this.renderChoices();
   }
 
   show(config: EventConfig, onComplete?: () => void): void {
     this.onComplete = onComplete ?? null;
-    this.visible = true;
+    this._visible = true;
     this.selectedIndex = 0;
     this.currentChoices = config.choices;
 
@@ -116,11 +110,11 @@ export class EventPanel {
   }
 
   private selectChoice(index: number): void {
-    if (!this.visible) return;
+    if (!this._visible) return;
     if (index < 0 || index >= this.currentChoices.length) return;
 
     const choice = this.currentChoices[index];
-    this.visible = false;
+    this._visible = false;
     this.container.setVisible(false);
 
     choice.action();
@@ -133,12 +127,8 @@ export class EventPanel {
     this.currentChoices = [];
   }
 
-  isVisible(): boolean {
-    return this.visible;
-  }
-
   hide(): void {
-    this.visible = false;
+    this._visible = false;
     this.container.setVisible(false);
     this.currentChoices = [];
   }

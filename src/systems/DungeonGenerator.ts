@@ -333,7 +333,7 @@ export class DungeonGenerator {
             else if (finalId === 'silver_ore') counts.silver++;
             else if (finalId === 'bronze_ore') counts.bronze++;
 
-            const durMap: Record<string, number> = { stone: 2, bronze_ore: 3, silver_ore: 4, gold_ore: 5 };
+            const durMap: Record<string, number> = { stone: 2, bronze_ore: 3, silver_ore: 5, gold_ore: 7 };
             tiles[y][x] = {
               type: 'mineable',
               resource: finalId,

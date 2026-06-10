@@ -2,10 +2,12 @@ import Phaser from 'phaser';
 import { gameState, itemDisplayName } from '../systems/GameState';
 import { getRecipe } from '../systems/DataRegistry';
 import { audio } from '../systems/AudioSystem';
+import { BasePanel } from './BasePanel';
 
 const RECIPE_INFO: Record<string, { desc: string; unlock?: string }> = {
   pickaxe_2: { desc: 'Bronze Pickaxe — 5 runs, mines bronze ore' },
   pickaxe_3: { desc: 'Silver Pickaxe — 5 runs, mines silver ore', unlock: 'Mine silver ore' },
+  pickaxe_4: { desc: 'Gold Pickaxe — 5 runs, mines gold ore', unlock: 'Mine gold ore' },
   stamina_potion: { desc: 'Restores 50 stamina during expedition', unlock: 'Defeat the boss on floor 4' },
   teleport_scroll: { desc: 'Emergency teleport back to homeland', unlock: 'Exhaust yourself 3 times' },
   mining_bomb: { desc: 'Destroys surrounding walls instantly', unlock: 'Unlocked via events' },
@@ -25,22 +27,18 @@ const RECIPE_INFO: Record<string, { desc: string; unlock?: string }> = {
   lantern_gold: { desc: '+60px light radius for 5 expeditions', unlock: 'Craft silver version first' },
 };
 
-export class CraftingPanel {
-  private scene: Phaser.Scene;
-  private container: Phaser.GameObjects.Container;
+export class CraftingPanel extends BasePanel {
   private overlay: Phaser.GameObjects.Graphics;
   private titleText: Phaser.GameObjects.Text;
   private recipeLines: Phaser.GameObjects.Container;
   private hintText: Phaser.GameObjects.Text;
   private descriptionText: Phaser.GameObjects.Text;
-  private visible: boolean = false;
   private recipes: { id: string; name: string }[] = [];
   private selectedIndex: number = 0;
   private clickZones: Phaser.GameObjects.Zone[] = [];
 
   constructor(scene: Phaser.Scene) {
-    this.scene = scene;
-    this.container = scene.add.container(0, 0).setDepth(200).setScrollFactor(0);
+    super(scene);
 
     this.overlay = scene.add.graphics();
     this.overlay.setInteractive(new Phaser.Geom.Rectangle(0, 0, 960, 640), Phaser.Geom.Rectangle.Contains);
@@ -64,15 +62,12 @@ export class CraftingPanel {
       fontSize: '11px', fontFamily: 'monospace', color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
-
-    this.container.setVisible(false);
   }
 
   show(): void {
-    this.visible = true;
+    this.setVisible(true);
     this.selectedIndex = 0;
     this.refresh();
-    this.container.setVisible(true);
 
     this.container.setAlpha(0);
     this.scene.tweens.add({
@@ -90,22 +85,9 @@ export class CraftingPanel {
       duration: 150,
       ease: 'Quad.easeIn',
       onComplete: () => {
-        this.visible = false;
-        this.container.setVisible(false);
+        this.setVisible(false);
       },
     });
-  }
-
-  toggle(): void {
-    if (this.visible) {
-      this.hide();
-    } else {
-      this.show();
-    }
-  }
-
-  isVisible(): boolean {
-    return this.visible;
   }
 
   navigateUp(): void {
@@ -150,7 +132,6 @@ export class CraftingPanel {
     this.clickZones.forEach(z => z.destroy());
     this.clickZones = [];
 
-
     const lineSpacing = 20;
     const startY = 80;
 
@@ -176,9 +157,9 @@ export class CraftingPanel {
         text = `  ${marker} ${r.name.padEnd(20)} ${ings}${canCraft ? '  ✓' : ''}`;
 
         if (canCraft) {
-          color = craftedBefore ? '#e8d080' : '#b8a040';
+          color = craftedBefore ? '#8ab0d0' : '#e8d080';
         } else {
-          color = craftedBefore ? '#8ab0d0' : '#6a7a9a';
+          color = craftedBefore ? '#24465c' : '#b8a040';
         }
       } else {
         const info = RECIPE_INFO[r.id];

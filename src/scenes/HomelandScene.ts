@@ -764,64 +764,22 @@ export class HomelandScene extends Phaser.Scene {
       return;
     }
 
-    if (b.id === 'storage') {
-      if (isRestored('storage')) {
-        this.inventoryPanel.refresh();
-        this.inventoryPanel.show();
-      } else {
-        this.showRestorePanel('storage');
-        this.restoreBuildingId = 'storage';
-      }
-      return;
-    }
+    const buildingActions: Record<string, { restoreId: string; show: () => void }> = {
+      storage: { restoreId: 'storage', show: () => { this.inventoryPanel.refresh(); this.inventoryPanel.show(); } },
+      crafting: { restoreId: 'crafting_station', show: () => { this.craftingPanel.refresh(); this.craftingPanel.show(); } },
+      villager_house: { restoreId: 'housing', show: () => this.showBuildingPanel(b) },
+      trading_post: { restoreId: 'trading_post', show: () => this.showTradePanel() },
+      laboratory: { restoreId: 'laboratory', show: () => this.showResearchPanel() },
+      farm: { restoreId: 'farm', show: () => this.showFarmPanel() },
+    };
 
-    if (b.id === 'crafting') {
-      if (isRestored('crafting_station')) {
-        this.craftingPanel.refresh();
-        this.craftingPanel.show();
+    const action = buildingActions[b.id];
+    if (action) {
+      if (isRestored(action.restoreId)) {
+        action.show();
       } else {
-        this.showRestorePanel('crafting_station');
-        this.restoreBuildingId = 'crafting_station';
-      }
-      return;
-    }
-
-    if (b.id === 'villager_house') {
-      if (isRestored('housing')) {
-        this.showBuildingPanel(b);
-      } else {
-        this.showRestorePanel('housing');
-        this.restoreBuildingId = 'housing';
-      }
-      return;
-    }
-
-    if (b.id === 'trading_post') {
-      if (isRestored('trading_post')) {
-        this.showTradePanel();
-      } else {
-        this.showRestorePanel('trading_post');
-        this.restoreBuildingId = 'trading_post';
-      }
-      return;
-    }
-
-    if (b.id === 'laboratory') {
-      if (isRestored('laboratory')) {
-        this.showResearchPanel();
-      } else {
-        this.showRestorePanel('laboratory');
-        this.restoreBuildingId = 'laboratory';
-      }
-      return;
-    }
-
-    if (b.id === 'farm') {
-      if (isRestored('farm')) {
-        this.showFarmPanel();
-      } else {
-        this.showRestorePanel('farm');
-        this.restoreBuildingId = 'farm';
+        this.showRestorePanel(action.restoreId);
+        this.restoreBuildingId = action.restoreId;
       }
       return;
     }
@@ -928,6 +886,7 @@ export class HomelandScene extends Phaser.Scene {
       1: 'Common Pickaxe',
       2: 'Bronze Pickaxe',
       3: 'Silver Pickaxe',
+      4: 'Gold Pickaxe',
     };
     const maxStamina = this.debugMode ? 10000 : 100 + gameState.maxStaminaBonus;
     const invSlots = 16 + gameState.inventorySlotBonus;

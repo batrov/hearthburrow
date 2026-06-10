@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { StaminaSystem } from '../systems/StaminaSystem';
 import { MiningSystem } from '../systems/MiningSystem';
 import { InventorySystem } from '../systems/InventorySystem';
-import { DungeonGenerator, DungeonFloor } from '../systems/DungeonGenerator';
+import { DungeonGenerator, DungeonFloor, DungeonTile } from '../systems/DungeonGenerator';
 import { ExpeditionState } from '../systems/ExpeditionState';
 import { gameState, itemDisplayName } from '../systems/GameState';
 import { InventoryPanel } from '../ui/InventoryPanel';
@@ -61,6 +61,14 @@ function getDepthPalette(depth: number): Palette {
     corridor: 0x140a1a,
   };
 }
+
+const DEPTH = {
+  TERRAIN: 4, INTERACTIVE_BASE: 6, SELECTED_BACKDROP: 7, PREVIEW_TILE: 7.1,
+  PLAYER: 8, FACING_HIGHLIGHT: 12, EFFECTS: 14, PARTICLES: 15, BOMB: 20,
+  ITEM_POPUP: 25, ITEM_SPRITE: 26, DARKNESS: 48, HUD_BG: 50, HUD: 51, MINIMAP_DOT: 52,
+  INTERACT_PROMPT: 55, OVERLAY: 100, OVERLAY_TEXT: 101,
+  POPUP: 200, CLICK_ZONES: 210, ANALOG: 250,
+};
 
 export class ExpeditionScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Container;
@@ -144,6 +152,30 @@ export class ExpeditionScene extends Phaser.Scene {
     this.expeditionState = new ExpeditionState();
   }
 
+  private isBlocked(tile: DungeonTile): boolean {
+    return tile.type === 'wall' || tile.type === 'blocked' || tile.type === 'boss_body'
+      || (tile.type === 'mineable' && !tile.broken)
+      || ((tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken)
+      || (tile.type.startsWith('event_') && !tile.broken);
+  }
+
+  private getDamageTint(tile: DungeonTile): number | null {
+    if (tile.maxDurability <= 0) return null;
+    const ratio = tile.durability / tile.maxDurability;
+    if (ratio <= 0.33) return 0x777777;
+    if (ratio <= 0.66) return 0xaaaaaa;
+    return null;
+  }
+
+  private createPopup(text: string, x: number, y: number, color: string, opts?: { duration?: number; moveY?: number; scaleFrom?: number; scaleTo?: number }): void {
+    const popup = this.add.text(x, y, text, {
+      fontSize: '16px', fontFamily: 'monospace', color, fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(DEPTH.POPUP).setScrollFactor(0);
+    const tween: any = { targets: popup, y: y + (opts?.moveY ?? -40), alpha: 0, duration: opts?.duration ?? 1200, ease: 'Quad.easeOut', onComplete: () => popup.destroy() };
+    if (opts?.scaleFrom || opts?.scaleTo) tween.scale = { from: opts?.scaleFrom ?? 1.2, to: opts?.scaleTo ?? 0.9 };
+    this.tweens.add(tween);
+  }
+
   init(data: { debug?: boolean; consumables?: Record<string, number>; startFloor?: number }): void {
     this.debugMode = data?.debug ?? false;
     this.loadoutConsumables = data?.consumables ?? {};
@@ -174,10 +206,10 @@ export class ExpeditionScene extends Phaser.Scene {
     this.expeditionState.reset();
     this.expeditionState.depth = this.startFloor;
     this.moveTimer = 0;
-    this.terrainSprites = this.add.graphics().setDepth(4);
-    this.facingHighlight = this.add.graphics().setDepth(12);
-    this.selectedObject = this.add.graphics().setDepth(7);
-    this.darknessOverlay = this.add.graphics().setDepth(48);
+    this.terrainSprites = this.add.graphics().setDepth(DEPTH.TERRAIN);
+    this.facingHighlight = this.add.graphics().setDepth(DEPTH.FACING_HIGHLIGHT);
+    this.selectedObject = this.add.graphics().setDepth(DEPTH.SELECTED_BACKDROP);
+    this.darknessOverlay = this.add.graphics().setDepth(DEPTH.DARKNESS);
 
     this.inventoryPanel = new InventoryPanel(
       this, this.inventory,
@@ -191,13 +223,13 @@ export class ExpeditionScene extends Phaser.Scene {
     this.combatActive = false;
     this.interactTarget = null;
 
-    this.minimapBg = this.add.graphics().setScrollFactor(0).setDepth(50);
-    this.minimapGfx = this.add.graphics().setScrollFactor(0).setDepth(51);
-    this.minimapDot = this.add.rectangle(0, 0, 3, 3, 0x88ccff).setScrollFactor(0).setDepth(52);
+    this.minimapBg = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD_BG);
+    this.minimapGfx = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD);
+    this.minimapDot = this.add.rectangle(0, 0, 3, 3, 0x88ccff).setScrollFactor(0).setDepth(DEPTH.MINIMAP_DOT);
 
     this.interactPrompt = this.add.text(0, 0, '', {
       fontSize: '12px', fontFamily: 'monospace', color: '#ffdd88',
-    }).setOrigin(0.5).setAlpha(0).setDepth(55);
+    }).setOrigin(0.5).setAlpha(0).setDepth(DEPTH.INTERACT_PROMPT);
 
     this.currentFloor = this.dungeonGen.generateFloor(this.startFloor);
 
@@ -325,14 +357,8 @@ export class ExpeditionScene extends Phaser.Scene {
             const img = makeImg('ore_' + tile.resource);
             img.setScale(1.5);
             this.oreImageMap.set(`${x},${y}`, img);
-            if (tile.maxDurability > 0) {
-              const ratio = tile.durability / tile.maxDurability;
-              if (ratio <= 0.33) {
-                img.setTint(0x777777);
-              } else if (ratio <= 0.66) {
-                img.setTint(0xaaaaaa);
-              }
-            }
+            const tint = this.getDamageTint(tile);
+            if (tint !== null) img.setTint(tint);
           }
           break;
         case 'stairs_up':
@@ -439,7 +465,7 @@ export class ExpeditionScene extends Phaser.Scene {
           previewY = cp.y;
         }
       }
-      this.previewTile = this.add.image(previewX, previewY, texKey).setDepth(7.1);
+      this.previewTile = this.add.image(previewX, previewY, texKey).setDepth(DEPTH.PREVIEW_TILE);
       if (tile.type === 'mineable') {
         this.previewTile.setScale(1.5);
         if (tile.maxDurability > 0) {
@@ -459,7 +485,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const p = gridToIso(this.playerX, this.playerY);
     const hasImage = this.textures.exists('player_bottom_left');
     if (hasImage) {
-      this.playerSprite = this.add.image(p.x, p.y, 'player_bottom_left').setDepth(8);
+      this.playerSprite = this.add.image(p.x, p.y, 'player_bottom_left').setDepth(DEPTH.PLAYER);
       this.player = this.playerSprite as unknown as Phaser.GameObjects.Container;
       this.updatePlayerSprite();
     } else {
@@ -476,7 +502,7 @@ export class ExpeditionScene extends Phaser.Scene {
       container.add(base);
       const body = this.add.rectangle(0, -20, 12, 20, 0x88ccff);
       container.add(body);
-      container.setDepth(8);
+      container.setDepth(DEPTH.PLAYER);
       this.player = container;
     }
   }
@@ -511,41 +537,41 @@ export class ExpeditionScene extends Phaser.Scene {
     hudBg.fillStyle(0x0a0a1a, 0.75);
     hudBg.fillRoundedRect(8, 8, 280, 100, 6);
     hudBg.setScrollFactor(0);
-    hudBg.setDepth(50);
+    hudBg.setDepth(DEPTH.HUD_BG);
 
     this.staminaBar = this.add.graphics();
     this.staminaBar.setScrollFactor(0);
-    this.staminaBar.setDepth(51);
+    this.staminaBar.setDepth(DEPTH.HUD);
 
     this.inventoryGauge = this.add.graphics();
     this.inventoryGauge.setScrollFactor(0);
-    this.inventoryGauge.setDepth(51);
+    this.inventoryGauge.setDepth(DEPTH.HUD);
 
     this.staminaText = this.add.text(20, 14, 'Stamina', {
       fontSize: '12px', fontFamily: 'monospace', color: '#8a7a6a',
-    }).setScrollFactor(0).setDepth(51);
+    }).setScrollFactor(0).setDepth(DEPTH.HUD);
 
     this.drawStaminaBar();
 
     this.depthText = this.add.text(20, 76, `Floor: ${this.expeditionState.depth}`, {
       fontSize: '12px', fontFamily: 'monospace', color: '#7a8a9a',
-    }).setScrollFactor(0).setDepth(51);
+    }).setScrollFactor(0).setDepth(DEPTH.HUD);
 
     this.inventoryText = this.add.text(20, 60, '', {
       fontSize: '11px', fontFamily: 'monospace', color: '#8a7a6a',
-    }).setScrollFactor(0).setDepth(51);
+    }).setScrollFactor(0).setDepth(DEPTH.HUD);
 
     this.drawInventoryGauge();
 
     this.add.text(20, 92, '[TAB] Inventory', {
       fontSize: '11px', fontFamily: 'monospace', color: '#4a5a4a',
-    }).setScrollFactor(0).setDepth(51);
+    }).setScrollFactor(0).setDepth(DEPTH.HUD);
 
     const infoBg = this.add.graphics();
     infoBg.fillStyle(0x0a0a1a, 0.75);
     infoBg.fillRoundedRect(camW - 228, 8, 220, 84, 6);
     infoBg.setScrollFactor(0);
-    infoBg.setDepth(50);
+    infoBg.setDepth(DEPTH.HUD_BG);
 
     const pickaxeNames: Record<number, string> = {
       1: 'Common Pickaxe',
@@ -557,7 +583,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.add.text(camW - 218, 14, `Pickaxe: ${pName}`, {
       fontSize: '11px', fontFamily: 'monospace', color: '#6a8a6a',
-    }).setScrollFactor(0).setDepth(51);
+    }).setScrollFactor(0).setDepth(DEPTH.HUD);
 
     const tier = gameState.currentPickaxeTier;
     const runsLeft = gameState.remainingPickaxeRuns(tier);
@@ -574,20 +600,20 @@ export class ExpeditionScene extends Phaser.Scene {
         .fillRoundedRect(barX, barY, barW, barH, 2)
         .fillStyle(runsLeft > 2 ? 0x44cc66 : runsLeft > 1 ? 0xccaa44 : 0xcc4444, 1)
         .fillRoundedRect(barX + 1, barY + 1, (barW - 2) * ratio, barH - 2, 1)
-        .setScrollFactor(0).setDepth(51);
+        .setScrollFactor(0).setDepth(DEPTH.HUD);
 
       this.add.text(barX + barW + 6, barY - 2, `${runsLeft}/${maxRuns}`, {
         fontSize: '10px', fontFamily: 'monospace', color: '#6a8a6a',
-      }).setScrollFactor(0).setDepth(51);
+      }).setScrollFactor(0).setDepth(DEPTH.HUD);
     }
 
     this.add.text(camW - 218, 40, '[ESC] Give Up  [SPACE] Mine', {
       fontSize: '11px', fontFamily: 'monospace', color: '#5a4a6a',
-    }).setScrollFactor(0).setDepth(51);
+    }).setScrollFactor(0).setDepth(DEPTH.HUD);
 
     this.add.text(camW - 218, 56, '[Q] Potion  [E] Scroll  [F] Bomb', {
       fontSize: '11px', fontFamily: 'monospace', color: '#4a6a5a',
-    }).setScrollFactor(0).setDepth(51);
+    }).setScrollFactor(0).setDepth(DEPTH.HUD);
   }
 
   private drawMinimap(): void {
@@ -789,7 +815,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.movePath = [];
 
       if (!this.analogGfx) {
-        this.analogGfx = this.add.graphics().setScrollFactor(0).setDepth(250);
+        this.analogGfx = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.ANALOG);
       }
       this.analogGfx.clear();
       this.analogGfx.lineStyle(2, 0xffffff, 0.25);
@@ -815,11 +841,8 @@ export class ExpeditionScene extends Phaser.Scene {
             const ty = this.playerY + this.facingY;
             if (g.x === tx && g.y === ty) {
               const tile = floor.tiles[ty][tx];
-              const interactive = tile.type === 'wall' || tile.type === 'blocked' || tile.type === 'boss_body'
-                || (tile.type === 'mineable' && !tile.broken)
-                || ((tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken)
-                || (tile.type.startsWith('event_') && !tile.broken)
-                || tile.type === 'stairs_down' || tile.type === 'stairs_up' || tile.type === 'pressure_plate';
+    const interactive = this.isBlocked(tile)
+      || tile.type === 'stairs_down' || tile.type === 'stairs_up' || tile.type === 'pressure_plate';
               
               if (interactive) {
                 this.movePath = [];
@@ -876,10 +899,7 @@ export class ExpeditionScene extends Phaser.Scene {
     if (g.x === this.playerX && g.y === this.playerY) return;
 
     const tile = floor.tiles[g.y][g.x];
-    const blocked = tile.type === 'wall' || tile.type === 'blocked' || tile.type === 'boss_body'
-      || (tile.type === 'mineable' && !tile.broken)
-      || ((tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken)
-      || (tile.type.startsWith('event_') && !tile.broken);
+    const blocked = this.isBlocked(tile);
 
     const interactive = blocked || tile.type === 'stairs_down' || tile.type === 'stairs_up' || tile.type === 'pressure_plate';
 
@@ -1194,8 +1214,8 @@ export class ExpeditionScene extends Phaser.Scene {
       audio.playItemPickup();
     };
 
-    switch (id) {
-      case 'hidden_treasure': {
+    const events: Record<string, () => EventConfig | null> = {
+      hidden_treasure: () => {
         const depth = this.expeditionState.depth;
         const pool = ['stone', 'bronze_ore', 'silver_ore', 'gold_ore'];
         const idx = Math.min(depth, pool.length - 1);
@@ -1203,33 +1223,20 @@ export class ExpeditionScene extends Phaser.Scene {
         return {
           title: 'Hidden Treasure',
           description: 'You find a hidden cache of resources!',
-          choices: [
-            {
-              label: `Take +3 ${itemDisplayName(reward)}`,
-              action: () => { addItem(reward, 3); },
-            },
-          ],
+          choices: [{ label: `Take +3 ${itemDisplayName(reward)}`, action: () => { addItem(reward, 3); } }],
         };
-      }
+      },
 
-      case 'blessing_fountain': {
-        return {
-          title: 'Blessing Fountain',
-          description: 'A mystical fountain pulses with energy. Drinking from it could restore your stamina.',
-          choices: [
-            {
-              label: 'Drink (+30 Stamina)',
-              action: () => { this.stamina.refill(30); },
-            },
-            {
-              label: 'Skip',
-              action: () => {},
-            },
-          ],
-        };
-      }
+      blessing_fountain: () => ({
+        title: 'Blessing Fountain',
+        description: 'A mystical fountain pulses with energy. Drinking from it could restore your stamina.',
+        choices: [
+          { label: 'Drink (+30 Stamina)', action: () => { this.stamina.refill(30); } },
+          { label: 'Skip', action: () => {} },
+        ],
+      }),
 
-      case 'wandering_trader': {
+      wandering_trader: () => {
         const cost = 5;
         const canTrade = stone() >= cost;
         const knowsScroll = gameState.crafting.isDiscovered('teleport_scroll');
@@ -1250,15 +1257,12 @@ export class ExpeditionScene extends Phaser.Scene {
                 }
               },
             },
-            {
-              label: 'Decline',
-              action: () => {},
-            },
+            { label: 'Decline', action: () => {} },
           ],
         };
-      }
+      },
 
-      case 'trapped_villager': {
+      trapped_villager: () => {
         const alreadyDiscovered = gameState.crafting.isDiscovered('stamina_potion');
         return {
           title: 'Trapped Villager',
@@ -1276,15 +1280,12 @@ export class ExpeditionScene extends Phaser.Scene {
                 gameState.save();
               },
             },
-            {
-              label: 'Leave them',
-              action: () => {},
-            },
+            { label: 'Leave them', action: () => {} },
           ],
         };
-      }
+      },
 
-      case 'gambling_goblin': {
+      gambling_goblin: () => {
         const cost = 5;
         const canGamble = stone() >= cost;
         return {
@@ -1296,72 +1297,47 @@ export class ExpeditionScene extends Phaser.Scene {
               action: () => {
                 if (stone() >= cost) {
                   removeStone(cost);
-                  if (Math.random() < 0.5) {
-                    addItem('silver_ore', 3);
-                  }
+                  if (Math.random() < 0.5) addItem('silver_ore', 3);
                 }
               },
             },
-            {
-              label: 'Walk away',
-              action: () => {},
-            },
+            { label: 'Walk away', action: () => {} },
           ],
         };
-      }
+      },
 
-      case 'midrun_shop': {
+      midrun_shop: () => {
         const hasCarrots = (n: number) => this.inventory.count('carrot') >= n;
         return {
           title: 'Wandering Shop',
           description: 'A merchant has set up shop mid-dungeon. What catches your eye?',
           choices: [
-            {
-              label: `Stamina Potion — 5 carrots ${hasCarrots(5) ? '' : '(not enough)'}`,
-              action: () => this.buyAtShop('stamina_potion', 5),
-            },
-            {
-              label: `Teleport Scroll — 8 carrots ${hasCarrots(8) ? '' : '(not enough)'}`,
-              action: () => this.buyAtShop('teleport_scroll', 8),
-            },
-            {
-              label: `Mining Bomb — 6 carrots ${hasCarrots(6) ? '' : '(not enough)'}`,
-              action: () => this.buyAtShop('mining_bomb', 6),
-            },
-            {
-              label: 'Leave',
-              action: () => {},
-            },
+            { label: `Stamina Potion — 5 carrots ${hasCarrots(5) ? '' : '(not enough)'}`, action: () => this.buyAtShop('stamina_potion', 5) },
+            { label: `Teleport Scroll — 8 carrots ${hasCarrots(8) ? '' : '(not enough)'}`, action: () => this.buyAtShop('teleport_scroll', 8) },
+            { label: `Mining Bomb — 6 carrots ${hasCarrots(6) ? '' : '(not enough)'}`, action: () => this.buyAtShop('mining_bomb', 6) },
+            { label: 'Leave', action: () => {} },
           ],
         };
-      }
+      },
 
-      case 'treasure_vault': {
+      treasure_vault: () => {
         const depth = this.expeditionState.depth;
         const goldAmt = 3 + Math.floor(depth / 3);
         const crystalAmt = 3 + Math.floor(depth / 4);
         return {
           title: 'Treasure Vault',
           description: 'A glittering stash of precious resources!',
-          choices: [
-            {
-              label: `Claim +${goldAmt} Gold Ore, +${crystalAmt} Crystal`,
-              action: () => {
-                addItem('gold_ore', goldAmt);
-                addItem('crystal', crystalAmt);
-              },
-            },
-          ],
+          choices: [{ label: `Claim +${goldAmt} Gold Ore, +${crystalAmt} Crystal`, action: () => { addItem('gold_ore', goldAmt); addItem('crystal', crystalAmt); } }],
         };
-      }
+      },
 
-      case 'relic_chamber': {
+      relic_chamber: () => {
         const relicIds = ['relic_stamina', 'relic_inventory', 'relic_luck'];
         const available = relicIds.filter(r => !gameState.hasFoundRelic(r));
         if (available.length === 0) {
           return {
             title: 'Ancient Relic',
-            description: 'The pedestal is empty \u2014 you have already claimed all relics.',
+            description: 'The pedestal is empty — you have already claimed all relics.',
             choices: [{ label: 'Leave', action: () => {} }],
           };
         }
@@ -1380,24 +1356,14 @@ export class ExpeditionScene extends Phaser.Scene {
           title: 'Ancient Relic',
           description: relicDescs[relicId] ?? 'A glowing artifact radiates ancient power...',
           choices: [
-            {
-              label: `Claim the ${relicNames[relicId] ?? 'Relic'}`,
-              action: () => {
-                gameState.addFoundRelic(relicId);
-                this.showRecipeDiscovery(relicNames[relicId] ?? 'Relic');
-              },
-            },
-            {
-              label: 'Leave it',
-              action: () => {},
-            },
+            { label: `Claim the ${relicNames[relicId] ?? 'Relic'}`, action: () => { gameState.addFoundRelic(relicId); this.showRecipeDiscovery(relicNames[relicId] ?? 'Relic'); } },
+            { label: 'Leave it', action: () => {} },
           ],
         };
-      }
+      },
+    };
 
-      default:
-        return null;
-    }
+    return events[id]?.() ?? null;
   }
 
   private buyAtShop(itemId: string, cost: number): void {
@@ -1411,29 +1377,14 @@ export class ExpeditionScene extends Phaser.Scene {
     const cx = this.cameras.main.width / 2;
     const cy = this.cameras.main.height / 2;
 
-    const bg = this.add.graphics().setScrollFactor(0).setDepth(100);
-    bg.fillStyle(0x0a0a1a, 0.85);
-    bg.fillRoundedRect(cx - 160, cy - 50, 320, 100, 8);
-    bg.lineStyle(1, 0x5a4a7a, 0.5);
-    bg.strokeRoundedRect(cx - 160, cy - 50, 320, 100, 8);
-
-    let label: string;
-    if (this.stairAction === 'ascend' && this.expeditionState.depth % 5 === 0) {
-      label = 'Return to homeland?';
-    } else {
-      const dir = this.stairAction === 'ascend' ? 'Ascend' : 'Descend';
-      const next = this.stairAction === 'ascend' ? this.expeditionState.depth - 1 : this.expeditionState.depth + 1;
-      label = `${dir} to floor ${next}?`;
-    }
-    const text = this.add.text(cx, cy - 20, label, {
-      fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
-
-    const hint = this.add.text(cx, cy + 15, '[SPACE] Confirm  |  [ESC] Cancel', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#7a6a5a',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
-
-    this.stairPrompt = this.add.container(0, 0, [bg, text, hint]).setDepth(100).setScrollFactor(0);
+    const bg = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.OVERLAY);
+    const text = this.add.text(cx, 270, 'Use stairs?', {
+      fontSize: '20px', fontFamily: 'monospace', color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
+    const hint = this.add.text(cx, 300, '[SPACE] Descend  [ESC] Cancel', {
+      fontSize: '12px', fontFamily: 'monospace', color: '#aaaaaa',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
+    this.stairPrompt = this.add.container(0, 0, [bg, text, hint]).setDepth(DEPTH.OVERLAY).setScrollFactor(0);
   }
 
   private hideStairPrompt(): void {
@@ -1495,6 +1446,11 @@ export class ExpeditionScene extends Phaser.Scene {
       gameState.crafting.discover('pickaxe_3');
       this.showRecipeDiscovery('Silver Pickaxe');
     }
+
+    if (resource === 'gold_ore' && !gameState.crafting.isDiscovered('pickaxe_4')) {
+      gameState.crafting.discover('pickaxe_4');
+      this.showRecipeDiscovery('Gold Pickaxe');
+    }
   }
 
   private checkRingDiscovery(): void {
@@ -1519,22 +1475,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
   private showRecipeDiscovery(name: string): void {
     const cx = this.cameras.main.width / 2;
-
-    const popup = this.add.text(
-      cx, 130,
-      `New Recipe: ${name}!`,
-      { fontSize: '16px', fontFamily: 'monospace', color: '#44ccff', fontStyle: 'bold' }
-    ).setOrigin(0.5).setDepth(200).setScrollFactor(0);
-
-    this.tweens.add({
-      targets: popup,
-      y: popup.y - 40,
-      alpha: 0,
-      scale: { from: 1.1, to: 0.9 },
-      duration: 2000,
-      ease: 'Quad.easeOut',
-      onComplete: () => popup.destroy(),
-    });
+    this.createPopup(`New Recipe: ${name}!`, cx, 130, '#44ccff', { duration: 2000, moveY: -40, scaleFrom: 1.1, scaleTo: 0.9 });
   }
 
   private rebuildFloor(): void {
@@ -1572,12 +1513,7 @@ export class ExpeditionScene extends Phaser.Scene {
     if (nx < 0 || nx >= floor.cols || ny < 0 || ny >= floor.rows) return;
 
     const tile = floor.tiles[ny][nx];
-    if (tile.type === 'wall') return;
-    if (tile.type === 'blocked') return;
-    if (tile.type === 'boss_body') return;
-    if (tile.type === 'mineable' && !tile.broken) return;
-    if ((tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken) return;
-    if (tile.type.startsWith('event_') && !tile.broken) return;
+    if (this.isBlocked(tile)) return;
     if (tile.type === 'stairs_up') {
       this.stairTargetX = nx;
       this.stairTargetY = ny;
@@ -1663,9 +1599,11 @@ export class ExpeditionScene extends Phaser.Scene {
     const tile = floor.tiles[ty][tx];
     if (tile.type !== 'mineable' || tile.broken) return;
 
+    console.log('dur 0: ', tile.durability);
     tile.durability -= this.mining.getDamage();
     audio.playMineHit(tile.maxDurability);
     this.cameras.main.shake(50, 0.006);
+    console.log('dur 1: ', tile.durability);
 
     // Update damage appearance on the existing ore image
     const hitImg = this.oreImageMap.get(`${tx},${ty}`);
@@ -1718,7 +1656,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
       // Shockwave ring
       const pp = gridToIso(tx, ty);
-      const ring = this.add.circle(pp.x, pp.y, 5, 0xffffff, 0.4).setDepth(14);
+      const ring = this.add.circle(pp.x, pp.y, 5, 0xffffff, 0.4).setDepth(DEPTH.EFFECTS);
       this.tweens.add({
         targets: ring,
         radius: HALF_W * 1.5,
@@ -1769,7 +1707,7 @@ export class ExpeditionScene extends Phaser.Scene {
     // Large core chunks
     for (let i = 0; i < 4; i++) {
       const radius = Phaser.Math.FloatBetween(4, 7);
-      const p = this.add.circle(cx, cy, radius, color, 0.9).setDepth(15);
+      const p = this.add.circle(cx, cy, radius, color, 0.9).setDepth(DEPTH.PARTICLES);
 
       this.tweens.add({
         targets: p,
@@ -1786,7 +1724,7 @@ export class ExpeditionScene extends Phaser.Scene {
     // Small debris burst
     for (let i = 0; i < 10; i++) {
       const radius = Phaser.Math.FloatBetween(1.5, 3.5);
-      const p = this.add.circle(cx, cy, radius, color, 0.7).setDepth(15);
+      const p = this.add.circle(cx, cy, radius, color, 0.7).setDepth(DEPTH.PARTICLES);
 
       this.tweens.add({
         targets: p,
@@ -1811,7 +1749,7 @@ export class ExpeditionScene extends Phaser.Scene {
       const angle = (Math.PI * 2 / 8) * i + Phaser.Math.FloatBetween(-0.2, 0.2);
       const dist = Phaser.Math.Between(8, 22);
       const radius = Phaser.Math.FloatBetween(2, 4);
-      const particle = this.add.circle(cx, cy, radius, 0xffffff, 0.7).setDepth(15);
+      const particle = this.add.circle(cx, cy, radius, 0xffffff, 0.7).setDepth(DEPTH.PARTICLES);
 
       this.tweens.add({
         targets: particle,
@@ -1826,7 +1764,7 @@ export class ExpeditionScene extends Phaser.Scene {
     }
 
     // Central flash
-    const flash = this.add.circle(cx, cy, HALF_W * 0.8, 0xffffff, 0.25).setDepth(14);
+    const flash = this.add.circle(cx, cy, HALF_W * 0.8, 0xffffff, 0.25).setDepth(DEPTH.EFFECTS);
     this.tweens.add({
       targets: flash,
       scale: 1.5,
@@ -1845,7 +1783,7 @@ export class ExpeditionScene extends Phaser.Scene {
       p.y - 10,
       `+1 ${label}`,
       { fontSize: '13px', fontFamily: 'monospace', color: '#ffcc44', fontStyle: 'bold' }
-    ).setOrigin(0.5).setDepth(25);
+    ).setOrigin(0.5).setDepth(DEPTH.ITEM_POPUP);
 
     this.tweens.add({
       targets: popup,
@@ -1961,13 +1899,13 @@ export class ExpeditionScene extends Phaser.Scene {
       cx, cy,
       this.cameras.main.width, this.cameras.main.height,
       0x000000, 0
-    ).setDepth(100).setScrollFactor(0);
+    ).setDepth(DEPTH.OVERLAY).setScrollFactor(0);
 
     this.add.text(
       cx, cy,
       'EXHAUSTED\nTeleporting home...',
       { fontSize: '24px', fontFamily: 'monospace', color: '#cc4444', align: 'center' }
-    ).setOrigin(0.5).setDepth(101).setScrollFactor(0);
+    ).setOrigin(0.5).setDepth(DEPTH.OVERLAY_TEXT).setScrollFactor(0);
 
     this.tweens.add({
       targets: overlay,
@@ -1991,13 +1929,13 @@ export class ExpeditionScene extends Phaser.Scene {
       cx, cy,
       'Returning to Homeland...',
       { fontSize: '20px', fontFamily: 'monospace', color: '#44cc66' }
-    ).setOrigin(0.5).setDepth(101).setScrollFactor(0);
+    ).setOrigin(0.5).setDepth(DEPTH.OVERLAY_TEXT).setScrollFactor(0);
 
     const overlay = this.add.rectangle(
       cx, cy,
       this.cameras.main.width, this.cameras.main.height,
       0x000000, 0
-    ).setDepth(100).setScrollFactor(0);
+    ).setDepth(DEPTH.OVERLAY).setScrollFactor(0);
 
     this.tweens.add({
       targets: overlay,
@@ -2021,13 +1959,13 @@ export class ExpeditionScene extends Phaser.Scene {
       cx, cy,
       'Giving Up...\nLosing some items...',
       { fontSize: '18px', fontFamily: 'monospace', color: '#cc8844', align: 'center' }
-    ).setOrigin(0.5).setDepth(101).setScrollFactor(0);
+    ).setOrigin(0.5).setDepth(DEPTH.OVERLAY_TEXT).setScrollFactor(0);
 
     const overlay = this.add.rectangle(
       cx, cy,
       this.cameras.main.width, this.cameras.main.height,
       0x000000, 0
-    ).setDepth(100).setScrollFactor(0);
+    ).setDepth(DEPTH.OVERLAY).setScrollFactor(0);
 
     this.tweens.add({
       targets: overlay,
@@ -2197,7 +2135,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const pp = gridToIso(this.playerX, this.playerY);
 
     // Expansion ring
-    const ring = this.add.circle(pp.x, pp.y, 5, 0xff6600, 0.3).setDepth(14);
+    const ring = this.add.circle(pp.x, pp.y, 5, 0xff6600, 0.3).setDepth(DEPTH.EFFECTS);
     this.tweens.add({
       targets: ring,
       radius: HALF_W * 2,
@@ -2208,7 +2146,7 @@ export class ExpeditionScene extends Phaser.Scene {
     });
 
     // Inner flash
-    const flash = this.add.circle(pp.x, pp.y, HALF_W, 0xffffff, 0.4).setDepth(20);
+    const flash = this.add.circle(pp.x, pp.y, HALF_W, 0xffffff, 0.4).setDepth(DEPTH.BOMB);
     this.tweens.add({
       targets: flash,
       scale: 2,
@@ -2222,7 +2160,7 @@ export class ExpeditionScene extends Phaser.Scene {
     for (let i = 0; i < 8; i++) {
       const angle = (Math.PI * 2 / 8) * i + Phaser.Math.FloatBetween(-0.3, 0.3);
       const radius = Phaser.Math.FloatBetween(3, 6);
-      const debris = this.add.circle(pp.x, pp.y, radius, 0xff6600, 0.6).setDepth(20);
+      const debris = this.add.circle(pp.x, pp.y, radius, 0xff6600, 0.6).setDepth(DEPTH.BOMB);
       this.tweens.add({
         targets: debris,
         x: pp.x + Math.cos(angle) * Phaser.Math.Between(30, 60),
@@ -2283,18 +2221,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
   private showConsumableFeedback(text: string): void {
     const cx = this.cameras.main.width / 2;
-    const popup = this.add.text(cx, 180, text, {
-      fontSize: '16px', fontFamily: 'monospace', color: '#44ff88', fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(200).setScrollFactor(0);
-
-    this.tweens.add({
-      targets: popup,
-      y: popup.y - 30,
-      alpha: 0,
-      duration: 1200,
-      ease: 'Quad.easeOut',
-      onComplete: () => popup.destroy(),
-    });
+    this.createPopup(text, cx, 180, '#44ff88', { duration: 1200, moveY: -30, scaleTo: 0.9 });
   }
 
   private trashItem(itemId: string): void {
@@ -2315,7 +2242,7 @@ export class ExpeditionScene extends Phaser.Scene {
     if (!this.textures.exists(textureKey)) return;
     const p = gridToIso(tx, ty);
     const sprite = this.add.image(p.x, p.y, textureKey)
-      .setDepth(26)
+      .setDepth(DEPTH.ITEM_SPRITE)
       .setScale(0);
     this.tweens.add({
       targets: sprite,

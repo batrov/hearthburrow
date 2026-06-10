@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { InventorySystem } from '../systems/InventorySystem';
 import { itemDisplayName } from '../systems/GameState';
+import { BasePanel } from './BasePanel';
 
 const ITEM_INFO: Record<string, { desc: string }> = {
   stone: { desc: 'Common stone. Used for building and basic crafting.' },
@@ -20,6 +21,7 @@ const ITEM_INFO: Record<string, { desc: string }> = {
   pickaxe_1: { desc: 'A basic wooden pickaxe. Unlimited uses.' },
   pickaxe_2: { desc: 'A bronze pickaxe. 5 runs, mines bronze ore.' },
   pickaxe_3: { desc: 'A silver pickaxe. 5 runs, mines silver ore.' },
+  pickaxe_4: { desc: 'A gold pickaxe. 5 runs, mines gold ore.' },
   boots_stamina_bronze: { desc: '+10 max stamina for 5 expeditions. Requires bronze version first.' },
   boots_stamina_silver: { desc: '+20 max stamina for 5 expeditions. Requires bronze version first.' },
   boots_stamina_gold: { desc: '+30 max stamina for 5 expeditions. Requires silver version first.' },
@@ -32,16 +34,13 @@ const ITEM_INFO: Record<string, { desc: string }> = {
   lantern_gold: { desc: 'Extends light radius by 60px for 5 expeditions.' },
 };
 
-export class InventoryPanel {
-  private scene: Phaser.Scene;
-  private container: Phaser.GameObjects.Container;
+export class InventoryPanel extends BasePanel {
   private overlay: Phaser.GameObjects.Graphics;
   private titleText: Phaser.GameObjects.Text;
   private contentText: Phaser.GameObjects.Text;
   private hintText: Phaser.GameObjects.Text;
   private warnText: Phaser.GameObjects.Text;
   private descriptionText: Phaser.GameObjects.Text;
-  private visible: boolean = false;
   private inventory: InventorySystem;
 
   private items: { id: string; name: string; qty: number }[] = [];
@@ -58,12 +57,10 @@ export class InventoryPanel {
     onTrash: ((itemId: string) => void) | null = null,
     title: string = 'Inventory',
   ) {
-    this.scene = scene;
+    super(scene);
     this.inventory = inventory;
     this.onUse = onUse;
     this.onTrash = onTrash;
-
-    this.container = scene.add.container(0, 0).setDepth(200).setScrollFactor(0);
 
     this.overlay = scene.add.graphics();
     this.overlay.setInteractive(new Phaser.Geom.Rectangle(0, 0, 960, 640), Phaser.Geom.Rectangle.Contains);
@@ -96,12 +93,10 @@ export class InventoryPanel {
       align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.descriptionText);
-
-    this.container.setVisible(false);
   }
 
   handleInput(key: string): void {
-    if (!this.visible) return;
+    if (!this._visible) return;
 
     if (key === 'W' || key === 'UP') {
       this.selectionIndex = Math.max(0, this.selectionIndex - 1);
@@ -123,9 +118,8 @@ export class InventoryPanel {
   }
 
   show(): void {
-    this.visible = true;
+    this.setVisible(true);
     this.dirty = true;
-    this.container.setVisible(true);
 
     this.container.setAlpha(0);
     this.scene.tweens.add({
@@ -143,22 +137,9 @@ export class InventoryPanel {
       duration: 150,
       ease: 'Quad.easeIn',
       onComplete: () => {
-        this.visible = false;
-        this.container.setVisible(false);
+        this.setVisible(false);
       },
     });
-  }
-
-  isVisible(): boolean {
-    return this.visible;
-  }
-
-  toggle(): void {
-    if (this.visible) {
-      this.hide();
-    } else {
-      this.show();
-    }
   }
 
   refresh(): void {
@@ -238,7 +219,7 @@ export class InventoryPanel {
   }
 
   draw(): void {
-    if (!this.visible) return;
+    if (!this._visible) return;
     if (!this.dirty) return;
     this.dirty = false;
 

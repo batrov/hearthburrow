@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { audio } from '../systems/AudioSystem';
+import { BasePanel } from './BasePanel';
 
 export type CombatResult = 'victory' | 'retreat' | null;
 
@@ -14,9 +15,7 @@ export interface EnemyConfig {
   ringCritChance?: number;
 }
 
-export class CombatPanel {
-  private scene: Phaser.Scene;
-  private container: Phaser.GameObjects.Container;
+export class CombatPanel extends BasePanel {
   private overlay: Phaser.GameObjects.Graphics;
   private enemyNameText: Phaser.GameObjects.Text;
   private hpBar: Phaser.GameObjects.Graphics;
@@ -31,7 +30,6 @@ export class CombatPanel {
   private staminaGfx: Phaser.GameObjects.Graphics;
   private staminaLabel: Phaser.GameObjects.Text;
 
-  private visible: boolean = false;
   private result: CombatResult = null;
   private enemyHP: number = 0;
   private enemyMaxHP: number = 0;
@@ -51,8 +49,7 @@ export class CombatPanel {
   private readonly MARKER_SIZE = 6;
 
   constructor(scene: Phaser.Scene) {
-    this.scene = scene;
-    this.container = scene.add.container(0, 0).setDepth(200).setScrollFactor(0);
+    super(scene);
 
     this.overlay = scene.add.graphics();
     this.overlay.setInteractive(new Phaser.Geom.Rectangle(0, 0, 960, 640), Phaser.Geom.Rectangle.Contains);
@@ -111,8 +108,6 @@ export class CombatPanel {
 
     this.staminaGfx = scene.add.graphics();
     this.container.add(this.staminaGfx);
-
-    this.container.setVisible(false);
   }
 
   show(
@@ -122,7 +117,7 @@ export class CombatPanel {
     staminaMax?: number,
   ): void {
     this.result = null;
-    this.visible = true;
+    this._visible = true;
     this.enemyHP = config.hp;
     this.enemyMaxHP = config.hp;
     this.currentEnemy = config;
@@ -177,15 +172,11 @@ export class CombatPanel {
       this.markerTween.stop();
       this.markerTween = null;
     }
-    this.visible = false;
+    this._visible = false;
     this.currentEnemy = null;
     this.enemySprite.setVisible(false);
     this.container.setVisible(false);
     this.result = null;
-  }
-
-  isVisible(): boolean {
-    return this.visible;
   }
 
   getResult(): CombatResult {
@@ -193,7 +184,7 @@ export class CombatPanel {
   }
 
   handleStrike(): 'hit' | 'miss' | 'kill' {
-    if (!this.visible || this.result) return 'miss';
+    if (!this._visible || this.result) return 'miss';
 
     const markerX = this.marker.x;
     const zoneCenter = this.barCenter + this.hitZoneOffset;

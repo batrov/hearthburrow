@@ -45,6 +45,23 @@ export class AudioSystem {
     return this.ctx;
   }
 
+  private playNote(type: OscillatorType, freq: number, freqEnd: number, vol: number, dur: number, delay: number = 0): void {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const t = ctx.currentTime + delay;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t);
+    osc.frequency.exponentialRampToValueAtTime(freqEnd, t + dur);
+    gain.gain.setValueAtTime(vol, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(gain);
+    gain.connect(this.sfxGain!);
+    osc.start(t);
+    osc.stop(t + dur);
+  }
+
   /** Short percussive square wave — pitch scales with tile durability. */
   playMineHit(durability: number = 3): void {
     const ctx = this.ensureContext();
@@ -340,113 +357,21 @@ export class AudioSystem {
   }
 
   playResourcePickup(resourceId: string): void {
-    const ctx = this.ensureContext();
-    if (!ctx) return;
-    const t = ctx.currentTime;
-
     switch (resourceId) {
-      case 'stone': {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(130, t);
-        osc.frequency.exponentialRampToValueAtTime(60, t + 0.12);
-        gain.gain.setValueAtTime(0.1, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
-        osc.connect(gain);
-        gain.connect(this.sfxGain!);
-        osc.start(t);
-        osc.stop(t + 0.12);
+      case 'stone': this.playNote('triangle', 130, 60, 0.1, 0.12); break;
+      case 'bronze_ore': this.playNote('square', 400, 800, 0.05, 0.08); break;
+      case 'silver_ore': this.playNote('square', 600, 1000, 0.05, 0.07); break;
+      case 'gold_ore':
+        this.playNote('sine', 880, 1320, 0.06, 0.15);
+        this.playNote('sine', 1320, 1320, 0.04, 0.1, 0.05);
         break;
-      }
-      case 'bronze_ore': {
-        const osc1 = ctx.createOscillator();
-        const gain1 = ctx.createGain();
-        osc1.type = 'square';
-        osc1.frequency.setValueAtTime(400, t);
-        osc1.frequency.exponentialRampToValueAtTime(800, t + 0.06);
-        gain1.gain.setValueAtTime(0.05, t);
-        gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
-        osc1.connect(gain1);
-        gain1.connect(this.sfxGain!);
-        osc1.start(t);
-        osc1.stop(t + 0.08);
+      case 'crystal':
+        [660, 880, 1100].forEach((freq, i) => this.playNote('sine', freq, freq, 0.07, 0.12, i * 0.04));
         break;
-      }
-      case 'silver_ore': {
-        const osc2 = ctx.createOscillator();
-        const gain2 = ctx.createGain();
-        osc2.type = 'square';
-        osc2.frequency.setValueAtTime(600, t);
-        osc2.frequency.exponentialRampToValueAtTime(1000, t + 0.05);
-        gain2.gain.setValueAtTime(0.05, t);
-        gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
-        osc2.connect(gain2);
-        gain2.connect(this.sfxGain!);
-        osc2.start(t);
-        osc2.stop(t + 0.07);
+      case 'monster_drop':
+        this.playNote('sine', 200, 100, 0.06, 0.15);
         break;
-      }
-      case 'gold_ore': {
-        const osc3 = ctx.createOscillator();
-        const gain3 = ctx.createGain();
-        osc3.type = 'sine';
-        osc3.frequency.setValueAtTime(880, t);
-        osc3.frequency.exponentialRampToValueAtTime(1320, t + 0.04);
-        gain3.gain.setValueAtTime(0.06, t);
-        gain3.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
-        osc3.connect(gain3);
-        gain3.connect(this.sfxGain!);
-        osc3.start(t);
-        osc3.stop(t + 0.15);
-        const osc3b = ctx.createOscillator();
-        const gain3b = ctx.createGain();
-        osc3b.type = 'sine';
-        osc3b.frequency.setValueAtTime(1320, t + 0.05);
-        gain3b.gain.setValueAtTime(0.04, t + 0.05);
-        gain3b.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
-        osc3b.connect(gain3b);
-        gain3b.connect(this.sfxGain!);
-        osc3b.start(t + 0.05);
-        osc3b.stop(t + 0.15);
-        break;
-      }
-      case 'crystal': {
-        const crystalNotes = [660, 880, 1100];
-        crystalNotes.forEach((freq, i) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'sine';
-          const noteT = t + i * 0.04;
-          osc.frequency.setValueAtTime(freq, noteT);
-          gain.gain.setValueAtTime(0.07, noteT);
-          gain.gain.exponentialRampToValueAtTime(0.001, noteT + 0.12);
-          osc.connect(gain);
-          gain.connect(this.sfxGain!);
-          osc.start(noteT);
-          osc.stop(noteT + 0.12);
-        });
-        break;
-      }
-      case 'monster_drop': {
-        const osc4 = ctx.createOscillator();
-        const gain4 = ctx.createGain();
-        osc4.type = 'sine';
-        osc4.frequency.setValueAtTime(200, t);
-        osc4.frequency.exponentialRampToValueAtTime(100, t + 0.08);
-        osc4.frequency.setValueAtTime(250, t + 0.1);
-        gain4.gain.setValueAtTime(0.06, t);
-        gain4.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
-        osc4.connect(gain4);
-        gain4.connect(this.sfxGain!);
-        osc4.start(t);
-        osc4.stop(t + 0.15);
-        break;
-      }
-      default: {
-        this.playItemPickup();
-        break;
-      }
+      default: this.playNote('triangle', 300, 100, 0.05, 0.1); break;
     }
   }
 }
