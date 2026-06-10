@@ -56,6 +56,13 @@
 - **Minimap** — all 9 tiles show as red dots
 - **Preview** — facing any body tile shows boss preview at center position
 
+## ✅ Seed-Based Generation (June 2026)
+- **Seeded RNG** — `DungeonGenerator` now uses `Phaser.Math.RandomDataGenerator` with `setSeed(seed)` replacing all 26 `Math.random()` call sites
+- **Seed input UI** — new "Seed" tab (tab 9) in the gate panel; type characters directly to set seed, Backspace to delete
+- **Per-floor determinism** — seed derived as `runSeed + '_depth_' + depth` so same seed + same depth = identical floor layout
+- **Persistence** — seed stored in `gameState.currentRunSeed`, saved/loaded with the rest of the save data
+- **Backward compatible** — empty seed = unseeded RNG = existing random behavior
+
 
 Resolved Bugs:
 - Pressure plate puzzle stairs not spawning — `completePuzzle` only searched for `type === 'floor'`, but stepped-on plates are `type === 'pressure_plate'`. Fixed by including `pressure_plate` in the candidate search. Also updated `stairsDownX/Y` after placement for correct ascending landing.

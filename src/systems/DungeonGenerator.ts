@@ -1,3 +1,5 @@
+import Phaser from 'phaser';
+
 export type TileType = 'wall' | 'floor' | 'mineable' | 'stairs_up' | 'stairs_down' | 'corridor'
   | 'event_chest' | 'event_merchant' | 'event_goblin' | 'event_villager' | 'event_fountain'
   | 'event_shop'
@@ -53,10 +55,15 @@ const ENEMY_POOL: { type: string; weight: number }[] = [
 ];
 
 export class DungeonGenerator {
+  private rng = new Phaser.Math.RandomDataGenerator();
   private minRooms = 3;
   private maxRooms = 5;
   private floorCols = 50;
   private floorRows = 40;
+
+  setSeed(seed: string): void {
+    this.rng.init([seed]);
+  }
 
   generateFloor(depth: number): DungeonFloor {
     const cols = this.floorCols;
@@ -129,7 +136,8 @@ export class DungeonGenerator {
         const base = Math.floor(total / n);
         const rem = total % n;
         const arr = Array(n).fill(base);
-        const indices = Array.from({ length: n }, (_, i) => i).sort(() => Math.random() - 0.5);
+        const indices = Array.from({ length: n }, (_, i) => i);
+        this.rng.shuffle(indices);
         for (let r = 0; r < rem; r++) arr[indices[r]]++;
         return arr;
       };
@@ -157,20 +165,20 @@ export class DungeonGenerator {
         this.placeShopTile(tiles, rooms);
       }
 
-      if (depth >= 1 && Math.random() < 0.4) {
+      if (depth >= 1 && this.rng.frac() < 0.4) {
         this.placeTreasureVault(tiles, rooms);
       }
 
       this.fixCorridorEntries(tiles);
 
-      if (depth >= 1 && Math.random() < 0.25) {
+      if (depth >= 1 && this.rng.frac() < 0.25) {
         const result = this.placePuzzle(tiles, rooms);
         if (result) {
           puzzle = { totalPlates: result.totalPlates, pressedPlates: 0, room: result.room };
         }
       }
 
-      if (depth >= 10 && Math.random() < 0.15) {
+      if (depth >= 10 && this.rng.frac() < 0.15) {
         this.placeRelicChamber(tiles, rooms);
       }
 
@@ -222,15 +230,15 @@ export class DungeonGenerator {
 
   private placeRooms(cols: number, rows: number): RoomRect[] {
     const rooms: RoomRect[] = [];
-    const numRooms = this.minRooms + Math.floor(Math.random() * (this.maxRooms - this.minRooms + 1));
+    const numRooms = this.minRooms + this.rng.integerInRange(0, this.maxRooms - this.minRooms);
     let attempts = 0;
 
     while (rooms.length < numRooms && attempts < 100) {
       attempts++;
-      const w = 10 + Math.floor(Math.random() * 5);
-      const h = 8 + Math.floor(Math.random() * 4);
-      const x = 1 + Math.floor(Math.random() * (cols - w - 2));
-      const y = 1 + Math.floor(Math.random() * (rows - h - 2));
+      const w = 10 + this.rng.integerInRange(0, 4);
+      const h = 8 + this.rng.integerInRange(0, 3);
+      const x = 1 + this.rng.integerInRange(0, cols - w - 3);
+      const y = 1 + this.rng.integerInRange(0, rows - h - 3);
 
       const padding = 3;
       let overlaps = false;
@@ -280,7 +288,7 @@ export class DungeonGenerator {
   }
 
   private pickResource(depth: number): { id: string; durability: number } {
-    const roll = Math.random();
+    const roll = this.rng.frac();
     const biomeFloor = depth % 5;
     if (depth <= 4) {
       if (roll < 0.65 - biomeFloor * 0.03) return { id: 'stone', durability: 2 };
@@ -321,7 +329,7 @@ export class DungeonGenerator {
         if (x === room.x || x === room.x + room.w - 1 || y === room.y || y === room.y + room.h - 1) {
           tiles[y][x] = this.makeTile('wall');
         } else {
-          const roll = Math.random();
+          const roll = this.rng.frac();
           if (roll < 0.18) {
             const res = this.pickResource(depth);
             let finalId = res.id;
@@ -351,9 +359,9 @@ export class DungeonGenerator {
   }
 
   private placeEventTiles(tiles: DungeonTile[][], rooms: RoomRect[]): void {
-    const available = [...EVENT_POOL];
-    const shuffled = available.sort(() => Math.random() - 0.5);
-    const count = Math.min(1 + Math.floor(Math.random() * 2), shuffled.length, rooms.length);
+    const shuffled = [...EVENT_POOL];
+    this.rng.shuffle(shuffled);
+    const count = Math.min(1 + this.rng.integerInRange(0, 1), shuffled.length, rooms.length);
 
     for (let i = 0; i < count; i++) {
       const ev = shuffled[i];
@@ -371,13 +379,13 @@ export class DungeonGenerator {
 
       if (floorPositions.length === 0) continue;
 
-      const pos = floorPositions[Math.floor(Math.random() * floorPositions.length)];
+      const pos = this.rng.pick(floorPositions);
       tiles[pos.y][pos.x] = this.makeTile(ev.type, ev.eventId);
     }
   }
 
   private placeShopTile(tiles: DungeonTile[][], rooms: RoomRect[]): void {
-    const room = rooms[Math.floor(Math.random() * rooms.length)];
+    const room = this.rng.pick(rooms);
 
     const floorPositions: { x: number; y: number }[] = [];
     for (let y = room.y + 1; y < room.y + room.h - 1; y++) {
@@ -391,7 +399,7 @@ export class DungeonGenerator {
 
     if (floorPositions.length === 0) return;
 
-    const pos = floorPositions[Math.floor(Math.random() * floorPositions.length)];
+    const pos = this.rng.pick(floorPositions);
     tiles[pos.y][pos.x] = this.makeTile('event_shop' as TileType, 'midrun_shop');
   }
 
@@ -400,8 +408,8 @@ export class DungeonGenerator {
     const vh = 6;
 
     for (let attempt = 0; attempt < 50; attempt++) {
-      const vx = 1 + Math.floor(Math.random() * (50 - vw - 1));
-      const vy = 1 + Math.floor(Math.random() * (40 - vh - 1));
+      const vx = 1 + this.rng.integerInRange(0, 50 - vw - 2);
+      const vy = 1 + this.rng.integerInRange(0, 40 - vh - 2);
 
       const overlaps = rooms.some(r =>
         vx < r.x + r.w + 3 && vx + vw + 3 > r.x &&
@@ -424,9 +432,9 @@ export class DungeonGenerator {
       for (let n = 0; n < 2; n++) {
         const ef = this.getFloorTiles(tiles, vaultRoom);
         if (ef.length === 0) break;
-        const p = ef[Math.floor(Math.random() * ef.length)];
+        const p = this.rng.pick(ef);
         const totalWeight = 9;
-        const roll = Math.random() * totalWeight;
+        const roll = this.rng.frac() * totalWeight;
         let chosen = 'slime';
         if (roll < 4) chosen = 'slime';
         else if (roll < 7) chosen = 'rat';
@@ -438,7 +446,7 @@ export class DungeonGenerator {
 
       const cf = this.getFloorTiles(tiles, vaultRoom);
       if (cf.length > 0) {
-        const cp = cf[Math.floor(Math.random() * cf.length)];
+        const cp = this.rng.pick(cf);
         tiles[cp.y][cp.x] = this.makeTile('event_treasure_vault' as TileType, 'treasure_vault');
       }
 
@@ -473,11 +481,11 @@ export class DungeonGenerator {
   }
 
   private placeEnemyTiles(tiles: DungeonTile[][], rooms: RoomRect[]): void {
-    const count = 2 + Math.floor(Math.random() * 2);
+    const count = this.rng.integerInRange(2, 3);
     const totalWeight = ENEMY_POOL.reduce((s, e) => s + e.weight, 0);
 
     for (let n = 0; n < count; n++) {
-      const roll = Math.random() * totalWeight;
+      const roll = this.rng.frac() * totalWeight;
       let cumulative = 0;
       let chosen = 'slime';
       for (const e of ENEMY_POOL) {
@@ -485,7 +493,7 @@ export class DungeonGenerator {
         if (roll < cumulative) { chosen = e.type; break; }
       }
 
-      const room = rooms[Math.floor(Math.random() * rooms.length)];
+      const room = this.rng.pick(rooms);
 
       const floorPositions: { x: number; y: number }[] = [];
       for (let y = room.y + 1; y < room.y + room.h - 1; y++) {
@@ -499,7 +507,7 @@ export class DungeonGenerator {
 
       if (floorPositions.length === 0) continue;
 
-      const pos = floorPositions[Math.floor(Math.random() * floorPositions.length)];
+      const pos = this.rng.pick(floorPositions);
       tiles[pos.y][pos.x] = {
         type: 'enemy',
         resource: chosen,
@@ -564,7 +572,7 @@ export class DungeonGenerator {
   }
 
   private placePuzzle(tiles: DungeonTile[][], rooms: RoomRect[]): { totalPlates: number; room: RoomRect } | null {
-    const room = rooms[Math.floor(Math.random() * rooms.length)];
+    const room = this.rng.pick(rooms);
 
     const floorTiles: { x: number; y: number }[] = [];
     for (let y = room.y + 1; y < room.y + room.h - 1; y++) {
@@ -578,7 +586,8 @@ export class DungeonGenerator {
 
     const numPlates = Math.min(5, Math.max(3, Math.floor(floorTiles.length / 4)));
     const plates: { x: number; y: number }[] = [];
-    const shuffled = [...floorTiles].sort(() => Math.random() - 0.5);
+    const shuffled = [...floorTiles];
+    this.rng.shuffle(shuffled);
 
     for (const tile of shuffled) {
       if (plates.length >= numPlates) break;
@@ -606,8 +615,8 @@ export class DungeonGenerator {
     const vh = 6;
 
     for (let attempt = 0; attempt < 50; attempt++) {
-      const vx = 1 + Math.floor(Math.random() * (50 - vw - 1));
-      const vy = 1 + Math.floor(Math.random() * (40 - vh - 1));
+      const vx = 1 + this.rng.integerInRange(0, 50 - vw - 2);
+      const vy = 1 + this.rng.integerInRange(0, 40 - vh - 2);
 
       const overlaps = rooms.some(r =>
         vx < r.x + r.w + 3 && vx + vw + 3 > r.x &&
@@ -627,7 +636,7 @@ export class DungeonGenerator {
 
       const cf = this.getFloorTiles(tiles, { x: vx, y: vy, w: vw, h: vh });
       if (cf.length > 0) {
-        const cp = cf[Math.floor(Math.random() * cf.length)];
+        const cp = this.rng.pick(cf);
         tiles[cp.y][cp.x] = this.makeTile('event_relic', 'relic_chamber');
       }
 

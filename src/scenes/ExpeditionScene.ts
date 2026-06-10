@@ -137,6 +137,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private itemFlyQueue: Array<{ sprite: Phaser.GameObjects.Image; resource: string }> = [];
   private itemFlyBusy: boolean = false;
   private startFloor: number = 0;
+  private runSeed: string = '';
   private movePath: { x: number; y: number }[] = [];
   private analogDx: number = 0;
   private analogDy: number = 0;
@@ -176,10 +177,11 @@ export class ExpeditionScene extends Phaser.Scene {
     this.tweens.add(tween);
   }
 
-  init(data: { debug?: boolean; consumables?: Record<string, number>; startFloor?: number }): void {
+  init(data: { debug?: boolean; consumables?: Record<string, number>; startFloor?: number; seed?: string }): void {
     this.debugMode = data?.debug ?? false;
     this.loadoutConsumables = data?.consumables ?? {};
     this.startFloor = data?.startFloor ?? 0;
+    this.runSeed = data?.seed ?? '';
   }
 
   create(): void {
@@ -231,6 +233,7 @@ export class ExpeditionScene extends Phaser.Scene {
       fontSize: '12px', fontFamily: 'monospace', color: '#ffdd88',
     }).setOrigin(0.5).setAlpha(0).setDepth(DEPTH.INTERACT_PROMPT);
 
+    if (this.runSeed) this.dungeonGen.setSeed(`${this.runSeed}_depth_${this.startFloor}`);
     this.currentFloor = this.dungeonGen.generateFloor(this.startFloor);
 
     const floor = this.currentFloor;
@@ -1416,6 +1419,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.showRecipeDiscovery('Gold Lantern');
     }
 
+    if (this.runSeed) this.dungeonGen.setSeed(`${this.runSeed}_depth_${this.expeditionState.depth}`);
     const floor = this.dungeonGen.generateFloor(this.expeditionState.depth);
     this.currentFloor = floor;
     this.playerX = floor.entryX;
@@ -1431,6 +1435,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.safeExtract();
     } else {
       this.expeditionState.ascend();
+      if (this.runSeed) this.dungeonGen.setSeed(`${this.runSeed}_depth_${this.expeditionState.depth}`);
       const floor = this.dungeonGen.generateFloor(this.expeditionState.depth);
       this.currentFloor = floor;
       this.playerX = floor.stairsDownX;

@@ -83,6 +83,7 @@ class GameState {
   masterVolume: number;
   musicVolume: number;
   sfxVolume: number;
+  currentRunSeed: string;
 
   constructor() {
     this.inventory = new InventorySystem(32);
@@ -108,6 +109,7 @@ class GameState {
     this.masterVolume = 1;
     this.musicVolume = 0.4;
     this.sfxVolume = 0.6;
+    this.currentRunSeed = '';
   }
 
   /** Get the current research level for a project (0 if not started). */
@@ -343,6 +345,7 @@ class GameState {
     this.masterVolume = 1;
     this.musicVolume = 0.4;
     this.sfxVolume = 0.6;
+    this.currentRunSeed = '';
   }
 
   /** Persist entire game state to localStorage. */
@@ -371,6 +374,7 @@ class GameState {
       masterVolume: this.masterVolume,
       musicVolume: this.musicVolume,
       sfxVolume: this.sfxVolume,
+      currentRunSeed: this.currentRunSeed,
     };
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -413,6 +417,7 @@ class GameState {
       this.masterVolume = data.masterVolume ?? 1;
       this.musicVolume = data.musicVolume ?? 0.4;
       this.sfxVolume = data.sfxVolume ?? 0.6;
+      this.currentRunSeed = data.currentRunSeed ?? '';
 
       // migrate researchLevels from old format
       if (data.researchLevels && typeof data.researchLevels === 'object' && !Array.isArray(data.researchLevels)) {

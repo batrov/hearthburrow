@@ -52,6 +52,7 @@ export class HomelandScene extends Phaser.Scene {
   private playerGx: number = 7;
   private playerGy: number = 8;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
+  private seedKeyHandler: ((event: KeyboardEvent) => void) | null = null;
   private promptText!: Phaser.GameObjects.Text;
   private panelBg!: Phaser.GameObjects.Graphics;
   private panelText!: Phaser.GameObjects.Text;
@@ -82,6 +83,7 @@ export class HomelandScene extends Phaser.Scene {
   private selectedElevatorFloor: number = 0;
   private resetConfirm: boolean = false;
   private maxTab: number = 8;
+  private gateSeed: string = '';
   private moveTimer: number = 0;
   private moveDelay: number = 150;
   private isMoving: boolean = false;
@@ -874,9 +876,24 @@ export class HomelandScene extends Phaser.Scene {
     this.elevatorFloorOptions = gameState.getAvailableElevatorFloors();
     this.selectedElevatorFloor = this.elevatorFloorOptions.includes(0) ? 0 : (this.elevatorFloorOptions[0] ?? 0);
     this.resetConfirm = false;
-    this.maxTab = 8;
+    this.maxTab = 9;
+    this.gateSeed = gameState.currentRunSeed;
 
     this.gateTab = 0;
+
+    this.seedKeyHandler = (event: KeyboardEvent) => {
+      if (this.gateTab !== 9 || !this.gateMode) return;
+      if (event.key === 'Backspace') {
+        this.gateSeed = this.gateSeed.slice(0, -1);
+        this.renderGatePanel();
+      } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        if (this.gateSeed.length < 24) {
+          this.gateSeed += event.key;
+          this.renderGatePanel();
+        }
+      }
+    };
+    this.input.keyboard!.on('keydown', this.seedKeyHandler);
 
     this.renderGatePanel();
   }
@@ -944,6 +961,10 @@ export class HomelandScene extends Phaser.Scene {
     const resetMarker = this.gateTab === 8 ? '▶' : ' ';
     const resetLine = `  ${resetMarker} Reset Game${this.resetConfirm ? '  [SPACE] confirm' : ''}`;
 
+    const seedMarker = this.gateTab === 9 ? '▶' : ' ';
+    const seedDisplay = this.gateSeed || '(none - random)';
+    const seedLine = `  ${seedMarker} Seed: ${seedDisplay}`;
+
     this.panelBg.clear();
     this.panelBg.fillStyle(0x0a0a1a, 0.85);
     this.panelBg.fillRoundedRect(960 / 2 - 260, 640 / 2 - 240, 520, 480, 10);
@@ -963,6 +984,7 @@ export class HomelandScene extends Phaser.Scene {
       `Consumables:\n${consumableLines}\n\n` +
       `${dbgLine}\n` +
       `${elevLine}\n` +
+      `${seedLine}\n` +
       `${resetLine}${relicLine}\n\n` +
       `   [↑/↓] select slot  [←/→] change\n\n` +
       `Max Stamina: ${maxStamina}\n` +
@@ -992,6 +1014,9 @@ export class HomelandScene extends Phaser.Scene {
     }
     gameState.save();
 
+    gameState.currentRunSeed = this.gateSeed;
+    gameState.save();
+
     this.closePanel();
     this.cameras.main.fadeOut(500, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
@@ -999,6 +1024,7 @@ export class HomelandScene extends Phaser.Scene {
         debug: this.debugMode,
         consumables,
         startFloor: this.selectedElevatorFloor,
+        seed: this.gateSeed,
       });
     });
   }
@@ -1025,6 +1051,10 @@ export class HomelandScene extends Phaser.Scene {
     this.restoreMode = false;
     this.gateMode = false;
     this.gateTab = 0;
+    if (this.seedKeyHandler) {
+      this.input.keyboard!.off('keydown', this.seedKeyHandler);
+      this.seedKeyHandler = null;
+    }
     this.consumableLoadout = {};
     this.tradePanel.hide();
     this.researchPanel.hide();
