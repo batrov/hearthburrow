@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { gameState, itemDisplayName } from '../systems/GameState';
+import { gameState, itemDisplayName, itemIconKey } from '../systems/GameState';
 import { audio } from '../systems/AudioSystem';
 import { BasePanel } from './BasePanel';
 
@@ -24,6 +24,7 @@ const TRADE_ITEMS: TradeItem[] = [
 export class TradePanel extends BasePanel {
   private bg: Phaser.GameObjects.Graphics;
   private text: Phaser.GameObjects.Text;
+  private itemRows: Phaser.GameObjects.Container;
   private selectionIndex: number = 0;
   private clickZones: Phaser.GameObjects.Zone[] = [];
 
@@ -38,6 +39,9 @@ export class TradePanel extends BasePanel {
       align: 'center', lineSpacing: 6,
     }).setOrigin(0.5, 0);
     this.container.add(this.text);
+
+    this.itemRows = scene.add.container(0, 0);
+    this.container.add(this.itemRows);
   }
 
   show(): void {
@@ -111,7 +115,10 @@ export class TradePanel extends BasePanel {
       '',
     ];
 
+    this.text.setText(lines.join('\n'));
 
+    this.itemRows.removeAll(true);
+    const baseY = 50 + 5 * 20;
     for (let i = 0; i < TRADE_ITEMS.length; i++) {
       const item = TRADE_ITEMS[i];
       const cursor = i === this.selectionIndex ? '▸' : ' ';
@@ -120,9 +127,23 @@ export class TradePanel extends BasePanel {
       const price = `${item.priceQty} ${itemDisplayName(item.priceId)}`;
       const have = gameState.inventory.count(item.id);
       const haveText = item.type === 'buy' ? '' : `  (have ${have})`;
-      lines.push(` ${cursor} ${label} ${price}${haveText}`);
+      const y = baseY + i * 20;
 
-      const zone = this.scene.add.zone(480, 50 + 5 * 20 + i * 20, 860, 20)
+      const row = this.scene.add.container(0, 0);
+      const iconKey = itemIconKey(item.id);
+      if (this.scene.textures.exists(iconKey)) {
+        row.add(this.scene.add.image(380, y, iconKey).setScale(0.7));
+        row.add(this.scene.add.text(395, y, `${cursor} ${label} ${price}${haveText}`, {
+          fontSize: '14px', fontFamily: 'monospace', color: '#e8d5b7',
+        }).setOrigin(0, 0.5));
+      } else {
+        row.add(this.scene.add.text(380, y, `${cursor} ${label} ${price}${haveText}`, {
+          fontSize: '14px', fontFamily: 'monospace', color: '#e8d5b7',
+        }).setOrigin(0, 0.5));
+      }
+      this.itemRows.add(row);
+
+      const zone = this.scene.add.zone(480, y, 860, 20)
         .setDepth(210)
         .setInteractive();
       zone.on('pointerdown', () => {

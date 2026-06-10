@@ -231,6 +231,182 @@ export function generateAll(scene: Phaser.Scene): void {
     g.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
   });
 
+  // --- Item sprites (24x24 UI icons) ---
+  const itemSize = 24;
+
+  const itemConfigs: Record<string, (cx: number, cy: number) => void> = {
+    carrot: (cx, cy) => {
+      g.fillStyle(0x44aa33, 1);
+      g.fillTriangle(cx, cy - 6, cx - 3, cy + 6, cx + 3, cy + 6);
+      g.fillStyle(0x88cc44, 1);
+      g.fillTriangle(cx - 2, cy - 7, cx, cy - 11, cx + 2, cy - 7);
+    },
+    stamina_potion: (cx, cy) => {
+      g.fillStyle(0xcccccc, 1);
+      g.fillRect(cx - 3, cy - 8, 6, 4);
+      g.fillStyle(0x44dd66, 1);
+      g.fillRoundedRect(cx - 5, cy - 4, 10, 10, 3);
+    },
+    teleport_scroll: (cx, cy) => {
+      g.fillStyle(0xddddaa, 1);
+      g.fillRoundedRect(cx - 7, cy - 9, 14, 18, 2);
+      g.fillStyle(0xcc6644, 0.8);
+      g.fillRect(cx - 3, cy - 2, 6, 4);
+    },
+    mining_bomb: (cx, cy) => {
+      g.fillStyle(0x555555, 1);
+      g.fillCircle(cx, cy, 7);
+      g.fillStyle(0x888888, 1);
+      g.fillRect(cx - 1, cy - 11, 2, 5);
+      g.fillStyle(0xff6644, 1);
+      g.fillCircle(cx, cy + 3, 2);
+    },
+    pickaxe_1: (cx, cy) => {
+      g.lineStyle(2, 0x8a6a3a, 1);
+      g.lineBetween(cx - 6, cy - 8, cx - 1, cy);
+      g.lineBetween(cx - 1, cy, cx + 6, cy - 6);
+      g.lineStyle(2, 0x6a4a2a, 1);
+      g.lineBetween(cx, cy, cx + 1, cy + 8);
+    },
+    pickaxe_2: (cx, cy) => {
+      g.lineStyle(2, 0xcc8844, 1);
+      g.lineBetween(cx - 6, cy - 8, cx - 1, cy);
+      g.lineBetween(cx - 1, cy, cx + 6, cy - 6);
+      g.lineStyle(2, 0x6a4a2a, 1);
+      g.lineBetween(cx, cy, cx + 1, cy + 8);
+    },
+    pickaxe_3: (cx, cy) => {
+      g.lineStyle(2, 0x88bbdd, 1);
+      g.lineBetween(cx - 6, cy - 8, cx - 1, cy);
+      g.lineBetween(cx - 1, cy, cx + 6, cy - 6);
+      g.lineStyle(2, 0x6a4a2a, 1);
+      g.lineBetween(cx, cy, cx + 1, cy + 8);
+    },
+    pickaxe_4: (cx, cy) => {
+      g.lineStyle(2, 0xddbb44, 1);
+      g.lineBetween(cx - 6, cy - 8, cx - 1, cy);
+      g.lineBetween(cx - 1, cy, cx + 6, cy - 6);
+      g.lineStyle(2, 0x6a4a2a, 1);
+      g.lineBetween(cx, cy, cx + 1, cy + 8);
+    },
+    ring_critical: (cx, cy) => {
+      g.lineStyle(2, 0xccccaa, 1);
+      g.strokeCircle(cx, cy, 6);
+      g.fillStyle(0xcc3333, 1);
+      g.fillCircle(cx, cy, 3);
+    },
+    ring_damage: (cx, cy) => {
+      g.lineStyle(2, 0xccccaa, 1);
+      g.strokeCircle(cx, cy, 6);
+      g.fillStyle(0xdd8833, 1);
+      g.fillCircle(cx, cy, 3);
+    },
+    ring_precision: (cx, cy) => {
+      g.lineStyle(2, 0xccccaa, 1);
+      g.strokeCircle(cx, cy, 6);
+      g.fillStyle(0x3388cc, 1);
+      g.fillCircle(cx, cy, 3);
+    },
+    ring_hunter: (cx, cy) => {
+      g.lineStyle(2, 0xccccaa, 1);
+      g.strokeCircle(cx, cy, 6);
+      g.fillStyle(0x44aa44, 1);
+      g.fillCircle(cx, cy, 3);
+    },
+    boots_stamina_bronze: (cx, cy) => {
+      g.fillStyle(0xcc8844, 1);
+      g.fillRect(cx - 5, cy - 4, 10, 8);
+      g.fillRect(cx - 7, cy + 1, 14, 4);
+    },
+    boots_stamina_silver: (cx, cy) => {
+      g.fillStyle(0x88bbdd, 1);
+      g.fillRect(cx - 5, cy - 4, 10, 8);
+      g.fillRect(cx - 7, cy + 1, 14, 4);
+    },
+    boots_stamina_gold: (cx, cy) => {
+      g.fillStyle(0xddbb44, 1);
+      g.fillRect(cx - 5, cy - 4, 10, 8);
+      g.fillRect(cx - 7, cy + 1, 14, 4);
+    },
+    boots_luck_bronze: (cx, cy) => {
+      g.fillStyle(0xcc8844, 1);
+      g.fillRect(cx - 5, cy - 4, 10, 8);
+      g.fillRect(cx - 7, cy + 1, 14, 4);
+      g.fillStyle(0x44dd44, 0.8);
+      g.fillCircle(cx, cy - 1, 2);
+    },
+    boots_luck_silver: (cx, cy) => {
+      g.fillStyle(0x88bbdd, 1);
+      g.fillRect(cx - 5, cy - 4, 10, 8);
+      g.fillRect(cx - 7, cy + 1, 14, 4);
+      g.fillStyle(0x44dd44, 0.8);
+      g.fillCircle(cx, cy - 1, 2);
+    },
+    boots_luck_gold: (cx, cy) => {
+      g.fillStyle(0xddbb44, 1);
+      g.fillRect(cx - 5, cy - 4, 10, 8);
+      g.fillRect(cx - 7, cy + 1, 14, 4);
+      g.fillStyle(0x44dd44, 0.8);
+      g.fillCircle(cx, cy - 1, 2);
+    },
+    boots_regen: (cx, cy) => {
+      g.fillStyle(0x88cc88, 1);
+      g.fillRect(cx - 5, cy - 4, 10, 8);
+      g.fillRect(cx - 7, cy + 1, 14, 4);
+      g.fillStyle(0xffffff, 0.8);
+      g.fillCircle(cx, cy - 1, 2);
+    },
+    lantern_bronze: (cx, cy) => {
+      g.lineStyle(2, 0x8a6a3a, 1);
+      g.strokeRect(cx - 5, cy - 8, 10, 12);
+      g.fillStyle(0xff8844, 0.7);
+      g.fillCircle(cx, cy - 2, 4);
+    },
+    lantern_silver: (cx, cy) => {
+      g.lineStyle(2, 0x888899, 1);
+      g.strokeRect(cx - 5, cy - 8, 10, 12);
+      g.fillStyle(0x88ccff, 0.7);
+      g.fillCircle(cx, cy - 2, 4);
+    },
+    lantern_gold: (cx, cy) => {
+      g.lineStyle(2, 0xccaa44, 1);
+      g.strokeRect(cx - 5, cy - 8, 10, 12);
+      g.fillStyle(0xffdd66, 0.7);
+      g.fillCircle(cx, cy - 2, 4);
+    },
+    relic_stamina: (cx, cy) => {
+      g.fillStyle(0x8844cc, 1);
+      g.fillCircle(cx, cy, 7);
+      g.fillStyle(0xcc88ff, 0.8);
+      g.fillCircle(cx, cy, 4);
+      g.lineStyle(1, 0xffffff, 0.5);
+      g.strokeCircle(cx, cy, 7);
+    },
+    relic_inventory: (cx, cy) => {
+      g.fillStyle(0x4488cc, 1);
+      g.fillCircle(cx, cy, 7);
+      g.fillStyle(0x88ccff, 0.8);
+      g.fillCircle(cx, cy, 4);
+      g.lineStyle(1, 0xffffff, 0.5);
+      g.strokeCircle(cx, cy, 7);
+    },
+    relic_luck: (cx, cy) => {
+      g.fillStyle(0x44cc66, 1);
+      g.fillCircle(cx, cy, 7);
+      g.fillStyle(0x88ffaa, 0.8);
+      g.fillCircle(cx, cy, 4);
+      g.lineStyle(1, 0xffffff, 0.5);
+      g.strokeCircle(cx, cy, 7);
+    },
+  };
+
+  for (const [name, drawFn] of Object.entries(itemConfigs)) {
+    make(scene, g, `item_${name}`, itemSize, itemSize, () => {
+      const { cx, cy } = centered(itemSize, itemSize);
+      drawFn(cx, cy);
+    });
+  }
+
   // --- Durability overlays ---
   make(scene, g, 'overlay_damage', 28, 28, () => {
     g.fillStyle(0x000000, 0.25);

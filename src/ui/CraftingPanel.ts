@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { gameState, itemDisplayName } from '../systems/GameState';
+import { gameState, itemDisplayName, itemIconKey } from '../systems/GameState';
 import { getRecipe } from '../systems/DataRegistry';
 import { audio } from '../systems/AudioSystem';
 import { BasePanel } from './BasePanel';
@@ -137,13 +137,13 @@ export class CraftingPanel extends BasePanel {
 
     for (let i = 0; i < this.recipes.length; i++) {
       const r = this.recipes[i];
-      const discovered = gameState.crafting.isDiscovered(r.id);
+      let discovered = gameState.crafting.isDiscovered(r.id);
+      let recipe = discovered ? gameState.crafting.getDiscoveredRecipes().find(d => d.id === r.id) : null;
       const marker = i === this.selectedIndex ? '▸' : ' ';
       let text: string;
       let color: string;
 
       if (discovered) {
-        const recipe = gameState.crafting.getDiscoveredRecipes().find(d => d.id === r.id);
         const canCraft = recipe ? gameState.crafting.canCraft(r.id) : false;
         const craftedBefore = gameState.hasCraftedItem(recipe?.result ?? '');
 
@@ -168,11 +168,22 @@ export class CraftingPanel extends BasePanel {
         color = '#6a7a9a';
       }
 
-      const line = this.scene.add.text(960 / 2, startY + i * lineSpacing, text, {
-        fontSize: '13px', fontFamily: 'monospace', color,
-        align: 'left',
-      }).setOrigin(0.5, 0);
-      this.recipeLines.add(line);
+      const ry = startY + i * lineSpacing;
+
+      const row = this.scene.add.container(0, 0);
+      let iconKey: string | null = null;
+      if (discovered && recipe) iconKey = itemIconKey(recipe.result);
+      if (iconKey && this.scene.textures.exists(iconKey)) {
+        row.add(this.scene.add.image(420, ry, iconKey).setScale(0.7));
+        row.add(this.scene.add.text(435, ry, text, {
+          fontSize: '13px', fontFamily: 'monospace', color, align: 'left',
+        }).setOrigin(0, 0.5));
+      } else {
+        row.add(this.scene.add.text(420, ry, text, {
+          fontSize: '13px', fontFamily: 'monospace', color, align: 'left',
+        }).setOrigin(0, 0.5));
+      }
+      this.recipeLines.add(row);
 
       const zone = this.scene.add.zone(960 / 2, startY + i * lineSpacing + 10, 860, 20)
         .setDepth(210)

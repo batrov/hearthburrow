@@ -20,6 +20,7 @@
 ## ✅ UI Polish
 - **Crafting panel**: 4-color recipe lines (crafted/craftable state) + persisted `craftedItems`
 - **Inventory panel**: Description bar for selected item
+- **Item sprites**: 22 procedurally generated item sprites (equipment, consumables, relics, food) shown left of item names in Inventory, Crafting, and Trade panels. Works via `itemIconKey()` helper mapping `itemId → texture key`.
 
 
 ## ✅ Touch Screen Improvements

@@ -47,6 +47,14 @@ export function itemDisplayName(id: string): string {
   return ITEM_NAMES[id] ?? id.replace(/_/g, ' ');
 }
 
+/** Get the texture key for an item icon. Uses existing ore_* textures where available, otherwise item_<id>. */
+export function itemIconKey(id: string): string {
+  const oreItems = ['stone', 'bronze_ore', 'silver_ore', 'gold_ore', 'crystal'];
+  if (oreItems.includes(id)) return `ore_${id}`;
+  if (id === 'monster_drop') return 'ore_monster_drop';
+  return `item_${id}`;
+}
+
 const MAX_PICKAXE_RUNS = 5;
 const MAX_EQUIP_RUNS = 5;
 

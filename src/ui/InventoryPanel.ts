@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { InventorySystem } from '../systems/InventorySystem';
-import { itemDisplayName } from '../systems/GameState';
+import { itemDisplayName, itemIconKey } from '../systems/GameState';
 import { BasePanel } from './BasePanel';
 
 const ITEM_INFO: Record<string, { desc: string }> = {
@@ -37,7 +37,7 @@ const ITEM_INFO: Record<string, { desc: string }> = {
 export class InventoryPanel extends BasePanel {
   private overlay: Phaser.GameObjects.Graphics;
   private titleText: Phaser.GameObjects.Text;
-  private contentText: Phaser.GameObjects.Text;
+  private itemRows: Phaser.GameObjects.Container;
   private hintText: Phaser.GameObjects.Text;
   private warnText: Phaser.GameObjects.Text;
   private descriptionText: Phaser.GameObjects.Text;
@@ -76,12 +76,8 @@ export class InventoryPanel extends BasePanel {
     }).setOrigin(0.5);
     this.container.add(this.warnText);
 
-    this.contentText = scene.add.text(480, 80, '', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#c8b898',
-      align: 'left', lineSpacing: 6,
-      wordWrap: { width: 860 },
-    });
-    this.container.add(this.contentText);
+    this.itemRows = scene.add.container(0, 0);
+    this.container.add(this.itemRows);
 
     this.hintText = scene.add.text(960 / 2, 620, '', {
       fontSize: '11px', fontFamily: 'monospace', color: '#5a4a6a',
@@ -176,14 +172,26 @@ export class InventoryPanel extends BasePanel {
         : `  Slots: ${used}/${max}  `,
     );
 
-    const lines: string[] = [];
+    this.itemRows.removeAll(true);
+    const startY = 80;
     for (let i = 0; i < this.items.length; i++) {
       const item = this.items[i];
       const cursor = i === this.selectionIndex ? '▸' : ' ';
-      const namePadded = item.name.padEnd(18);
-      lines.push(` ${cursor} ${namePadded} ${item.qty}`);
+      const y = startY + i * 20;
+      const row = this.scene.add.container(0, 0);
+      const icon = this.scene.add.image(452, y, itemIconKey(item.id)).setScale(0.8);
+      const text = this.scene.add.text(466, y, `${cursor} ${item.name.padEnd(18)} ${item.qty}`, {
+        fontSize: '14px', fontFamily: 'monospace', color: '#c8b898',
+      }).setOrigin(0, 0.5);
+      row.add([icon, text]);
+      this.itemRows.add(row);
     }
-    this.contentText.setText(lines.length > 0 ? lines.join('\n') : '  (empty)');
+    if (this.items.length === 0) {
+      const emptyText = this.scene.add.text(480, startY, '  (empty)', {
+        fontSize: '14px', fontFamily: 'monospace', color: '#6a7a9a',
+      });
+      this.itemRows.add(emptyText);
+    }
 
     this.clickZones.forEach(z => z.destroy());
     this.clickZones = [];
