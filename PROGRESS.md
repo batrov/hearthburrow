@@ -57,5 +57,5 @@
 - **Preview** — facing any body tile shows boss preview at center position
 
 
-Bugs Found:
-- Pressing all pressure plate sometime does not spawn stair
+Resolved Bugs:
+- Pressure plate puzzle stairs not spawning — `completePuzzle` only searched for `type === 'floor'`, but stepped-on plates are `type === 'pressure_plate'`. Fixed by including `pressure_plate` in the candidate search. Also updated `stairsDownX/Y` after placement for correct ascending landing.

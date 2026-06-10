@@ -1572,7 +1572,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const candidates: { x: number; y: number }[] = [];
     for (let y = room.y + 1; y < room.y + room.h - 1; y++) {
       for (let x = room.x + 1; x < room.x + room.w - 1; x++) {
-        if (floor.tiles[y][x].type === 'floor') {
+        if (floor.tiles[y][x].type === 'floor' || floor.tiles[y][x].type === 'pressure_plate') {
           candidates.push({ x, y });
         }
       }
@@ -1581,10 +1581,13 @@ export class ExpeditionScene extends Phaser.Scene {
     if (candidates.length > 0) {
       pos = candidates[Math.floor(Math.random() * candidates.length)];
     } else {
+      console.warn('completePuzzle: no floor/plate tiles available, using room center');
       pos = { x: Math.floor(room.x + room.w / 2), y: Math.floor(room.y + room.h / 2) };
     }
     floor.tiles[pos.y][pos.x].type = 'stairs_down';
     floor.tiles[pos.y][pos.x].resource = '';
+    floor.stairsDownX = pos.x;
+    floor.stairsDownY = pos.y;
     this.stairsSpawned = true;
   }
 
