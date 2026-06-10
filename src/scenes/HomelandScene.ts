@@ -84,6 +84,7 @@ export class HomelandScene extends Phaser.Scene {
   private resetConfirm: boolean = false;
   private maxTab: number = 8;
   private gateSeed: string = '';
+  private seedEditing: boolean = false;
   private moveTimer: number = 0;
   private moveDelay: number = 150;
   private isMoving: boolean = false;
@@ -496,10 +497,18 @@ export class HomelandScene extends Phaser.Scene {
 
     if (this.panelVisible) {
       if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
+        if (this.seedEditing) {
+          this.seedEditing = false;
+          this.renderGatePanel();
+          return;
+        }
         this.closePanel();
         return;
       }
       if (this.gateMode) {
+        if (this.gateTab === 9 && this.seedEditing) {
+          // block navigation while typing seed
+        } else {
         const up = Phaser.Input.Keyboard.JustDown(this.keys.UP) || Phaser.Input.Keyboard.JustDown(this.keys.W);
         const down = Phaser.Input.Keyboard.JustDown(this.keys.DOWN) || Phaser.Input.Keyboard.JustDown(this.keys.S);
         const left = Phaser.Input.Keyboard.JustDown(this.keys.LEFT) || Phaser.Input.Keyboard.JustDown(this.keys.A);
@@ -598,6 +607,7 @@ export class HomelandScene extends Phaser.Scene {
             }
           }
         }
+        }
       }
       if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
         if (this.restoreMode) {
@@ -615,6 +625,9 @@ export class HomelandScene extends Phaser.Scene {
               this.resetConfirm = true;
               this.renderGatePanel();
             }
+          } else if (this.gateTab === 9) {
+            this.seedEditing = !this.seedEditing;
+            this.renderGatePanel();
           } else {
             this.resetConfirm = false;
             this.startExpedition();
@@ -878,11 +891,12 @@ export class HomelandScene extends Phaser.Scene {
     this.resetConfirm = false;
     this.maxTab = 9;
     this.gateSeed = gameState.currentRunSeed;
+    this.seedEditing = false;
 
     this.gateTab = 0;
 
     this.seedKeyHandler = (event: KeyboardEvent) => {
-      if (this.gateTab !== 9 || !this.gateMode) return;
+      if (this.gateTab !== 9 || !this.gateMode || !this.seedEditing) return;
       if (event.key === 'Backspace') {
         this.gateSeed = this.gateSeed.slice(0, -1);
         this.renderGatePanel();
@@ -963,7 +977,8 @@ export class HomelandScene extends Phaser.Scene {
 
     const seedMarker = this.gateTab === 9 ? '▶' : ' ';
     const seedDisplay = this.gateSeed || '(none - random)';
-    const seedLine = `  ${seedMarker} Seed: ${seedDisplay}`;
+    const seedStatus = this.seedEditing ? ' [EDITING]' : '';
+    const seedLine = `  ${seedMarker} Seed: ${seedDisplay}${seedStatus}`;
 
     this.panelBg.clear();
     this.panelBg.fillStyle(0x0a0a1a, 0.85);
@@ -1051,6 +1066,7 @@ export class HomelandScene extends Phaser.Scene {
     this.restoreMode = false;
     this.gateMode = false;
     this.gateTab = 0;
+    this.seedEditing = false;
     if (this.seedKeyHandler) {
       this.input.keyboard!.off('keydown', this.seedKeyHandler);
       this.seedKeyHandler = null;
