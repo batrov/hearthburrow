@@ -823,62 +823,42 @@ export class HomelandScene extends Phaser.Scene {
     this.panelBg.strokeRoundedRect(960 / 2 - 200, 640 / 2 - 110, 400, 220, 10);
     this.panelBg.setAlpha(1);
 
-    this.panelText.setAlpha(0);
+    const costLines = costEntries
+      .map(([id, qty]) => {
+        const have = gameState.inventory.count(id);
+        const color = have >= qty ? '#88dd88' : '#dd6666';
+        return `  ${itemDisplayName(id)}: ${have}/${qty}`;
+      })
+      .join('\n');
 
-    const cx = 960 / 2;
-    const panelY = 640 / 2 - 110;
-
-    this.restoreCostIcons.push(
-      this.add.text(cx, panelY + 20, building.name, {
-        fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
-      }).setOrigin(0.5).setDepth(210)
+    this.panelText.setText(
+      `${building.name}\n\nRequired Materials:\n${costLines}\n\n${
+        canAfford ? '[SPACE] Restore  |  [ESC] cancel' : '[ESC] close'
+      }`
     );
+    this.panelText.setAlpha(1);
 
-    this.restoreCostIcons.push(
-      this.add.text(cx, panelY + 48, 'Required Materials:', {
-        fontSize: '14px', fontFamily: 'monospace', color: '#8a7a6a',
-      }).setOrigin(0.5).setDepth(210)
-    );
+    const lineH = 24;
+    const textH = this.panelText.height;
+    const textTop = 640 / 2 - textH / 2;
 
-    const rowStartY = panelY + 75;
     for (let i = 0; i < costEntries.length; i++) {
-      const [id, qty] = costEntries[i];
-      const have = gameState.inventory.count(id);
-      const color = have >= qty ? '#88dd88' : '#dd6666';
-      const y = rowStartY + i * 24;
-
-      const label = `${itemDisplayName(id)}: ${have}/${qty}`;
+      const [id] = costEntries[i];
       const iconKey = itemIconKey(id);
+      if (!this.textures.exists(iconKey)) continue;
 
-      const tmp = this.add.text(0, 0, label, {
+      const lineY = textTop + (3 + i) * lineH + lineH / 2;
+      const lineText = `  ${itemDisplayName(id)}: 0/0`;
+      const tmp = this.add.text(0, 0, lineText, {
         fontSize: '14px', fontFamily: 'monospace',
       });
-      const textW = tmp.width;
+      const lineW = tmp.width;
       tmp.destroy();
 
-      const iconW = 17;
-      const gap = 4;
-      const totalW = iconW + gap + textW;
-      const rowX = cx - totalW / 2;
-
-      if (this.textures.exists(iconKey)) {
-        this.restoreCostIcons.push(
-          this.add.image(rowX + iconW / 2, y, iconKey).setScale(0.7).setDepth(210)
-        );
-      }
       this.restoreCostIcons.push(
-        this.add.text(rowX + iconW + gap, y, label, {
-          fontSize: '14px', fontFamily: 'monospace', color,
-        }).setOrigin(0, 0.5).setDepth(210)
+        this.add.image(480 - lineW / 2 + 8, lineY, iconKey).setScale(0.7).setDepth(210)
       );
     }
-
-    this.restoreCostIcons.push(
-      this.add.text(cx, panelY + 220 - 30,
-        canAfford ? '[SPACE] Restore  |  [ESC] cancel' : '[ESC] close',
-        { fontSize: '13px', fontFamily: 'monospace', color: '#8a7a6a' }
-      ).setOrigin(0.5).setDepth(210)
-    );
   }
 
   private tryRestore(buildingId: string): void {
