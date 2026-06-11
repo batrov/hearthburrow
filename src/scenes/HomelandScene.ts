@@ -825,27 +825,33 @@ export class HomelandScene extends Phaser.Scene {
     this.panelBg.setAlpha(1);
 
     this.panelText.setText(
-      `${building.name}\n\nRequired Materials:`
+      `${building.name}`
     );
     this.panelText.setAlpha(1);
 
-    const entryStartY = 640 / 2 - 110 + 55;
+    const panelLeft = 960 / 2 - 190;
+    const headerText = this.add.text(panelLeft, 640 / 2 - 110 + 40, 'Required Materials:', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#8a7a6a',
+    }).setDepth(210);
+    this.restoreCostIcons.push(headerText);
+
+    const entryStartY = 640 / 2 - 110 + 62;
     for (let i = 0; i < costEntries.length; i++) {
       const [id, qty] = costEntries[i];
       const have = gameState.inventory.count(id);
       const color = have >= qty ? '#88dd88' : '#dd6666';
-      const y = entryStartY + i * 20;
+      const y = entryStartY + i * 22;
 
       const iconKey = itemIconKey(id);
       if (this.textures.exists(iconKey)) {
         this.restoreCostIcons.push(
-          this.add.image(320, y, iconKey).setScale(0.7).setDepth(210)
+          this.add.image(panelLeft, y, iconKey).setScale(0.7).setDepth(210)
         );
       }
       this.restoreCostIcons.push(
-        this.add.text(336, y, `${itemDisplayName(id)}: ${have}/${qty}`, {
+        this.add.text(panelLeft + 16, y, `${itemDisplayName(id)}: ${have}/${qty}`, {
           fontSize: '14px', fontFamily: 'monospace', color,
-        }).setDepth(210)
+        }).setOrigin(0, 0.5).setDepth(210)
       );
     }
 
