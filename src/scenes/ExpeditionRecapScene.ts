@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { gameState, itemDisplayName } from '../systems/GameState';
+import { gameState, itemDisplayName, itemIconKey } from '../systems/GameState';
 
 export class ExpeditionRecapScene extends Phaser.Scene {
   constructor() {
@@ -119,11 +119,16 @@ export class ExpeditionRecapScene extends Phaser.Scene {
       const item = shown[i];
       const y = startY + i * lineH;
 
-      this.add.text(x, y, itemDisplayName(item.id), {
+      const iconKey = itemIconKey(item.id);
+      if (this.textures.exists(iconKey)) {
+        this.add.image(x, y + 7, iconKey).setScale(0.7);
+      }
+
+      this.add.text(x + 18, y, itemDisplayName(item.id), {
         fontSize: '13px', fontFamily: 'monospace', color: nameColor,
       });
 
-      const qtyText = this.add.text(x + labelW, y, 'x0', {
+      const qtyText = this.add.text(x + 18 + labelW, y, 'x0', {
         fontSize: '13px', fontFamily: 'monospace', color: qtyColor,
       });
 

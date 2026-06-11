@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { gameState } from '../systems/GameState';
+import { gameState, itemDisplayName, itemIconKey } from '../systems/GameState';
 import { InventoryPanel } from '../ui/InventoryPanel';
 import { CraftingPanel } from '../ui/CraftingPanel';
 import { TradePanel } from '../ui/TradePanel';
@@ -85,6 +85,7 @@ export class HomelandScene extends Phaser.Scene {
   private maxTab: number = 8;
   private gateSeed: string = '';
   private seedEditing: boolean = false;
+  private restoreCostIcons: Phaser.GameObjects.GameObject[] = [];
   private moveTimer: number = 0;
   private moveDelay: number = 150;
   private isMoving: boolean = false;
@@ -809,13 +810,10 @@ export class HomelandScene extends Phaser.Scene {
     this.restoreMode = true;
     this.panelVisible = true;
 
-    const costLines = Object.entries(building.cost)
-      .map(([id, qty]) => {
-        const have = gameState.inventory.count(id);
-        const color = have >= qty ? '#88dd88' : '#dd6666';
-        return `  ${id.replace(/_/g, ' ')}: ${have}/${qty}`;
-      })
-      .join('\n');
+    for (const obj of this.restoreCostIcons) obj.destroy();
+    this.restoreCostIcons = [];
+
+    const costEntries = Object.entries(building.cost);
 
     const canAfford = canRestore(buildingId);
 
@@ -827,11 +825,35 @@ export class HomelandScene extends Phaser.Scene {
     this.panelBg.setAlpha(1);
 
     this.panelText.setText(
-      `${building.name}\n\nRequired Materials:\n${costLines}\n\n${
-        canAfford ? '[SPACE] Restore  |  [ESC] cancel' : '[ESC] close'
-      }`
+      `${building.name}\n\nRequired Materials:`
     );
     this.panelText.setAlpha(1);
+
+    const entryStartY = 640 / 2 - 110 + 55;
+    for (let i = 0; i < costEntries.length; i++) {
+      const [id, qty] = costEntries[i];
+      const have = gameState.inventory.count(id);
+      const color = have >= qty ? '#88dd88' : '#dd6666';
+      const y = entryStartY + i * 20;
+
+      const iconKey = itemIconKey(id);
+      if (this.textures.exists(iconKey)) {
+        this.restoreCostIcons.push(
+          this.add.image(320, y, iconKey).setScale(0.7).setDepth(210)
+        );
+      }
+      this.restoreCostIcons.push(
+        this.add.text(336, y, `${itemDisplayName(id)}: ${have}/${qty}`, {
+          fontSize: '14px', fontFamily: 'monospace', color,
+        }).setDepth(210)
+      );
+    }
+
+    const footerText = this.add.text(480, 640 / 2 + 110 - 25,
+      canAfford ? '[SPACE] Restore  |  [ESC] cancel' : '[ESC] close',
+      { fontSize: '13px', fontFamily: 'monospace', color: '#8a7a6a' }
+    ).setOrigin(0.5).setDepth(210);
+    this.restoreCostIcons.push(footerText);
   }
 
   private tryRestore(buildingId: string): void {
@@ -1067,6 +1089,8 @@ export class HomelandScene extends Phaser.Scene {
     this.gateMode = false;
     this.gateTab = 0;
     this.seedEditing = false;
+    for (const obj of this.restoreCostIcons) obj.destroy();
+    this.restoreCostIcons = [];
     if (this.seedKeyHandler) {
       this.input.keyboard!.off('keydown', this.seedKeyHandler);
       this.seedKeyHandler = null;

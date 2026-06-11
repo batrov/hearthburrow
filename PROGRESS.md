@@ -66,3 +66,9 @@
 
 Resolved Bugs:
 - Pressure plate puzzle stairs not spawning — `completePuzzle` only searched for `type === 'floor'`, but stepped-on plates are `type === 'pressure_plate'`. Fixed by including `pressure_plate` in the candidate search. Also updated `stairsDownX/Y` after placement for correct ascending landing.
+
+## ✅ Item Sprite Polish (June 2026)
+- **ExpeditionRecapScene** — item sprites now shown next to each item name in the collected/lost lists
+- **TradePanel** — price/currency item now has its own sprite next to the cost text
+- **Building restore costs** — Homeland building repair panel now shows item sprites per material + uses `itemDisplayName()` instead of raw IDs
+- **Inventory qty badges** — small count overlay at bottom-right of each item sprite when `qty > 1`

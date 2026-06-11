@@ -180,6 +180,13 @@ export class InventoryPanel extends BasePanel {
       const y = startY + i * 20;
       const row = this.scene.add.container(0, 0);
       const icon = this.scene.add.image(452, y, itemIconKey(item.id)).setScale(0.8);
+      row.add(icon);
+      if (item.qty > 1) {
+        row.add(this.scene.add.text(462, y + 10, `${item.qty}`, {
+          fontSize: '9px', fontFamily: 'monospace', color: '#ffffff',
+          stroke: '#000000', strokeThickness: 2,
+        }).setOrigin(1, 1));
+      }
       const text = this.scene.add.text(466, y, `${cursor} ${item.name.padEnd(18)} ${item.qty}`, {
         fontSize: '14px', fontFamily: 'monospace', color: '#c8b898',
       }).setOrigin(0, 0.5);

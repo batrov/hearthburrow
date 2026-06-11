@@ -133,11 +133,18 @@ export class TradePanel extends BasePanel {
       const iconKey = itemIconKey(item.id);
       if (this.scene.textures.exists(iconKey)) {
         row.add(this.scene.add.image(380, y, iconKey).setScale(0.7));
-        row.add(this.scene.add.text(395, y, `${cursor} ${label} ${price}${haveText}`, {
+      }
+      const priceIconKey = itemIconKey(item.priceId);
+      if (this.scene.textures.exists(priceIconKey)) {
+        row.add(this.scene.add.image(590, y, priceIconKey).setScale(0.6));
+        row.add(this.scene.add.text(395, y, `${cursor} ${label}`, {
+          fontSize: '14px', fontFamily: 'monospace', color: '#e8d5b7',
+        }).setOrigin(0, 0.5));
+        row.add(this.scene.add.text(602, y, `${item.priceQty}${haveText}`, {
           fontSize: '14px', fontFamily: 'monospace', color: '#e8d5b7',
         }).setOrigin(0, 0.5));
       } else {
-        row.add(this.scene.add.text(380, y, `${cursor} ${label} ${price}${haveText}`, {
+        row.add(this.scene.add.text(395, y, `${cursor} ${label} ${price}${haveText}`, {
           fontSize: '14px', fontFamily: 'monospace', color: '#e8d5b7',
         }).setOrigin(0, 0.5));
       }
