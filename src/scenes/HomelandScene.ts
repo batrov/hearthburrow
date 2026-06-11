@@ -10,8 +10,7 @@ import { getBuilding } from '../systems/DataRegistry';
 import { audio } from '../systems/AudioSystem';
 import {
   gridToIso, isoToGrid, findPath,
-  drawDiamond, drawDiamondAt, drawExtrudedAt, drawExtrudedTile,
-  HALF_W, HALF_H, WALL_HEIGHT, worldWidth, worldHeight,
+  HALF_W, HALF_H, worldWidth, worldHeight,
 } from '../systems/IsoUtils';
 
 interface HubBuildingDef {
@@ -36,8 +35,8 @@ const HUB_BUILDINGS: HubBuildingDef[] = [
     description: 'Craft tools and equipment from mined materials.', solid: true },
   { id: 'farm', label: 'Farm', gx: 1, gy: 7, gw: 3, gh: 2, buildingId: 'farm',
     description: 'Plant carrots and harvest more carrots.', solid: true },
-  { id: 'villager_house', label: 'Villager House', gx: 12, gy: 1, gw: 3, gh: 2, buildingId: 'housing',
-    description: 'A cozy home. Increases max stamina when restored.', solid: true },
+  { id: 'tavern', label: 'Tavern', gx: 12, gy: 1, gw: 3, gh: 2, buildingId: 'housing',
+    description: 'A warm gathering place for rescued villagers.', solid: true },
   { id: 'storage', label: 'Storage', gx: 12, gy: 4, gw: 3, gh: 2, buildingId: 'storage',
     description: 'Store and manage your collected resources.', solid: true },
   { id: 'laboratory', label: 'Laboratory', gx: 12, gy: 7, gw: 3, gh: 2, buildingId: 'laboratory',
@@ -47,8 +46,10 @@ const HUB_BUILDINGS: HubBuildingDef[] = [
 ];
 
 export class HomelandScene extends Phaser.Scene {
-  private player!: Phaser.GameObjects.Container;
+  private player!: Phaser.GameObjects.Image;
   private playerLabel!: Phaser.GameObjects.Text;
+  private facingX: number = 0;
+  private facingY: number = -1;
   private playerGx: number = 7;
   private playerGy: number = 8;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
@@ -133,16 +134,17 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private drawHubTerrain(): void {
-    const g = this.add.graphics();
     const isPath = (x: number) => x === 7 || x === 8;
 
     for (let y = 0; y < HUB_ROWS; y++) {
       for (let x = 0; x < HUB_COLS; x++) {
+        const p = gridToIso(x, y);
+        const tile = this.add.image(p.x, p.y, 'terrain_diamond');
+        tile.setDepth(4);
         if (isPath(x)) {
-          drawDiamondAt(g, x, y, 0x5a4a3a);
+          tile.setTint(0x5a4a3a);
         } else {
-          const checker = (x + y) % 2 === 0;
-          drawDiamondAt(g, x, y, checker ? 0x3a5a2a : 0x4a6a3a);
+          tile.setTint((x + y) % 2 === 0 ? 0x3a5a2a : 0x4a6a3a);
         }
       }
     }
@@ -150,28 +152,27 @@ export class HomelandScene extends Phaser.Scene {
 
   private drawHubBuildings(): void {
     this.buildingsContainer.removeAll(true);
-    const buildingColors: Record<string, [number, number, number]> = {
-      trading_post: [0x8a6a3a, 0x6a4a2a, 0x5a3a1a],
-      crafting: [0x6a7a8a, 0x4a5a6a, 0x3a4a5a],
-      farm: [0x5a7a3a, 0x3a5a2a, 0x2a4a1a],
-      villager_house: [0x8a6a4a, 0x6a4a2a, 0x5a3a1a],
-      storage: [0x6a5a4a, 0x4a3a2a, 0x3a2a1a],
-      laboratory: [0x6a4a8a, 0x4a2a6a, 0x3a1a5a],
+    const buildingTextureKeys: Record<string, string> = {
+      trading_post: 'building_trading_post',
+      crafting: 'building_crafting',
+      farm: 'building_farm',
+      tavern: 'building_tavern',
+      storage: 'building_storage',
+      laboratory: 'building_laboratory',
     };
     const unlocked = (b: HubBuildingDef) => !b.buildingId || isRestored(b.buildingId);
 
     for (const b of HUB_BUILDINGS) {
       if (b.id === 'gate') continue;
       const ul = unlocked(b);
-      const [top, left, right] = buildingColors[b.id] ?? [0x7a6a4a, 0x5a4a2a, 0x4a3a1a];
+      const texKey = buildingTextureKeys[b.id] ?? 'building_trading_post';
       const alpha = ul ? 1 : 0.4;
 
       for (let dy = 0; dy < b.gh; dy++) {
         for (let dx = 0; dx < b.gw; dx++) {
           const p = gridToIso(b.gx + dx, b.gy + dy);
-          const g = this.add.graphics().setAlpha(alpha);
-          this.buildingsContainer.add(g);
-          drawExtrudedTile(g, p.x, p.y, top, left, right, 24);
+          const img = this.add.image(p.x, p.y, texKey).setAlpha(alpha);
+          this.buildingsContainer.add(img);
         }
       }
 
@@ -182,36 +183,19 @@ export class HomelandScene extends Phaser.Scene {
       this.buildingsContainer.add(label);
     }
 
-    const rescued = gameState.villagersRescued;
-    if (rescued > 0) {
-      for (let i = 0; i < Math.min(rescued, 10); i++) {
-        const nx = 12 + Math.floor(i / 3);
-        const ny = 3 + (i % 3);
-        const pp = gridToIso(nx, ny);
-        const npc = this.add.graphics();
-        npc.fillStyle(0x66bbee, 1);
-        npc.fillCircle(pp.x, pp.y, 6);
-        npc.fillStyle(0x88ddff, 1);
-        npc.fillRect(pp.x - 3, pp.y - 8, 6, 3);
-        npc.setDepth(9);
-      }
-    }
+
   }
 
   private drawHubGate(): void {
     for (let dy = 0; dy < 1; dy++) {
       for (let dx = 0; dx < 2; dx++) {
         const p = gridToIso(7 + dx, 9 + dy);
-        const g = this.add.graphics();
-        drawExtrudedTile(g, p.x, p.y, 0x3a2a5a, 0x2a1a4a, 0x1a0a3a, 36);
+        this.add.image(p.x, p.y, 'building_gate');
       }
     }
 
     const c = gridToIso(8, 9);
-    const glow = this.add.graphics();
-    glow.fillStyle(0x6a5a9a, 0.15);
-    drawDiamond(glow, c.x, c.y - 36, 0x6a5a9a, 0.15);
-    drawDiamond(glow, c.x, c.y - 36, 0x8a7aba, 0.1);
+    const glow = this.add.image(c.x, c.y - 36, 'gate_glow');
 
     this.tweens.add({
       targets: glow,
@@ -233,29 +217,21 @@ export class HomelandScene extends Phaser.Scene {
 
   private drawPlayer(): void {
     const p = gridToIso(this.playerGx, this.playerGy);
-    const container = this.add.container(p.x, p.y);
-
-    const base = this.add.graphics();
-    base.fillStyle(0x6699cc, 1);
-    base.beginPath();
-    base.moveTo(0, -10);
-    base.lineTo(14, 0);
-    base.lineTo(0, 10);
-    base.lineTo(-14, 0);
-    base.closePath();
-    base.fill();
-    container.add(base);
-
-    const body = this.add.rectangle(0, -20, 12, 20, 0x88ccff);
-    container.add(body);
-
-    container.setDepth(10);
-    this.player = container;
-
-    const pp = gridToIso(this.playerGx, this.playerGy);
-    this.playerLabel = this.add.text(pp.x, pp.y - 30, 'You', {
+    this.player = this.add.image(p.x, p.y, 'player_bottom_left').setDepth(10);
+    this.playerLabel = this.add.text(p.x, p.y - 30, 'You', {
       fontSize: '11px', fontFamily: 'monospace', color: '#aaddff',
     }).setOrigin(0.5);
+    this.updatePlayerSprite();
+  }
+
+  private updatePlayerSprite(): void {
+    const isUpFacing = this.facingY < 0 || (this.facingY === 0 && this.facingX < 0);
+    const key = isUpFacing ? 'player_top_right' : 'player_bottom_left';
+    const flipX = this.facingX !== 0 && this.facingY === 0;
+    if (this.textures.exists(key)) {
+      this.player.setTexture(key);
+      this.player.setFlipX(flipX);
+    }
   }
 
   private repositionPlayer(): void {
@@ -668,6 +644,10 @@ export class HomelandScene extends Phaser.Scene {
     if (nx < 0 || nx >= HUB_COLS || ny < 0 || ny >= HUB_ROWS) return;
     if (this.isSolid(nx, ny)) return;
 
+    this.facingX = dx;
+    this.facingY = dy;
+    this.updatePlayerSprite();
+
     audio.playStep();
 
     this.playerGx = nx;
@@ -756,7 +736,7 @@ export class HomelandScene extends Phaser.Scene {
       const restored = !closest.buildingId || isRestored(closest.buildingId);
       if (closest.id === 'gate') action = 'Begin expedition';
       else if (!restored) action = `Restore ${closest.label}`;
-      else if (closest.id === 'villager_house') action = `Visit (${gameState.villagersRescued} rescued)`;
+      else if (closest.id === 'tavern') action = `Enter Tavern (${gameState.rescuedVillagers.length}/20 inside)`;
       else action = `Visit ${closest.label.split(' ')[0].toLowerCase()}`;
 
       this.promptText.setText(`[SPACE] ${action}`);
@@ -783,7 +763,7 @@ export class HomelandScene extends Phaser.Scene {
     const buildingActions: Record<string, { restoreId: string; show: () => void }> = {
       storage: { restoreId: 'storage', show: () => { this.inventoryPanel.refresh(); this.inventoryPanel.show(); } },
       crafting: { restoreId: 'crafting_station', show: () => { this.craftingPanel.refresh(); this.craftingPanel.show(); } },
-      villager_house: { restoreId: 'housing', show: () => this.showBuildingPanel(b) },
+      tavern: { restoreId: 'housing', show: () => { this.scene.start('TavernScene'); } },
       trading_post: { restoreId: 'trading_post', show: () => this.showTradePanel() },
       laboratory: { restoreId: 'laboratory', show: () => this.showResearchPanel() },
       farm: { restoreId: 'farm', show: () => this.showFarmPanel() },

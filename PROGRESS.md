@@ -73,3 +73,9 @@ Resolved Bugs:
 - **TradePanel** — price/currency item now has its own sprite next to the cost text
 - **Building restore costs** — Homeland building repair panel now shows item sprites per material + uses `itemDisplayName()` instead of raw IDs
 - **Inventory qty badges** — small count overlay at bottom-right of each item sprite when `qty > 1`
+
+## ✅ Isometric Tavern (June 2026)
+- **TavernScene rewrite** — replaced top-down rendering with full 8×7 isometric grid using `terrain_diamond` floors + extruded walls/bar/tables, properly depth-sorted via painter's algorithm (`6 + (x+y)*0.01`)
+- **Player movement** — WASD/arrows + click-to-move with BFS pathfinding + virtual analog stick, matching HomelandScene's movement system (150ms gate, facing sprites, step audio, collision against solids)
+- **20 rescued NPCs** — placed on floor grid cells with painter's depth (`8 + (x+y)*0.01`), name labels, hover tooltips, and click-to-greet dialog overlays
+- **Exit** — walk to door cell (7, 3) + SPACE, or ESC from anywhere, with fade transition back to HomelandScene

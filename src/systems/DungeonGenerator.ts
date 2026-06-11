@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { gameState } from './GameState';
 
 export type TileType = 'wall' | 'floor' | 'mineable' | 'stairs_up' | 'stairs_down' | 'corridor'
   | 'event_chest' | 'event_merchant' | 'event_goblin' | 'event_villager' | 'event_fountain'
@@ -156,7 +157,7 @@ export class DungeonGenerator {
         this.carveCorridor(tiles, rooms[i], rooms[i + 1]);
       }
 
-      this.placeEventTiles(tiles, rooms);
+      this.placeEventTiles(tiles, rooms, depth);
       this.placeEnemyTiles(tiles, rooms);
 
       const exitRoomIndex = rooms.length - 1;
@@ -358,8 +359,15 @@ export class DungeonGenerator {
     }
   }
 
-  private placeEventTiles(tiles: DungeonTile[][], rooms: RoomRect[]): void {
-    const shuffled = [...EVENT_POOL];
+  private placeEventTiles(tiles: DungeonTile[][], rooms: RoomRect[], depth: number): void {
+    const pool = EVENT_POOL.filter(ev => {
+      if (ev.eventId !== 'trapped_villager') return true;
+      const rescuedTooMany = gameState.rescuedVillagers.length >= 20;
+      const floorAlreadyRescued = gameState.villagerRescueFloors.has(depth);
+      const tavernNotBuilt = !gameState.restoredBuildings.has('housing');
+      return !tavernNotBuilt && !floorAlreadyRescued && !rescuedTooMany;
+    });
+    const shuffled = [...pool];
     this.rng.shuffle(shuffled);
     const count = Math.min(1 + this.rng.integerInRange(0, 1), shuffled.length, rooms.length);
 

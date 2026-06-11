@@ -419,5 +419,47 @@ export function generateAll(scene: Phaser.Scene): void {
     g.lineBetween(24, 2, 4, 26);
   });
 
+  // --- Hub terrain diamond (white, tinted at use) ---
+  make(scene, g, 'terrain_diamond', 80, 40, () => {
+    drawDiamond(g, 40, 20, 0xffffff, 1);
+  });
+
+  // --- Hub buildings (extruded tiles per type) ---
+  const buildingConfigs: Record<string, [number, number, number]> = {
+    trading_post: [0x8a6a3a, 0x6a4a2a, 0x5a3a1a],
+    crafting: [0x6a7a8a, 0x4a5a6a, 0x3a4a5a],
+    farm: [0x5a7a3a, 0x3a5a2a, 0x2a4a1a],
+    tavern: [0x6a3a1a, 0x4a2a0a, 0x3a1a00],
+    storage: [0x6a5a4a, 0x4a3a2a, 0x3a2a1a],
+    laboratory: [0x6a4a8a, 0x4a2a6a, 0x3a1a5a],
+    gate: [0x3a2a5a, 0x2a1a4a, 0x1a0a3a],
+  };
+
+  for (const [id, colors] of Object.entries(buildingConfigs)) {
+    make(scene, g, `building_${id}`, 80, 64, () => {
+      drawExtrudedTile(g, 40, 44, colors[0], colors[1], colors[2], WALL_HEIGHT);
+    });
+  }
+
+  // --- Gate glow diamond ---
+  make(scene, g, 'gate_glow', 80, 40, () => {
+    drawDiamond(g, 40, 20, 0x8a7aba, 0.3);
+    drawDiamond(g, 40, 20, 0x6a5a9a, 0.2);
+  });
+
+  // --- Villager NPC variants (20 unique colors) ---
+  for (let i = 0; i < 20; i++) {
+    const hue = i / 20;
+    const bodyColor = Phaser.Display.Color.HSLToColor(hue, 0.7, 0.6).color;
+    const headColor = Phaser.Display.Color.HSLToColor(hue, 0.6, 0.8).color;
+    make(scene, g, `npc_${i}`, 24, 24, () => {
+      const { cx, cy } = centered(24, 24);
+      g.fillStyle(bodyColor, 1);
+      g.fillCircle(cx, cy + 2, 7);
+      g.fillStyle(headColor, 1);
+      g.fillRect(cx - 4, cy - 7, 8, 5);
+    });
+  }
+
   g.destroy();
 }

@@ -4,7 +4,7 @@ import { MiningSystem } from '../systems/MiningSystem';
 import { InventorySystem } from '../systems/InventorySystem';
 import { DungeonGenerator, DungeonFloor, DungeonTile } from '../systems/DungeonGenerator';
 import { ExpeditionState } from '../systems/ExpeditionState';
-import { gameState, itemDisplayName } from '../systems/GameState';
+import { gameState, itemDisplayName, NPC_NAMES } from '../systems/GameState';
 import { InventoryPanel } from '../ui/InventoryPanel';
 import { EventPanel, EventChoice, EventConfig } from '../ui/EventPanel';
 import { CombatPanel, CombatResult, EnemyConfig } from '../ui/CombatPanel';
@@ -486,28 +486,9 @@ export class ExpeditionScene extends Phaser.Scene {
 
   private createPlayer(): void {
     const p = gridToIso(this.playerX, this.playerY);
-    const hasImage = this.textures.exists('player_bottom_left');
-    if (hasImage) {
-      this.playerSprite = this.add.image(p.x, p.y, 'player_bottom_left').setDepth(DEPTH.PLAYER);
-      this.player = this.playerSprite as unknown as Phaser.GameObjects.Container;
-      this.updatePlayerSprite();
-    } else {
-      const container = this.add.container(p.x, p.y);
-      const base = this.add.graphics();
-      base.fillStyle(0x6699cc, 1);
-      base.beginPath();
-      base.moveTo(0, -10);
-      base.lineTo(14, 0);
-      base.lineTo(0, 10);
-      base.lineTo(-14, 0);
-      base.closePath();
-      base.fill();
-      container.add(base);
-      const body = this.add.rectangle(0, -20, 12, 20, 0x88ccff);
-      container.add(body);
-      container.setDepth(DEPTH.PLAYER);
-      this.player = container;
-    }
+    this.playerSprite = this.add.image(p.x, p.y, 'player_bottom_left').setDepth(DEPTH.PLAYER);
+    this.player = this.playerSprite as unknown as Phaser.GameObjects.Container;
+    this.updatePlayerSprite();
   }
 
   private updatePlayerSprite(): void {
@@ -1278,6 +1259,11 @@ export class ExpeditionScene extends Phaser.Scene {
                   gameState.crafting.discover('stamina_potion');
                   this.showRecipeDiscovery('Stamina Potion');
                 }
+                const variant = gameState.rescuedVillagers.length;
+                const depth = this.expeditionState.depth;
+                const name = NPC_NAMES[variant] ?? `Villager ${variant + 1}`;
+                gameState.rescuedVillagers.push({ variant, rescuedAtDepth: depth, name });
+                gameState.villagerRescueFloors.add(depth);
                 gameState.villagersRescued++;
                 gameState.maxStaminaBonus += 2;
                 gameState.save();

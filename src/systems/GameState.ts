@@ -3,6 +3,17 @@ import { CraftingSystem } from './CraftingSystem';
 
 const SAVE_KEY = 'hearthburrow_save';
 
+export const NPC_NAMES = [
+  'Mila', 'Finn', 'Bram', 'Nori', 'Tess', 'Kael', 'Rin', 'Hugo', 'Lira', 'Dorn',
+  'Elara', 'Sage', 'Pip', 'Zara', 'Grom', 'Lyra', 'Moss', 'Ivy', 'Ash', 'Wren',
+];
+
+export interface RescuedVillager {
+  variant: number;
+  rescuedAtDepth: number;
+  name: string;
+}
+
 /** Result of a completed expedition run — items gained/lost and extract method. */
 export interface RunResult {
   itemsObtained: { id: string; quantity: number }[];
@@ -76,6 +87,8 @@ class GameState {
   researchLevels: Record<string, number>;
   monsterKills: { slime: number; rat: number; bat: number };
   villagersRescued: number;
+  rescuedVillagers: RescuedVillager[];
+  villagerRescueFloors: Set<number>;
   foundRelics: string[];
   maxDepthReached: number;
   exhaustionCount: number;
@@ -102,6 +115,8 @@ class GameState {
     this.researchLevels = {};
     this.monsterKills = { slime: 0, rat: 0, bat: 0 };
     this.villagersRescued = 0;
+    this.rescuedVillagers = [];
+    this.villagerRescueFloors = new Set();
     this.foundRelics = [];
     this.maxDepthReached = 0;
     this.exhaustionCount = 0;
@@ -338,6 +353,8 @@ class GameState {
     this.researchLevels = {};
     this.monsterKills = { slime: 0, rat: 0, bat: 0 };
     this.villagersRescued = 0;
+    this.rescuedVillagers = [];
+    this.villagerRescueFloors = new Set();
     this.foundRelics = [];
     this.maxDepthReached = 0;
     this.exhaustionCount = 0;
@@ -367,6 +384,8 @@ class GameState {
       researchLevels: { ...this.researchLevels },
       monsterKills: { ...this.monsterKills },
       villagersRescued: this.villagersRescued,
+      rescuedVillagers: this.rescuedVillagers,
+      villagerRescueFloors: Array.from(this.villagerRescueFloors),
       foundRelics: this.foundRelics,
       maxDepthReached: this.maxDepthReached,
       exhaustionCount: this.exhaustionCount,
@@ -410,6 +429,15 @@ class GameState {
       this.farmHarvest = data.farmHarvest ?? 0;
       this.monsterKills = data.monsterKills ?? { slime: 0, rat: 0, bat: 0 };
       this.villagersRescued = data.villagersRescued ?? 0;
+      this.rescuedVillagers = data.rescuedVillagers ?? [];
+      this.villagerRescueFloors = new Set(data.villagerRescueFloors ?? []);
+      // migrate: backfill rescuedVillagers from legacy count
+      if (data.rescuedVillagers === undefined && this.villagersRescued > 0) {
+        this.rescuedVillagers = [];
+        for (let i = 0; i < this.villagersRescued; i++) {
+          this.rescuedVillagers.push({ variant: i, rescuedAtDepth: -1, name: NPC_NAMES[i % NPC_NAMES.length] });
+        }
+      }
       this.foundRelics = data.foundRelics ?? [];
       this.maxDepthReached = data.maxDepthReached ?? 0;
       this.exhaustionCount = data.exhaustionCount ?? 0;
