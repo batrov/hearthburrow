@@ -857,7 +857,7 @@ export class HomelandScene extends Phaser.Scene {
       tmp.destroy();
 
       this.restoreCostIcons.push(
-        this.add.image(480 - lineW / 2 + 8, lineY, iconKey).setScale(0.7).setDepth(210)
+        this.add.image(480 - lineW / 2 - 10, lineY, iconKey).setScale(0.7).setDepth(210)
       );
     }
   }
