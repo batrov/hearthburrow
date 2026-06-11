@@ -838,8 +838,9 @@ export class HomelandScene extends Phaser.Scene {
     );
     this.panelText.setAlpha(1);
 
-    const lineH = 24;
-    const textH = this.panelText.height;
+    const lineH = 28;
+    const totalLines = 5 + costEntries.length;
+    const textH = totalLines * lineH;
     const textTop = 640 / 2 - textH / 2;
 
     for (let i = 0; i < costEntries.length; i++) {
