@@ -814,7 +814,6 @@ export class HomelandScene extends Phaser.Scene {
     this.restoreCostIcons = [];
 
     const costEntries = Object.entries(building.cost);
-
     const canAfford = canRestore(buildingId);
 
     this.panelBg.clear();
@@ -824,42 +823,62 @@ export class HomelandScene extends Phaser.Scene {
     this.panelBg.strokeRoundedRect(960 / 2 - 200, 640 / 2 - 110, 400, 220, 10);
     this.panelBg.setAlpha(1);
 
-    this.panelText.setText(
-      `${building.name}`
+    this.panelText.setAlpha(0);
+
+    const cx = 960 / 2;
+    const panelY = 640 / 2 - 110;
+
+    this.restoreCostIcons.push(
+      this.add.text(cx, panelY + 20, building.name, {
+        fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
+      }).setOrigin(0.5).setDepth(210)
     );
-    this.panelText.setAlpha(1);
 
-    const panelLeft = 960 / 2 - 190;
-    const headerText = this.add.text(panelLeft, 640 / 2 - 110 + 40, 'Required Materials:', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#8a7a6a',
-    }).setDepth(210);
-    this.restoreCostIcons.push(headerText);
+    this.restoreCostIcons.push(
+      this.add.text(cx, panelY + 48, 'Required Materials:', {
+        fontSize: '14px', fontFamily: 'monospace', color: '#8a7a6a',
+      }).setOrigin(0.5).setDepth(210)
+    );
 
-    const entryStartY = 640 / 2 - 110 + 62;
+    const rowStartY = panelY + 75;
     for (let i = 0; i < costEntries.length; i++) {
       const [id, qty] = costEntries[i];
       const have = gameState.inventory.count(id);
       const color = have >= qty ? '#88dd88' : '#dd6666';
-      const y = entryStartY + i * 22;
+      const y = rowStartY + i * 24;
 
+      const label = `${itemDisplayName(id)}: ${have}/${qty}`;
       const iconKey = itemIconKey(id);
+
+      const tmp = this.add.text(0, 0, label, {
+        fontSize: '14px', fontFamily: 'monospace',
+      });
+      const textW = tmp.width;
+      tmp.destroy();
+
+      const iconW = 17;
+      const gap = 4;
+      const totalW = iconW + gap + textW;
+      const rowX = cx - totalW / 2;
+
       if (this.textures.exists(iconKey)) {
         this.restoreCostIcons.push(
-          this.add.image(panelLeft, y, iconKey).setScale(0.7).setDepth(210)
+          this.add.image(rowX + iconW / 2, y, iconKey).setScale(0.7).setDepth(210)
         );
       }
       this.restoreCostIcons.push(
-        this.add.text(panelLeft + 16, y, `${itemDisplayName(id)}: ${have}/${qty}`, {
+        this.add.text(rowX + iconW + gap, y, label, {
           fontSize: '14px', fontFamily: 'monospace', color,
         }).setOrigin(0, 0.5).setDepth(210)
       );
     }
 
-    const footerText = this.add.text(480, 640 / 2 + 110 - 25,
-      canAfford ? '[SPACE] Restore  |  [ESC] cancel' : '[ESC] close',
-      { fontSize: '13px', fontFamily: 'monospace', color: '#8a7a6a' }
-    ).setOrigin(0.5).setDepth(210);
-    this.restoreCostIcons.push(footerText);
+    this.restoreCostIcons.push(
+      this.add.text(cx, panelY + 220 - 30,
+        canAfford ? '[SPACE] Restore  |  [ESC] cancel' : '[ESC] close',
+        { fontSize: '13px', fontFamily: 'monospace', color: '#8a7a6a' }
+      ).setOrigin(0.5).setDepth(210)
+    );
   }
 
   private tryRestore(buildingId: string): void {
