@@ -843,8 +843,8 @@ export class HomelandScene extends Phaser.Scene {
       }).setOrigin(0.5)
     );
 
-    const spriteX = 340;
-    const textX = 365;
+    const spriteX = 420;
+    const textX = 435;
 
     for (let i = 0; i < costEntries.length; i++) {
       const [id, qty] = costEntries[i];
