@@ -85,7 +85,7 @@ export class HomelandScene extends Phaser.Scene {
   private maxTab: number = 8;
   private gateSeed: string = '';
   private seedEditing: boolean = false;
-  private restoreCostIcons: Phaser.GameObjects.GameObject[] = [];
+  private restoreContent: Phaser.GameObjects.Container | null = null;
   private moveTimer: number = 0;
   private moveDelay: number = 150;
   private isMoving: boolean = false;
@@ -810,8 +810,7 @@ export class HomelandScene extends Phaser.Scene {
     this.restoreMode = true;
     this.panelVisible = true;
 
-    for (const obj of this.restoreCostIcons) obj.destroy();
-    this.restoreCostIcons = [];
+    if (this.restoreContent) { this.restoreContent.destroy(true); this.restoreContent = null; }
 
     const costEntries = Object.entries(building.cost);
     const canAfford = canRestore(buildingId);
@@ -823,43 +822,56 @@ export class HomelandScene extends Phaser.Scene {
     this.panelBg.strokeRoundedRect(960 / 2 - 200, 640 / 2 - 110, 400, 220, 10);
     this.panelBg.setAlpha(1);
 
-    const costLines = costEntries
-      .map(([id, qty]) => {
-        const have = gameState.inventory.count(id);
-        const color = have >= qty ? '#88dd88' : '#dd6666';
-        return `  ${itemDisplayName(id)}: ${have}/${qty}`;
-      })
-      .join('\n');
-
-    this.panelText.setText(
-      `${building.name}\n\nRequired Materials:\n${costLines}\n\n${
-        canAfford ? '[SPACE] Restore  |  [ESC] cancel' : '[ESC] close'
-      }`
-    );
-    this.panelText.setAlpha(1);
+    this.panelText.setAlpha(0);
 
     const lineH = 28;
     const totalLines = 5 + costEntries.length;
-    const textH = totalLines * lineH;
-    const textTop = 640 / 2 - textH / 2;
+    const totalTextH = totalLines * lineH;
+    const textTop = 640 / 2 - totalTextH / 2;
+
+    this.restoreContent = this.add.container(0, 0).setDepth(210);
+
+    this.restoreContent.add(
+      this.add.text(480, textTop + 0 * lineH + lineH / 2, building.name, {
+        fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7',
+      }).setOrigin(0.5)
+    );
+
+    this.restoreContent.add(
+      this.add.text(480, textTop + 2 * lineH + lineH / 2, 'Required Materials:', {
+        fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7',
+      }).setOrigin(0.5)
+    );
+
+    const spriteX = 340;
+    const textX = 365;
 
     for (let i = 0; i < costEntries.length; i++) {
-      const [id] = costEntries[i];
+      const [id, qty] = costEntries[i];
+      const have = gameState.inventory.count(id);
+      const color = have >= qty ? '#88dd88' : '#dd6666';
+      const y = textTop + (3 + i) * lineH + lineH / 2;
+
       const iconKey = itemIconKey(id);
-      if (!this.textures.exists(iconKey)) continue;
+      if (this.textures.exists(iconKey)) {
+        this.restoreContent.add(
+          this.add.image(spriteX, y, iconKey).setScale(0.7)
+        );
+      }
 
-      const lineY = textTop + (3 + i) * lineH + lineH / 2;
-      const lineText = `  ${itemDisplayName(id)}: 0/0`;
-      const tmp = this.add.text(0, 0, lineText, {
-        fontSize: '16px', fontFamily: 'monospace',
-      });
-      const lineW = tmp.width;
-      tmp.destroy();
-
-      this.restoreCostIcons.push(
-        this.add.image(480 - lineW / 2, lineY, iconKey).setScale(0.7).setDepth(210)
+      this.restoreContent.add(
+        this.add.text(textX, y, `${itemDisplayName(id)}: ${have}/${qty}`, {
+          fontSize: '16px', fontFamily: 'monospace', color,
+        }).setOrigin(0, 0.5)
       );
     }
+
+    this.restoreContent.add(
+      this.add.text(480, textTop + (4 + costEntries.length) * lineH + lineH / 2,
+        canAfford ? '[SPACE] Restore  |  [ESC] cancel' : '[ESC] close', {
+        fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7',
+      }).setOrigin(0.5)
+    );
   }
 
   private tryRestore(buildingId: string): void {
@@ -1095,8 +1107,7 @@ export class HomelandScene extends Phaser.Scene {
     this.gateMode = false;
     this.gateTab = 0;
     this.seedEditing = false;
-    for (const obj of this.restoreCostIcons) obj.destroy();
-    this.restoreCostIcons = [];
+    if (this.restoreContent) { this.restoreContent.destroy(true); this.restoreContent = null; }
     if (this.seedKeyHandler) {
       this.input.keyboard!.off('keydown', this.seedKeyHandler);
       this.seedKeyHandler = null;
