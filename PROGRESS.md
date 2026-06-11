@@ -16,6 +16,7 @@
 - **Ore distribution** — High-tier ores now distributed evenly across all rooms with per-room caps and randomized remainder allocation, instead of all spawning in the first room
 - **Darkness overlay** — lantern no longer draws darkness overlay on non-dark floors (only `depth % 5 === 3`)
 - **Storage/Crafting costs** — buildings now have proper `buildingId` so they require resource costs to restore instead of being always unlocked
+- **Building restore panel centering** — `restoreContent` container was missing `setScrollFactor(0)`, causing panel text to shift off-center when camera scrolled
 
 ## ✅ UI Polish
 - **Crafting panel**: 4-color recipe lines (crafted/craftable state) + persisted `craftedItems`

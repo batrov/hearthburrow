@@ -829,7 +829,7 @@ export class HomelandScene extends Phaser.Scene {
     const totalTextH = totalLines * lineH;
     const textTop = 640 / 2 - totalTextH / 2;
 
-    this.restoreContent = this.add.container(0, 0).setDepth(210);
+    this.restoreContent = this.add.container(0, 0).setDepth(210).setScrollFactor(0);
 
     this.restoreContent.add(
       this.add.text(480, textTop + 0 * lineH + lineH / 2, building.name, {
