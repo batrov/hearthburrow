@@ -851,13 +851,13 @@ export class HomelandScene extends Phaser.Scene {
       const lineY = textTop + (3 + i) * lineH + lineH / 2;
       const lineText = `  ${itemDisplayName(id)}: 0/0`;
       const tmp = this.add.text(0, 0, lineText, {
-        fontSize: '14px', fontFamily: 'monospace',
+        fontSize: '16px', fontFamily: 'monospace',
       });
       const lineW = tmp.width;
       tmp.destroy();
 
       this.restoreCostIcons.push(
-        this.add.image(480 - lineW / 2 - 10, lineY, iconKey).setScale(0.7).setDepth(210)
+        this.add.image(480 - lineW / 2, lineY, iconKey).setScale(0.7).setDepth(210)
       );
     }
   }
