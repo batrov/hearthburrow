@@ -1625,8 +1625,10 @@ export class ExpeditionScene extends Phaser.Scene {
       console.warn('completePuzzle: no floor/plate tiles available, using room center');
       pos = { x: Math.floor(room.x + room.w / 2), y: Math.floor(room.y + room.h / 2) };
     }
-    floor.tiles[pos.y][pos.x].type = 'stairs_down';
-    floor.tiles[pos.y][pos.x].resource = '';
+    const t = floor.tiles[pos.y][pos.x];
+    t.type = 'stairs_down';
+    t.resource = '';
+    t.broken = false;
     floor.stairsDownX = pos.x;
     floor.stairsDownY = pos.y;
     this.stairsSpawned = true;
@@ -2103,8 +2105,10 @@ export class ExpeditionScene extends Phaser.Scene {
               }
             }
           }
-          floor!.tiles[ty][tx].type = 'stairs_down';
-          floor!.tiles[ty][tx].resource = '';
+          const st = floor!.tiles[ty][tx];
+          st.type = 'stairs_down';
+          st.resource = '';
+          st.broken = false;
           this.drawFloor();
           this.drawMinimap();
 
@@ -2165,7 +2169,9 @@ export class ExpeditionScene extends Phaser.Scene {
       const tile = floor.tiles[y][x];
       tile.type = 'stairs_down';
       tile.resource = '';
+      tile.broken = false;
       this.stairsSpawned = true;
+      this.drawFloor();
     }
   }
 
