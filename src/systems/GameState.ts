@@ -659,6 +659,10 @@ class GameState {
       this.monsterKills = data.monsterKills ?? { slime: 0, rat: 0, bat: 0 };
       this.villagersRescued = data.villagersRescued ?? 0;
       this.rescuedVillagers = data.rescuedVillagers ?? [];
+      // migrate: backfill talkCount for saves made before NPC personalities
+      for (const v of this.rescuedVillagers) {
+        if (v.talkCount === undefined) v.talkCount = 0;
+      }
       this.villagerRescueFloors = new Set(data.villagerRescueFloors ?? []);
       // migrate: backfill rescuedVillagers from legacy count
       if (data.rescuedVillagers === undefined && this.villagersRescued > 0) {

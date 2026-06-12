@@ -516,7 +516,7 @@ export class TavernScene extends Phaser.Scene {
     const personality = NPC_PERSONALITIES[npc.variant];
     if (!personality) return;
 
-    const greeting = personality.greetings[npc.talkCount % personality.greetings.length];
+    const greeting = personality.greetings[(npc.talkCount ?? 0) % personality.greetings.length];
     npc.talkCount++;
     gameState.save();
 
