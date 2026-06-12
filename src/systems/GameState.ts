@@ -3,15 +3,244 @@ import { CraftingSystem } from './CraftingSystem';
 
 const SAVE_KEY = 'hearthburrow_save';
 
-export const NPC_NAMES = [
-  'Mila', 'Finn', 'Bram', 'Nori', 'Tess', 'Kael', 'Rin', 'Hugo', 'Lira', 'Dorn',
-  'Elara', 'Sage', 'Pip', 'Zara', 'Grom', 'Lyra', 'Moss', 'Ivy', 'Ash', 'Wren',
+export interface NPCPersonality {
+  name: string;
+  archetype: string;
+  rescueLine: string;
+  greetings: string[];
+  description: string;
+}
+
+export const NPC_PERSONALITIES: NPCPersonality[] = [
+  {
+    name: 'Mila',
+    archetype: 'Botanist',
+    rescueLine: 'I was cataloging glowing moss when the floor collapsed! My specimen journal — did you see it anywhere?',
+    greetings: [
+      'The fungi down here glow in patterns I\'ve never documented before.',
+      'I found a root that blooms only in absolute darkness.',
+      'Every floor has its own ecosystem. Remarkable, really.',
+    ],
+    description: 'A botanist who ventured too deep studying rare dungeon flora.',
+  },
+  {
+    name: 'Finn',
+    archetype: 'Wannabe Warrior',
+    rescueLine: 'I had that goblin right where I wanted him! ...Okay, maybe he had me. But I put up a fight!',
+    greetings: [
+      'Next time I\'m bringing a real sword. This rusted thing is useless.',
+      'I\'ve been practicing my stance. Watch this! ...No, don\'t watch.',
+      'The slimes aren\'t so tough once you know their rhythm.',
+    ],
+    description: 'An aspiring adventurer with more courage than skill.',
+  },
+  {
+    name: 'Bram',
+    archetype: 'Miner',
+    rescueLine: 'Tunnel collapsed on me while I was chasing a silver vein. Happens to the best of us, eh?',
+    greetings: [
+      'I can smell ore from three rooms away. It\'s a gift.',
+      'The rock on floor 8 has a distinct red tint. Rich in iron.',
+      'If you ever need to read a tunnel wall, come find me.',
+    ],
+    description: 'A seasoned miner who knows every rock and vein by feel.',
+  },
+  {
+    name: 'Nori',
+    archetype: 'Halfling Cook',
+    rescueLine: 'I was looking for cave truffles for my signature stew! Now my pot\'s gone cold...',
+    greetings: [
+      'I\'ve improvised a kitchen in the back. The mushroom broth is coming along.',
+      'If you bring me cave herbs, I\'ll make you something warm.',
+      'The trick to a good dungeon stew is patience and a strong stomach.',
+    ],
+    description: 'A cheerful cook always hunting for rare ingredients.',
+  },
+  {
+    name: 'Tess',
+    archetype: 'Scout',
+    rescueLine: 'Ambushed by a patrol of rats. I held them off for hours! ...Okay, maybe minutes.',
+    greetings: [
+      'I\'ve sketched a map of the upper floors from memory.',
+      'The monsters have patrol routes. You can learn to predict them.',
+      'I spotted a hidden passage on floor 3. We should check it out.',
+    ],
+    description: 'A sharp-eyed scout with an instinct for danger.',
+  },
+  {
+    name: 'Kael',
+    archetype: 'Runaway Mage',
+    rescueLine: 'The teleportation spell was supposed to land me in the capital, not a slime pit. Don\'t tell my master.',
+    greetings: [
+      'I\'ve been experimenting with a new cantrip. Watch this — okay, that wasn\'t supposed to smoke.',
+      'The magical resonance down here is chaotic. I love it.',
+      'I could teach you a simple light spell. If you promise not to laugh.',
+    ],
+    description: 'A talented but accident-prone mage with more ambition than precision.',
+  },
+  {
+    name: 'Rin',
+    archetype: 'Archaeologist',
+    rescueLine: 'I found a door covered in ancient runes! I touched it and — well — the floor disappeared.',
+    greetings: [
+      'The architecture on floor 6 is clearly pre-empire. Fascinating.',
+      'I\'ve been transcribing the runes from that sealed chamber.',
+      'This dungeon was built for a purpose. I intend to find out what.',
+    ],
+    description: 'An archaeologist obsessed with the dungeon\'s forgotten origins.',
+  },
+  {
+    name: 'Hugo',
+    archetype: 'Merchant',
+    rescueLine: 'Ambushed on the trade route! My cart, my goods — everything\'s gone. At least I still have my wits.',
+    greetings: [
+      'I\'ve set up a small trade post in the corner. Prices are fair!',
+      'Supply and demand, my friend. Everything has a price down here.',
+      'If you find anything shiny, I know a buyer.',
+    ],
+    description: 'A traveling merchant who can sell sand in a desert.',
+  },
+  {
+    name: 'Lira',
+    archetype: 'Bard',
+    rescueLine: 'I came down here looking for inspiration for my next ballad. Got a bit more than I bargained for!',
+    greetings: [
+      'I\'ve written a song about your exploits. It needs work.',
+      'The acoustics in the main hall are incredible for lute practice.',
+      'Every hero needs a bard to sing their deeds. That\'s where I come in.',
+    ],
+    description: 'A wandering bard seeking the song that will define her career.',
+  },
+  {
+    name: 'Dorn',
+    archetype: 'Blacksmith',
+    rescueLine: 'I was hunting for deep-crystal ore when a rockfall trapped me. Found this nice chunk, though!',
+    greetings: [
+      'I\'ve set up a makeshift forge. The bellows need work.',
+      'That ore you brought back has excellent carbon content.',
+      'If you have the materials, I can sharpen your tools.',
+    ],
+    description: 'A gruff blacksmith who judges ore quality at a glance.',
+  },
+  {
+    name: 'Elara',
+    archetype: 'Healer',
+    rescueLine: 'I followed an injured adventurer down to help them. They made it out. I didn\'t. No regrets.',
+    greetings: [
+      'Let me check that wound. I\'ve seen worse, but not by much.',
+      'I\'ve been stockpiling herbs for poultices. The work never ends.',
+      'You push yourself too hard. Even heroes need rest.',
+    ],
+    description: 'A selfless healer who puts others before herself.',
+  },
+  {
+    name: 'Sage',
+    archetype: 'Librarian',
+    rescueLine: 'I was looking for the dungeon\'s archive. They say the original builders left records. I found monsters instead.',
+    greetings: [
+      'I\'ve started a library in the corner. Donations welcome.',
+      'The oral histories of the rescued tell a pattern. I\'m recording it.',
+      'Knowledge is the sharpest weapon against the dark.',
+    ],
+    description: 'A bookish scholar trying to document the dungeon\'s secrets.',
+  },
+  {
+    name: 'Pip',
+    archetype: 'Tinkerer',
+    rescueLine: 'My mining drill broke down and I got cornered. If I\'d had my tools, I could\'ve fixed it!',
+    greetings: [
+      'I\'ve been building a device that maps rooms automatically.',
+      'If you bring me scrap metal, I can make something useful.',
+      'The prototype exploded. That means progress!',
+    ],
+    description: 'An inventive tinkerer who believes every problem has a mechanical solution.',
+  },
+  {
+    name: 'Zara',
+    archetype: 'Rogue',
+    rescueLine: 'Picked the wrong lock. Behind it was a nest of giant spiders. Note to self: check for webs first.',
+    greetings: [
+      'The locked rooms on floor 4 have good loot. I may have... investigated.',
+      'Traps are just puzzles with sharper consequences.',
+      'I never stole from anyone here. The dungeon provides.',
+    ],
+    description: 'A nimble rogue who can charm or pick her way through anything.',
+  },
+  {
+    name: 'Grom',
+    archetype: 'Survivalist',
+    rescueLine: 'I\'ve been down here for weeks. Lost count of the days. Learned to fight, eat, sleep with one eye open.',
+    greetings: [
+      'The deep floors have their own rules. You learn or you die.',
+      'I\'ve been tanning monster hides. Makes for warm bedding.',
+      'Never drink standing water from floor 7. Trust me.',
+    ],
+    description: 'A rugged survivalist who adapted to the dungeon better than most.',
+  },
+  {
+    name: 'Lyra',
+    archetype: 'Herbalist / Alchemist',
+    rescueLine: 'I was testing a new potion recipe. The fumes attracted every monster in the vicinity. Oops.',
+    greetings: [
+      'That batch of stamina tonic is almost ready. Don\'t volunteer as a tester.',
+      'Crystal dust, when properly refined, makes an excellent reagent.',
+      'I mixed something new yesterday. Either a breakthrough or a disaster.',
+    ],
+    description: 'An alchemist whose experiments are as dangerous as the dungeon itself.',
+  },
+  {
+    name: 'Moss',
+    archetype: 'Druid / Hermit',
+    rescueLine: 'The spirits of the deep led me here. They said I was needed. They didn\'t mention the teeth.',
+    greetings: [
+      'I can feel the dungeon breathing. It\'s alive, you know.',
+      'The stones remember those who built this place.',
+      'I\'ve been communing with the earth. It has much to say.',
+    ],
+    description: 'A quiet druid who hears the whispers of the ancient stone.',
+  },
+  {
+    name: 'Ivy',
+    archetype: 'Ranger / Tracker',
+    rescueLine: 'I was tracking a wounded beast when the trail led into an ambush. Should\'ve seen it coming.',
+    greetings: [
+      'I\'ve charted the monster migration patterns on the upper floors.',
+      'There\'s a pack of slimes that moves between floors through cracks in the rock.',
+      'I\'ve been training a cave lizard to scout ahead. She learns fast.',
+    ],
+    description: 'A skilled ranger who reads the dungeon like a living forest.',
+  },
+  {
+    name: 'Ash',
+    archetype: 'Survivor / Cursed',
+    rescueLine: 'Don\'t come near me! ...I think the curse wore off. Probably. Stay back just in case.',
+    greetings: [
+      'The dungeon left its mark on me. I\'m still figuring out what changed.',
+      'I can sense monsters before they appear. A gift and a curse.',
+      'Some days I miss the silence of the deep floors. That worries me.',
+    ],
+    description: 'A quiet soul marked by a dungeon curse that changed them forever.',
+  },
+  {
+    name: 'Wren',
+    archetype: 'Messenger / Scout',
+    rescueLine: 'I volunteered to deliver supplies to an outpost. Got lost, got attacked, got rescued. Embarrassing.',
+    greetings: [
+      'I can carry messages between floors if you need. I know the safe paths now.',
+      'The network of survivors is growing. I help keep us connected.',
+      'I\'ve memorized the patrol patterns of the floor 2 monsters.',
+    ],
+    description: 'A swift and reliable messenger who connects the rescued community.',
+  },
 ];
+
+export const NPC_NAMES = NPC_PERSONALITIES.map(p => p.name);
 
 export interface RescuedVillager {
   variant: number;
   rescuedAtDepth: number;
   name: string;
+  talkCount: number;
 }
 
 /** Result of a completed expedition run — items gained/lost and extract method. */
@@ -435,7 +664,7 @@ class GameState {
       if (data.rescuedVillagers === undefined && this.villagersRescued > 0) {
         this.rescuedVillagers = [];
         for (let i = 0; i < this.villagersRescued; i++) {
-          this.rescuedVillagers.push({ variant: i, rescuedAtDepth: -1, name: NPC_NAMES[i % NPC_NAMES.length] });
+          this.rescuedVillagers.push({ variant: i, rescuedAtDepth: -1, name: NPC_NAMES[i % NPC_NAMES.length], talkCount: 0 });
         }
       }
       this.foundRelics = data.foundRelics ?? [];

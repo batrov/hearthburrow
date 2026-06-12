@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { gameState, NPC_NAMES } from '../systems/GameState';
+import { gameState, NPC_PERSONALITIES } from '../systems/GameState';
 import { audio } from '../systems/AudioSystem';
 import {
   gridToIso, isoToGrid, findPath,
@@ -512,33 +512,16 @@ export class TavernScene extends Phaser.Scene {
     this.promptText.setAlpha(0);
   }
 
-  private showGreeting(npc: { variant: number; rescuedAtDepth: number; name: string }): void {
-    const greetings = [
-      'Ah, a friendly face! Pull up a chair.',
-      'The warmth of this place does wonders.',
-      'I never thought I\'d be rescued. Thank you.',
-      'These floors are deadly, but this tavern is paradise.',
-      'Have you tried the mead? It\'s excellent.',
-      'The dungeon is no place for the faint of heart.',
-      'I still have nightmares about those slimes.',
-      'I owe you my life, friend.',
-      'This place feels like home already.',
-      'The adventurers tell the best stories here.',
-      'I\'ve been helping in the kitchen.',
-      'Cheers to another day above ground!',
-      'The fire keeps us warm through the night.',
-      'Have you seen the cellar? It\'s full of supplies.',
-      'I\'m crafting something special for you.',
-      'The walls have ears, but here we are safe.',
-      'I heard there are even more trapped souls down there.',
-      'Rest easy, friend. You\'ve earned it.',
-      'The bard should be here any day now.',
-      'To new beginnings!',
-    ];
+  private showGreeting(npc: { variant: number; rescuedAtDepth: number; name: string; talkCount: number }): void {
+    const personality = NPC_PERSONALITIES[npc.variant];
+    if (!personality) return;
+
+    const greeting = personality.greetings[npc.talkCount % personality.greetings.length];
+    npc.talkCount++;
+    gameState.save();
 
     this.greetingActive = true;
 
-    const greeting = greetings[npc.variant % greetings.length];
     const overlayBg = this.add.graphics().setDepth(200);
     overlayBg.fillStyle(0x0a0a1a, 0.85);
     overlayBg.fillRoundedRect(960 / 2 - 250, 640 / 2 - 60, 500, 120, 10);

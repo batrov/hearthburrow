@@ -4,7 +4,7 @@ import { MiningSystem } from '../systems/MiningSystem';
 import { InventorySystem } from '../systems/InventorySystem';
 import { DungeonGenerator, DungeonFloor, DungeonTile } from '../systems/DungeonGenerator';
 import { ExpeditionState } from '../systems/ExpeditionState';
-import { gameState, itemDisplayName, NPC_NAMES } from '../systems/GameState';
+import { gameState, itemDisplayName, NPC_PERSONALITIES } from '../systems/GameState';
 import { InventoryPanel } from '../ui/InventoryPanel';
 import { EventPanel, EventChoice, EventConfig } from '../ui/EventPanel';
 import { CombatPanel, CombatResult, EnemyConfig } from '../ui/CombatPanel';
@@ -1301,10 +1301,14 @@ export class ExpeditionScene extends Phaser.Scene {
       },
 
       trapped_villager: () => {
+        const variant = gameState.rescuedVillagers.length;
+        const personality = NPC_PERSONALITIES[variant];
+        const name = personality?.name ?? `Villager ${variant + 1}`;
+        const line = personality?.rescueLine ?? 'Please, help me!';
         const alreadyDiscovered = gameState.crafting.isDiscovered('stamina_potion');
         return {
-          title: 'Trapped Villager',
-          description: 'A frightened villager is trapped in the dungeon! Rescue them and they will share knowledge.',
+          title: `Trapped: ${name}`,
+          description: `"${line}"`,
           choices: [
             {
               label: alreadyDiscovered ? 'Rescue (already know recipe)' : 'Rescue (learn Stamina Potion recipe)',
@@ -1313,10 +1317,8 @@ export class ExpeditionScene extends Phaser.Scene {
                   gameState.crafting.discover('stamina_potion');
                   this.showRecipeDiscovery('Stamina Potion');
                 }
-                const variant = gameState.rescuedVillagers.length;
                 const depth = this.expeditionState.depth;
-                const name = NPC_NAMES[variant] ?? `Villager ${variant + 1}`;
-                gameState.rescuedVillagers.push({ variant, rescuedAtDepth: depth, name });
+                gameState.rescuedVillagers.push({ variant, rescuedAtDepth: depth, name, talkCount: 0 });
                 gameState.villagerRescueFloors.add(depth);
                 gameState.villagersRescued++;
                 gameState.maxStaminaBonus += 2;

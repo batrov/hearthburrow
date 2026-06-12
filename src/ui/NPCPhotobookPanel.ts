@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { gameState, NPC_NAMES } from '../systems/GameState';
+import { gameState, NPC_PERSONALITIES } from '../systems/GameState';
 import { BasePanel } from './BasePanel';
 
 export class NPCPhotobookPanel extends BasePanel {
@@ -75,9 +75,10 @@ export class NPCPhotobookPanel extends BasePanel {
     this.overlay.strokeRect(40, 65, 880, 540);
 
     const rescued = gameState.rescuedVillagers;
-    this.entries = rescued.map((r, i) => ({
-      variant: r.variant, name: r.name || NPC_NAMES[i] || `Villager ${i + 1}`, depth: r.rescuedAtDepth,
-    }));
+    this.entries = rescued.map((r) => {
+      const p = NPC_PERSONALITIES[r.variant];
+      return { variant: r.variant, name: p?.name ?? r.name, depth: r.rescuedAtDepth };
+    });
 
     if (this.selectionIndex >= this.entries.length) {
       this.selectionIndex = Math.max(0, this.entries.length - 1);
@@ -102,8 +103,9 @@ export class NPCPhotobookPanel extends BasePanel {
     }
 
     const selected = this.entries[this.selectionIndex];
-    const info = selected
-      ? `\n\n---\nVariant #${selected.variant + 1} · Rescued at floor ${selected.depth}`
+    const selPersonality = selected ? NPC_PERSONALITIES[selected.variant] : null;
+    const info = selected && selPersonality
+      ? `\n\n---\n${selPersonality.archetype}\nRescued at floor ${selected.depth}\n"${selPersonality.description}"`
       : '';
 
     this.contentText.setText(lines.join('\n') + info);
