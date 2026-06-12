@@ -9,6 +9,6 @@
 - Stair up and stair down in dungeon should be walkable, ask player to asc/desc when player is on top of the tile
 
 
-- Bug: unable to descend floor
 - Player should spawn near door on tavern entrance
 - Replace glowing diamond to follow selected object sprite shape, border should be surrounding the selected object
+- Result screen should also show rescued villagers and learned recipe during the run

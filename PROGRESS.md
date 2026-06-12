@@ -78,4 +78,27 @@ Resolved Bugs:
 - **TavernScene rewrite** — replaced top-down rendering with full 8×7 isometric grid using `terrain_diamond` floors + extruded walls/bar/tables, properly depth-sorted via painter's algorithm (`6 + (x+y)*0.01`)
 - **Player movement** — WASD/arrows + click-to-move with BFS pathfinding + virtual analog stick, matching HomelandScene's movement system (150ms gate, facing sprites, step audio, collision against solids)
 - **20 rescued NPCs** — placed on floor grid cells with painter's depth (`8 + (x+y)*0.01`), name labels, hover tooltips, and click-to-greet dialog overlays
-- **Exit** — walk to door cell (7, 3) + SPACE, or ESC from anywhere, with fade transition back to HomelandScene
+- **Exit** — walk to door + SPACE, or ESC from anywhere, with fade transition back to HomelandScene
+
+## ✅ Tavern Polish (June 2026)
+- **Layout expansion** — tavern grid enlarged 8×7 → 10×8 with natural bar/tables/firepit layout, NPCs clustered at bar counters and table groups
+- **Door interactable** — pulsing glow sprite on the door, `[SPACE] Exit` floating prompt when player is adjacent
+- **NPC Photobook panel** — `[P]` key opens a full panel listing all rescued NPCs with variant number, name, and rescue depth; W/S scroll, ESC close
+- **Rescue popup** — rescuing an NPC now shows a floating `Rescued: {name}!` notification via `createPopup`
+
+## ✅ Expedition Polish (June 2026)
+- **NPC variant sprites** — trapped villagers in the dungeon render their unique `npc_{variant}` texture instead of the generic `event_villager` sprite (works in `drawInteractiveTiles` and `updateFacingHighlight` preview)
+- **Glow highlight** — facing highlight changed from flat white diamond to a 3-layer concentric diamond glow (2px solid inner, 6px at 0.25 alpha, 12px at 0.08 alpha)
+- **Stair interaction overhaul**:
+  - Stairs are walkable (removed from `tryMove` intercept)
+  - Standing-on-stairs detection in `checkEventProximity` shows a full-screen popup (`[SPACE] Descend/Ascend / [ESC] Cancel`)
+  - `floorEntry` flag suppresses prompt on initial floor spawn (sanctuary floor entry)
+  - `stairDismissCell` prevents prompt re-trigger after ESC dismiss; auto-clears when player leaves the tile
+  - Only triggers on intentional re-entry (walk off and back onto stairs)
+- **Stair prompt style** — popup now has dark overlay background + rounded rect box + dynamic action button text
+
+## ✅ Bug Fixes (June 2026)
+- **Stairs_down broken flag** — mining sets `tile.broken = true`, then `spawnStairsOnBreak` changes type to `stairs_down` without resetting `broken`, so `!curTile.broken` guard rejects the tile. Fixed: `broken = false` in all three `stairs_down` placement paths (random spawn, puzzle, boss kill). Added `drawFloor()` after spawn for visual texture.
+- **Facing-edge stairs detection** — `checkEventProximity` returned early when facing tile was out-of-bounds (player at map edge), skipping stairs-underfoot check. Fixed: stairs check moved before facing-tile bounds guard.
+- **Facing highlight depth** — `previewTile.destroy()` moved to top of `updateFacingHighlight()` before early return guard, preventing stale Image at same depth from accumulating.
+- **Guaranteed NPC per floor** — refactored `placeEventTiles()` to place one `trapped_villager` before random events; extracted `getFloorPositions()` and `canSpawnVillager()` helpers.
