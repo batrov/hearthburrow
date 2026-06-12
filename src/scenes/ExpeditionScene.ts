@@ -200,7 +200,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.stamina = new StaminaSystem(staminaMax);
     this.mining = new MiningSystem();
     this.mining.setPickaxeTier(gameState.currentPickaxeTier);
-    this.inventory = new InventorySystem(16 + gameState.inventorySlotBonus, false);
+    this.inventory = new InventorySystem(this.debugMode ? 100 : 16 + gameState.inventorySlotBonus, false);
     for (const [id, qty] of Object.entries(this.loadoutConsumables)) {
       if (qty > 0) this.inventory.addItem(id, qty);
     }
