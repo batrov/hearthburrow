@@ -113,7 +113,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private stairTargetY: number = -1;
   private stairAction: 'ascend' | 'descend' | null = null;
   private stairPrompt: Phaser.GameObjects.Container | null = null;
-  private floorEntry: boolean = false;
+  private stairDismissCell: { x: number; y: number } | null = null;
   private exhausted: boolean = false;
   private stairsSpawned: boolean = false;
   private facingX: number = 0;
@@ -195,7 +195,6 @@ export class ExpeditionScene extends Phaser.Scene {
     const staminaMax = this.debugMode ? 10000 : 100 + gameState.maxStaminaBonus + bootStaminaBonus;
     this.rocksBrokenThisRun = 0;
     this.stairsSpawned = false;
-    this.floorEntry = true;
     this.stamina = new StaminaSystem(staminaMax);
     this.mining = new MiningSystem();
     this.mining.setPickaxeTier(gameState.currentPickaxeTier);
@@ -1041,18 +1040,7 @@ export class ExpeditionScene extends Phaser.Scene {
         this.stairAction = null;
         this.interactTarget = null;
         this.interactPrompt.setAlpha(0);
-        // Bump player back one cell so the prompt doesn't re-trigger
-        const bx = this.playerX - this.facingX;
-        const by = this.playerY - this.facingY;
-        const floor = this.currentFloor;
-        if (floor && bx >= 0 && bx < floor.cols && by >= 0 && by < floor.rows) {
-          const bt = floor.tiles[by][bx];
-          if (!this.isBlocked(bt)) {
-            this.playerX = bx;
-            this.playerY = by;
-            this.repositionPlayer();
-          }
-        }
+        this.stairDismissCell = { x: this.playerX, y: this.playerY };
       }
       return;
     }
@@ -1149,14 +1137,23 @@ export class ExpeditionScene extends Phaser.Scene {
     if (!floor) return;
 
     const curTile = floor.tiles[this.playerY][this.playerX];
-    if (!this.floorEntry && (curTile.type === 'stairs_up' || curTile.type === 'stairs_down') && !curTile.broken && !this.stairAction) {
-      this.interactTarget = null;
-      this.interactPrompt.setAlpha(0);
-      this.stairTargetX = this.playerX;
-      this.stairTargetY = this.playerY;
-      this.stairAction = curTile.type === 'stairs_up' ? 'ascend' : 'descend';
-      this.showStairPrompt();
-      return;
+    const onStairs = (curTile.type === 'stairs_up' || curTile.type === 'stairs_down') && !curTile.broken;
+
+    if (!onStairs) {
+      this.stairDismissCell = null;
+    }
+
+    if (onStairs && !this.stairAction) {
+      const dismissed = this.stairDismissCell && this.stairDismissCell.x === this.playerX && this.stairDismissCell.y === this.playerY;
+      if (!dismissed) {
+        this.interactTarget = null;
+        this.interactPrompt.setAlpha(0);
+        this.stairTargetX = this.playerX;
+        this.stairTargetY = this.playerY;
+        this.stairAction = curTile.type === 'stairs_up' ? 'ascend' : 'descend';
+        this.showStairPrompt();
+        return;
+      }
     }
 
     const tx = this.playerX + this.facingX;
@@ -1536,7 +1533,6 @@ export class ExpeditionScene extends Phaser.Scene {
     if (!floor) return;
 
     this.stairsSpawned = false;
-    this.floorEntry = true;
     this.interactTarget = null;
     this.interactPrompt.setAlpha(0);
 
@@ -1571,7 +1567,6 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.playerX = nx;
     this.playerY = ny;
-    this.floorEntry = false;
 
     const target = gridToIso(nx, ny);
     this.isMoving = true;
