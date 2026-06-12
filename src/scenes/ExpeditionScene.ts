@@ -113,6 +113,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private stairTargetY: number = -1;
   private stairAction: 'ascend' | 'descend' | null = null;
   private stairPrompt: Phaser.GameObjects.Container | null = null;
+  private floorEntry: boolean = false;
   private exhausted: boolean = false;
   private stairsSpawned: boolean = false;
   private facingX: number = 0;
@@ -194,6 +195,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const staminaMax = this.debugMode ? 10000 : 100 + gameState.maxStaminaBonus + bootStaminaBonus;
     this.rocksBrokenThisRun = 0;
     this.stairsSpawned = false;
+    this.floorEntry = true;
     this.stamina = new StaminaSystem(staminaMax);
     this.mining = new MiningSystem();
     this.mining.setPickaxeTier(gameState.currentPickaxeTier);
@@ -1147,7 +1149,7 @@ export class ExpeditionScene extends Phaser.Scene {
     if (!floor) return;
 
     const curTile = floor.tiles[this.playerY][this.playerX];
-    if ((curTile.type === 'stairs_up' || curTile.type === 'stairs_down') && !curTile.broken && !this.stairAction) {
+    if (!this.floorEntry && (curTile.type === 'stairs_up' || curTile.type === 'stairs_down') && !curTile.broken && !this.stairAction) {
       this.interactTarget = null;
       this.interactPrompt.setAlpha(0);
       this.stairTargetX = this.playerX;
@@ -1534,6 +1536,7 @@ export class ExpeditionScene extends Phaser.Scene {
     if (!floor) return;
 
     this.stairsSpawned = false;
+    this.floorEntry = true;
     this.interactTarget = null;
     this.interactPrompt.setAlpha(0);
 
@@ -1568,6 +1571,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.playerX = nx;
     this.playerY = ny;
+    this.floorEntry = false;
 
     const target = gridToIso(nx, ny);
     this.isMoving = true;
