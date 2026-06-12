@@ -80,10 +80,10 @@ export class TavernScene extends Phaser.Scene {
     this.analogDx = 0;
     this.analogDy = 0;
     this.analogGfx = null;
-    this.playerGx = 4;
-    this.playerGy = 7;
+    this.playerGx = 8;
+    this.playerGy = 3;
     this.facingX = 0;
-    this.facingY = -1;
+    this.facingY = 1;
 
     this.drawTavern();
     this.createPlayer();
