@@ -110,3 +110,8 @@ Resolved Bugs:
   - **Tavern greeting**: 3 personality-consistent greetings rotated via `talkCount` (persisted per NPC)
   - **Photobook detail**: archetype label + description shown when selected
 - **Save migration** — existing saves automatically get `talkCount: 0` backfilled on load
+
+## ✅ Result Recap Sprites (June 2026)
+- **Rescued NPCs** — recap screen now lists rescued villagers with their unique `npc_{variant}` sprite (scale 0.5) + name inline, wrapping per row
+- **Discovered recipes** — each discovered recipe shows its item sprite + name, same inline pattern; recipes without known item icons (e.g. relics) fall back to text-only
+- **Reverse lookup helper** — `itemIdFromDisplayName()` converts display names to item IDs for icon key resolution
