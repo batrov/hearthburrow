@@ -377,7 +377,10 @@ export class ExpeditionScene extends Phaser.Scene {
           if (this.textures.exists('blocked')) makeImg('blocked');
           break;
         default:
-          if (tile.type.startsWith('event_') && tile.type !== 'event_boss' && !tile.broken) {
+          if (tile.type === 'event_villager' && !tile.broken) {
+            const npcKey = 'npc_' + tile.resource;
+            if (this.textures.exists(npcKey)) makeImg(npcKey);
+          } else if (tile.type.startsWith('event_') && tile.type !== 'event_boss' && !tile.broken) {
             if (this.textures.exists(tile.type)) makeImg(tile.type);
           } else if (tile.type === 'enemy' && !tile.broken) {
             if (this.textures.exists('enemy_' + tile.resource)) makeImg('enemy_' + tile.resource);
@@ -397,6 +400,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private updateFacingHighlight(): void {
     this.facingHighlight.clear();
     this.selectedObject.clear();
+    if (this.previewTile) { this.previewTile.destroy(); this.previewTile = null; }
     const floor = this.currentFloor;
     if (!floor) return;
     const tx = this.playerX + this.facingX;
@@ -423,15 +427,15 @@ export class ExpeditionScene extends Phaser.Scene {
         break;
       case 'blocked':
         drawDiamondAt(this.selectedObject, tx, ty, 0x2a2a3a);
-        break;
-      default:
+          break;
+        default:
         if (tile.type.startsWith('event_') || tile.type === 'enemy' || tile.type === 'event_boss' || tile.type === 'boss_body') {
           drawDiamondAt(this.selectedObject, tx, ty, 0x1a1a2a);
         }
         break;
     }
 
-    this.facingHighlight.lineStyle(2, 0xffffff, 0.8);
+    this.facingHighlight.lineStyle(2, 0xffffff, 1);
     this.facingHighlight.beginPath();
     this.facingHighlight.moveTo(p.x, p.y - HALF_H);
     this.facingHighlight.lineTo(p.x + HALF_W, p.y);
@@ -440,7 +444,23 @@ export class ExpeditionScene extends Phaser.Scene {
     this.facingHighlight.closePath();
     this.facingHighlight.strokePath();
 
-    if (this.previewTile) { this.previewTile.destroy(); this.previewTile = null; }
+    this.facingHighlight.lineStyle(6, 0xffffff, 0.25);
+    this.facingHighlight.beginPath();
+    this.facingHighlight.moveTo(p.x, p.y - HALF_H);
+    this.facingHighlight.lineTo(p.x + HALF_W, p.y);
+    this.facingHighlight.lineTo(p.x, p.y + HALF_H);
+    this.facingHighlight.lineTo(p.x - HALF_W, p.y);
+    this.facingHighlight.closePath();
+    this.facingHighlight.strokePath();
+
+    this.facingHighlight.lineStyle(12, 0xffffff, 0.08);
+    this.facingHighlight.beginPath();
+    this.facingHighlight.moveTo(p.x, p.y - HALF_H);
+    this.facingHighlight.lineTo(p.x + HALF_W, p.y);
+    this.facingHighlight.lineTo(p.x, p.y + HALF_H);
+    this.facingHighlight.lineTo(p.x - HALF_W, p.y);
+    this.facingHighlight.closePath();
+    this.facingHighlight.strokePath();
 
     let texKey = '';
     switch (tile.type) {
@@ -452,6 +472,7 @@ export class ExpeditionScene extends Phaser.Scene {
       case 'enemy': texKey = 'enemy_' + tile.resource; break;
       case 'event_boss':
       case 'boss_body': texKey = 'enemy_boss'; break;
+      case 'event_villager': texKey = 'npc_' + tile.resource; break;
       default:
         if (tile.type.startsWith('event_')) texKey = tile.type;
         break;
@@ -1016,6 +1037,20 @@ export class ExpeditionScene extends Phaser.Scene {
       } else if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
         this.hideStairPrompt();
         this.stairAction = null;
+        this.interactTarget = null;
+        this.interactPrompt.setAlpha(0);
+        // Bump player back one cell so the prompt doesn't re-trigger
+        const bx = this.playerX - this.facingX;
+        const by = this.playerY - this.facingY;
+        const floor = this.currentFloor;
+        if (floor && bx >= 0 && bx < floor.cols && by >= 0 && by < floor.rows) {
+          const bt = floor.tiles[by][bx];
+          if (!this.isBlocked(bt)) {
+            this.playerX = bx;
+            this.playerY = by;
+            this.repositionPlayer();
+          }
+        }
       }
       return;
     }
@@ -1029,6 +1064,13 @@ export class ExpeditionScene extends Phaser.Scene {
     if (this.interactTarget && Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
       this.movePath = [];
       this.analogActive = false;
+      if (this.interactTarget.id === 'ascend') {
+        this.handleAscend();
+        return;
+      } else if (this.interactTarget.id === 'descend') {
+        this.handleDescend();
+        return;
+      }
       const tile = this.currentFloor?.tiles[this.interactTarget.y]?.[this.interactTarget.x];
       if (tile && (tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken) {
         if (this.stamina.remaining > 10) {
@@ -1103,6 +1145,17 @@ export class ExpeditionScene extends Phaser.Scene {
   private checkEventProximity(): void {
     const floor = this.currentFloor;
     if (!floor) return;
+
+    const curTile = floor.tiles[this.playerY][this.playerX];
+    if ((curTile.type === 'stairs_up' || curTile.type === 'stairs_down') && !curTile.broken && !this.stairAction) {
+      this.interactTarget = null;
+      this.interactPrompt.setAlpha(0);
+      this.stairTargetX = this.playerX;
+      this.stairTargetY = this.playerY;
+      this.stairAction = curTile.type === 'stairs_up' ? 'ascend' : 'descend';
+      this.showStairPrompt();
+      return;
+    }
 
     const tx = this.playerX + this.facingX;
     const ty = this.playerY + this.facingY;
@@ -1267,6 +1320,7 @@ export class ExpeditionScene extends Phaser.Scene {
                 gameState.villagersRescued++;
                 gameState.maxStaminaBonus += 2;
                 gameState.save();
+                this.createPopup(`Rescued: ${name}!`, this.cameras.main.width / 2, 300, '#44cc66');
               },
             },
             { label: 'Leave them', action: () => {} },
@@ -1365,12 +1419,18 @@ export class ExpeditionScene extends Phaser.Scene {
   private showStairPrompt(): void {
     const cx = this.cameras.main.width / 2;
     const cy = this.cameras.main.height / 2;
+    const action = this.stairAction === 'ascend' ? 'Ascend' : 'Descend';
 
     const bg = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.OVERLAY);
-    const text = this.add.text(cx, 270, 'Use stairs?', {
+    bg.fillStyle(0x0a0a1a, 0.9);
+    bg.fillRect(0, 0, 960, 640);
+    bg.lineStyle(2, 0x5a4a7a, 0.6);
+    bg.strokeRoundedRect(cx - 140, cy - 40, 280, 100, 10);
+
+    const text = this.add.text(cx, cy - 5, 'Use stairs?', {
       fontSize: '20px', fontFamily: 'monospace', color: '#ffffff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
-    const hint = this.add.text(cx, 300, '[SPACE] Descend  [ESC] Cancel', {
+    const hint = this.add.text(cx, cy + 25, `[SPACE] ${action}  [ESC] Cancel`, {
       fontSize: '12px', fontFamily: 'monospace', color: '#aaaaaa',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
     this.stairPrompt = this.add.container(0, 0, [bg, text, hint]).setDepth(DEPTH.OVERLAY).setScrollFactor(0);
@@ -1505,19 +1565,6 @@ export class ExpeditionScene extends Phaser.Scene {
 
     const tile = floor.tiles[ny][nx];
     if (this.isBlocked(tile)) return;
-    if (tile.type === 'stairs_up') {
-      this.stairTargetX = nx;
-      this.stairTargetY = ny;
-      this.stairAction = 'ascend';
-      this.showStairPrompt();
-      return;
-    } else if (tile.type === 'stairs_down') {
-      this.stairTargetX = nx;
-      this.stairTargetY = ny;
-      this.stairAction = 'descend';
-      this.showStairPrompt();
-      return;
-    }
 
     this.playerX = nx;
     this.playerY = ny;

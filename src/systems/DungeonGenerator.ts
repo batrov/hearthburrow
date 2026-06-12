@@ -359,35 +359,58 @@ export class DungeonGenerator {
     }
   }
 
+  private getFloorPositions(tiles: DungeonTile[][], room: RoomRect): { x: number; y: number }[] {
+    const positions: { x: number; y: number }[] = [];
+    for (let y = room.y + 1; y < room.y + room.h - 1; y++) {
+      for (let x = room.x + 1; x < room.x + room.w - 1; x++) {
+        const tile = tiles[y][x];
+        if (tile.type === 'floor' && !tile.broken) positions.push({ x, y });
+      }
+    }
+    return positions;
+  }
+
+  private canSpawnVillager(depth: number): boolean {
+    if (gameState.rescuedVillagers.length >= 20) return false;
+    if (gameState.villagerRescueFloors.has(depth)) return false;
+    if (!gameState.restoredBuildings.has('housing')) return false;
+    return true;
+  }
+
   private placeEventTiles(tiles: DungeonTile[][], rooms: RoomRect[], depth: number): void {
-    const pool = EVENT_POOL.filter(ev => {
-      if (ev.eventId !== 'trapped_villager') return true;
-      const rescuedTooMany = gameState.rescuedVillagers.length >= 20;
-      const floorAlreadyRescued = gameState.villagerRescueFloors.has(depth);
-      const tavernNotBuilt = !gameState.restoredBuildings.has('housing');
-      return !tavernNotBuilt && !floorAlreadyRescued && !rescuedTooMany;
-    });
+    const canSpawnVillager = this.canSpawnVillager(depth);
+    let usedRoom = -1;
+
+    if (canSpawnVillager) {
+      const room = this.rng.pick(rooms);
+      const positions = this.getFloorPositions(tiles, room);
+      if (positions.length > 0) {
+        const pos = this.rng.pick(positions);
+        tiles[pos.y][pos.x] = this.makeTile('event_villager', 'trapped_villager');
+        tiles[pos.y][pos.x].resource = String(gameState.rescuedVillagers.length);
+        usedRoom = rooms.indexOf(room);
+      }
+    }
+
+    const pool = EVENT_POOL.filter(ev => ev.eventId !== 'trapped_villager');
     const shuffled = [...pool];
     this.rng.shuffle(shuffled);
-    const count = Math.min(1 + this.rng.integerInRange(0, 1), shuffled.length, rooms.length);
+    const maxCount = shuffled.length;
+    const roomCount = Math.max(0, rooms.length - (canSpawnVillager ? 1 : 0));
+    const count = Math.min(1 + this.rng.integerInRange(0, 1), maxCount, roomCount);
 
+    let ri = 0;
     for (let i = 0; i < count; i++) {
       const ev = shuffled[i];
-      const room = rooms[i % rooms.length];
+      while (ri < rooms.length && ri === usedRoom) ri++;
+      if (ri >= rooms.length) break;
+      const room = rooms[ri % rooms.length];
+      ri++;
 
-      const floorPositions: { x: number; y: number }[] = [];
-      for (let y = room.y + 1; y < room.y + room.h - 1; y++) {
-        for (let x = room.x + 1; x < room.x + room.w - 1; x++) {
-          const tile = tiles[y][x];
-          if (tile.type === 'floor' && !tile.broken) {
-            floorPositions.push({ x, y });
-          }
-        }
-      }
+      const positions = this.getFloorPositions(tiles, room);
+      if (positions.length === 0) continue;
 
-      if (floorPositions.length === 0) continue;
-
-      const pos = this.rng.pick(floorPositions);
+      const pos = this.rng.pick(positions);
       tiles[pos.y][pos.x] = this.makeTile(ev.type, ev.eventId);
     }
   }

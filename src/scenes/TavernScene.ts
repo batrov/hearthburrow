@@ -6,32 +6,38 @@ import {
   drawDiamond, drawExtrudedTile,
   HALF_W, HALF_H,
 } from '../systems/IsoUtils';
+import { NPCPhotobookPanel } from '../ui/NPCPhotobookPanel';
 
-const TAVERN_COLS = 8;
-const TAVERN_ROWS = 7;
+const TAVERN_COLS = 10;
+const TAVERN_ROWS = 8;
 
 const OFFSET_X = 480;
-const OFFSET_Y = 200;
+const OFFSET_Y = 160;
 
 // 0=floor, 1=wall, 2=bar, 3=table, 4=door
 const TAVERN_MAP: number[][] = [
-  [1,1,1,1,1,1,1,1],
-  [1,2,2,2,2,2,2,1],
-  [1,0,0,0,0,0,0,1],
-  [1,0,3,0,3,0,3,4],
-  [1,0,0,0,0,0,0,1],
-  [1,0,0,0,3,0,0,1],
-  [1,0,0,0,0,0,0,1],
+  [1,1,1,1,1,1,1,1,1,1],
+  [1,2,2,2,2,2,2,2,2,1],
+  [1,0,0,0,0,0,0,0,0,1],
+  [1,0,3,0,3,0,0,3,0,4],
+  [1,0,0,0,0,0,3,0,0,1],
+  [1,0,3,0,0,0,0,0,3,1],
+  [1,0,0,0,0,3,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,1],
 ];
 
 const NPC_GRID: { x: number; y: number }[] = [
-  { x: 1, y: 2 }, { x: 2, y: 2 }, { x: 3, y: 2 },
-  { x: 4, y: 2 }, { x: 5, y: 2 }, { x: 6, y: 2 },
-  { x: 1, y: 4 }, { x: 2, y: 4 }, { x: 3, y: 4 },
-  { x: 4, y: 4 }, { x: 5, y: 4 }, { x: 6, y: 4 },
-  { x: 1, y: 6 }, { x: 2, y: 6 }, { x: 4, y: 6 },
-  { x: 5, y: 6 }, { x: 6, y: 6 },
-  { x: 1, y: 3 }, { x: 3, y: 3 }, { x: 5, y: 3 },
+  // Bar patrons (line at the bar counter)
+  { x: 2, y: 2 }, { x: 3, y: 2 }, { x: 4, y: 2 }, { x: 5, y: 2 },
+  // Table cluster left
+  { x: 1, y: 3 }, { x: 1, y: 4 }, { x: 3, y: 4 }, { x: 5, y: 3 },
+  { x: 5, y: 4 }, { x: 7, y: 3 },
+  // Bottom tables
+  { x: 1, y: 5 }, { x: 1, y: 6 }, { x: 3, y: 6 },
+  { x: 8, y: 4 }, { x: 8, y: 5 },
+  // Floor loungers
+  { x: 6, y: 6 }, { x: 7, y: 6 }, { x: 2, y: 7 },
+  { x: 4, y: 7 }, { x: 6, y: 7 }, { x: 8, y: 7 },
 ];
 
 function gridToScreen(gx: number, gy: number): { x: number; y: number } {
@@ -57,6 +63,7 @@ export class TavernScene extends Phaser.Scene {
   private analogDy: number = 0;
   private analogActive: boolean = false;
   private analogGfx: Phaser.GameObjects.Graphics | null = null;
+  private photobook!: NPCPhotobookPanel;
 
   constructor() {
     super({ key: 'TavernScene' });
@@ -73,8 +80,8 @@ export class TavernScene extends Phaser.Scene {
     this.analogDx = 0;
     this.analogDy = 0;
     this.analogGfx = null;
-    this.playerGx = 3;
-    this.playerGy = 6;
+    this.playerGx = 4;
+    this.playerGy = 7;
     this.facingX = 0;
     this.facingY = -1;
 
@@ -82,6 +89,7 @@ export class TavernScene extends Phaser.Scene {
     this.createPlayer();
     this.createNPCs();
     this.createUI();
+    this.photobook = new NPCPhotobookPanel(this);
     this.setupInput();
     this.setupPointerInput();
   }
@@ -120,6 +128,12 @@ export class TavernScene extends Phaser.Scene {
           this.add.text(pos.x, pos.y - 28, 'EXIT', {
             fontSize: '9px', fontFamily: 'monospace', color: '#6a5a3a',
           }).setOrigin(0.5).setDepth(15);
+          const glow = this.add.image(pos.x, pos.y - 14, 'terrain_diamond')
+            .setTint(0x8a7a5a).setAlpha(0.3).setDepth(depth + 0.1);
+          this.tweens.add({
+            targets: glow, alpha: 0.6, yoyo: true, repeat: -1,
+            duration: 1000, ease: 'Sine.easeInOut',
+          });
         }
       }
     }
@@ -195,7 +209,7 @@ export class TavernScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(50);
 
     const rescued = gameState.rescuedVillagers;
-    this.add.text(cx, 620, `${rescued.length} / 20 villagers resting here`, {
+    this.add.text(cx, 620, `${rescued.length} / 20 villagers resting here    [P] Photobook`, {
       fontSize: '11px', fontFamily: 'monospace', color: '#7a6a5a',
     }).setOrigin(0.5).setDepth(50);
 
@@ -218,16 +232,37 @@ export class TavernScene extends Phaser.Scene {
       RIGHT: kb.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT),
       SPACE: kb.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
       ESC: kb.addKey(Phaser.Input.Keyboard.KeyCodes.ESC),
+      P: kb.addKey(Phaser.Input.Keyboard.KeyCodes.P),
+      TAB: kb.addKey(Phaser.Input.Keyboard.KeyCodes.TAB),
     };
 
     this.keys.ESC.on('down', () => {
+      if (this.photobook.isVisible()) {
+        this.photobook.hide();
+        return;
+      }
       if (!this.greetingActive) {
         this.leave();
       }
     });
 
+    this.keys.TAB.on('down', () => {
+      if (this.photobook.isVisible()) {
+        this.photobook.hide();
+      }
+    });
+
+    this.keys.P.on('down', () => {
+      if (this.greetingActive) return;
+      this.photobook.toggle();
+    });
+
     this.keys.SPACE.on('down', () => {
       if (this.greetingActive) return;
+      if (this.photobook.isVisible()) {
+        this.photobook.hide();
+        return;
+      }
       const doorCell = this.findDoorCell();
       if (doorCell) {
         const dx = Math.abs(this.playerGx - doorCell.x);
@@ -362,10 +397,34 @@ export class TavernScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     if (this.greetingActive) return;
+
+    if (this.photobook.isVisible()) {
+      this.photobook.draw();
+      const keys = this.keys;
+      if (Phaser.Input.Keyboard.JustDown(keys.W) || Phaser.Input.Keyboard.JustDown(keys.UP)) {
+        this.photobook.handleInput('W');
+      }
+      if (Phaser.Input.Keyboard.JustDown(keys.S) || Phaser.Input.Keyboard.JustDown(keys.DOWN)) {
+        this.photobook.handleInput('S');
+      }
+      return;
+    }
+
     this.moveTimer += delta;
     if (this.moveTimer >= this.moveDelay) {
       this.handleMovement(delta);
       this.moveTimer = 0;
+    }
+    const doorCell = this.findDoorCell();
+    if (doorCell) {
+      const dx = Math.abs(this.playerGx - doorCell.x);
+      const dy = Math.abs(this.playerGy - doorCell.y);
+      if (dx + dy === 1) {
+        const doorIso = gridToIso(doorCell.x, doorCell.y);
+        this.showPrompt('[SPACE] Exit', doorIso.x, doorIso.y - 48);
+      } else {
+        this.hidePrompt();
+      }
     }
   }
 

@@ -1,0 +1,14 @@
+- Reflect trapped NPC sprite in dungeon based on floors
+- guaranteed to spawn NPC on a non-boss floor if not rescued yet, room is random
+- Unique rescue message per NPC
+- NPC photobook in tavern, can see rescued NPC and missing NPCs, also have info on which floor the missing NPC can be rescued
+- Make Tavern larger, and NPC position more natural
+- Make Tavern has exit door (interactable) for player to exit tavern
+- On facing an object, instead of drawing white diamond in the floor, should draw 2px glowing line as the faced object border
+- Bug: on facing item in dungeon, the sprite order stuck until player faced object again. Sprite order should be reset on player unselect
+- Stair up and stair down in dungeon should be walkable, ask player to asc/desc when player is on top of the tile
+
+
+- Bug: unable to descend floor
+- Player should spawn near door on tavern entrance
+- Replace glowing diamond to follow selected object sprite shape, border should be surrounding the selected object
