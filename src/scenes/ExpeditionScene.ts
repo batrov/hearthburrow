@@ -208,6 +208,8 @@ export class ExpeditionScene extends Phaser.Scene {
       this.inventory.addItem('stamina_potion', 5);
       this.inventory.addItem('mining_bomb', 5);
     }
+    gameState.runVillagersRescued = [];
+    gameState.runRecipesDiscovered = [];
     this.expeditionState.reset();
     this.expeditionState.depth = this.startFloor;
     this.moveTimer = 0;
@@ -1305,22 +1307,23 @@ export class ExpeditionScene extends Phaser.Scene {
         const personality = NPC_PERSONALITIES[variant];
         const name = personality?.name ?? `Villager ${variant + 1}`;
         const line = personality?.rescueLine ?? 'Please, help me!';
-        const alreadyDiscovered = gameState.crafting.isDiscovered('stamina_potion');
-        return {
-          title: `Trapped: ${name}`,
-          description: `"${line}"`,
-          choices: [
-            {
-              label: alreadyDiscovered ? 'Rescue (already know recipe)' : 'Rescue (learn Stamina Potion recipe)',
-              action: () => {
-                if (!alreadyDiscovered) {
-                  gameState.crafting.discover('stamina_potion');
-                  this.showRecipeDiscovery('Stamina Potion');
-                }
-                const depth = this.expeditionState.depth;
-                gameState.rescuedVillagers.push({ variant, rescuedAtDepth: depth, name, talkCount: 0 });
-                gameState.villagerRescueFloors.add(depth);
-                gameState.villagersRescued++;
+            const alreadyDiscovered = gameState.crafting.isDiscovered('stamina_potion');
+            return {
+              title: `Trapped: ${name}`,
+              description: `"${line}"`,
+              choices: [
+                {
+                  label: alreadyDiscovered ? 'Rescue (already know recipe)' : 'Rescue (learn Stamina Potion recipe)',
+                  action: () => {
+                    if (!alreadyDiscovered) {
+                      gameState.crafting.discover('stamina_potion');
+                      this.showRecipeDiscovery('Stamina Potion');
+                    }
+                    const depth = this.expeditionState.depth;
+                    gameState.rescuedVillagers.push({ variant, rescuedAtDepth: depth, name, talkCount: 0 });
+                    gameState.villagerRescueFloors.add(depth);
+                    gameState.villagersRescued++;
+                    gameState.runVillagersRescued.push({ variant, name });
                 gameState.maxStaminaBonus += 2;
                 gameState.save();
                 this.createPopup(`Rescued: ${name}!`, this.cameras.main.width / 2, 300, '#44cc66');
@@ -1528,6 +1531,7 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private showRecipeDiscovery(name: string): void {
+    gameState.runRecipesDiscovered.push(name);
     const cx = this.cameras.main.width / 2;
     this.createPopup(`New Recipe: ${name}!`, cx, 130, '#44ccff', { duration: 2000, moveY: -40, scaleFrom: 1.1, scaleTo: 0.9 });
   }
@@ -1890,7 +1894,7 @@ export class ExpeditionScene extends Phaser.Scene {
     }
     gameState.save();
 
-    gameState.lastRunResult = { itemsObtained: obtained, itemsLost: lost, extractType, depth: this.expeditionState.depth };
+    gameState.lastRunResult = { itemsObtained: obtained, itemsLost: lost, extractType, depth: this.expeditionState.depth, villagersRescued: gameState.runVillagersRescued, recipesDiscovered: gameState.runRecipesDiscovered };
 
     if (extractType === 'emergency') {
       gameState.exhaustionCount++;

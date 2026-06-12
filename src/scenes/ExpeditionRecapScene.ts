@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { gameState, itemDisplayName, itemIconKey } from '../systems/GameState';
+import { gameState, itemDisplayName, itemIconKey, itemIdFromDisplayName } from '../systems/GameState';
 
 export class ExpeditionRecapScene extends Phaser.Scene {
   constructor() {
@@ -65,7 +65,57 @@ export class ExpeditionRecapScene extends Phaser.Scene {
 
     this.renderList(rightX, itemStartY, lineH, result.itemsLost, maxItemsPerCol, '#c8b898', '#dd6666');
 
-    this.add.text(cx, 590, '[SPACE] Return to Homeland', {
+    let nextY = 570;
+
+    const rescued = result.villagersRescued;
+    if (rescued.length > 0) {
+      this.add.text(leftX, nextY, 'Rescued', {
+        fontSize: '13px', fontFamily: 'monospace', color: '#44cc66', fontStyle: 'bold',
+      });
+      nextY += 18;
+      let rx = leftX;
+      const maxRX = panelX + panelW - 20;
+      for (const v of rescued) {
+        const iconKey = 'npc_' + v.variant;
+        const entryW = 12 + v.name.length * 8 + 16;
+        if (rx + entryW > maxRX) { rx = leftX; nextY += 18; }
+        if (this.textures.exists(iconKey)) {
+          this.add.image(rx, nextY + 6, iconKey).setScale(0.5);
+        }
+        this.add.text(rx + 12, nextY, v.name, {
+          fontSize: '13px', fontFamily: 'monospace', color: '#c8b898',
+        });
+        rx += entryW;
+      }
+      nextY += 22;
+    }
+
+    const recipes = result.recipesDiscovered;
+    if (recipes.length > 0) {
+      nextY = Math.max(nextY, 598);
+      this.add.text(leftX, nextY, 'Discovered', {
+        fontSize: '13px', fontFamily: 'monospace', color: '#88ddff', fontStyle: 'bold',
+      });
+      nextY += 18;
+      let rx = leftX;
+      const maxRX = panelX + panelW - 20;
+      for (const name of recipes) {
+        const itemId = itemIdFromDisplayName(name);
+        const entryW = (itemId ? 12 : 0) + name.length * 8 + 16;
+        if (rx + entryW > maxRX) { rx = leftX; nextY += 18; }
+        if (itemId && this.textures.exists(itemIconKey(itemId))) {
+          this.add.image(rx, nextY + 6, itemIconKey(itemId)).setScale(0.5);
+        }
+        this.add.text(rx + (itemId ? 12 : 0), nextY, name, {
+          fontSize: '13px', fontFamily: 'monospace', color: '#b8b8c8',
+        });
+        rx += entryW;
+      }
+      nextY += 22;
+    }
+
+    const hintY = Math.max(nextY, 626);
+    this.add.text(cx, hintY, '[SPACE] Return to Homeland', {
       fontSize: '14px', fontFamily: 'monospace', color: '#6a5a8a',
     }).setOrigin(0.5);
 

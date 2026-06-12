@@ -249,6 +249,8 @@ export interface RunResult {
   itemsLost: { id: string; quantity: number }[];
   extractType: 'safe' | 'emergency';
   depth: number;
+  villagersRescued: { variant: number; name: string }[];
+  recipesDiscovered: string[];
 }
 
 const ITEM_NAMES: Record<string, string> = {
@@ -295,6 +297,15 @@ export function itemIconKey(id: string): string {
   return `item_${id}`;
 }
 
+const DISPLAY_NAME_TO_ID = Object.fromEntries(
+  Object.entries(ITEM_NAMES).map(([id, name]) => [name, id])
+);
+
+/** Reverse lookup: get the item ID for a display name (e.g. 'Stamina Potion' → 'stamina_potion'). */
+export function itemIdFromDisplayName(name: string): string | undefined {
+  return DISPLAY_NAME_TO_ID[name];
+}
+
 const MAX_PICKAXE_RUNS = 5;
 const MAX_EQUIP_RUNS = 5;
 
@@ -326,6 +337,8 @@ class GameState {
   musicVolume: number;
   sfxVolume: number;
   currentRunSeed: string;
+  runVillagersRescued: { variant: number; name: string }[];
+  runRecipesDiscovered: string[];
 
   constructor() {
     this.inventory = new InventorySystem(32);
@@ -354,6 +367,8 @@ class GameState {
     this.musicVolume = 0.4;
     this.sfxVolume = 0.6;
     this.currentRunSeed = '';
+    this.runVillagersRescued = [];
+    this.runRecipesDiscovered = [];
   }
 
   /** Get the current research level for a project (0 if not started). */
