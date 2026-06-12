@@ -102,3 +102,11 @@ Resolved Bugs:
 - **Facing-edge stairs detection** — `checkEventProximity` returned early when facing tile was out-of-bounds (player at map edge), skipping stairs-underfoot check. Fixed: stairs check moved before facing-tile bounds guard.
 - **Facing highlight depth** — `previewTile.destroy()` moved to top of `updateFacingHighlight()` before early return guard, preventing stale Image at same depth from accumulating.
 - **Guaranteed NPC per floor** — refactored `placeEventTiles()` to place one `trapped_villager` before random events; extracted `getFloorPositions()` and `canSpawnVillager()` helpers.
+
+## ✅ NPC Personalities (June 2026)
+- **20 unique personalities** — new `NPCPersonality` interface with name, archetype, rescueLine, greetings[], description. Replaces the old flat `NPC_NAMES` array.
+- **Consistent voice** — each NPC uses their own archetype-specific dialog in all three contexts:
+  - **Dungeon rescue**: unique `rescueLine` shown in the event panel (e.g. Mila: "I was cataloging glowing moss when the floor collapsed!")
+  - **Tavern greeting**: 3 personality-consistent greetings rotated via `talkCount` (persisted per NPC)
+  - **Photobook detail**: archetype label + description shown when selected
+- **Save migration** — existing saves automatically get `talkCount: 0` backfilled on load
