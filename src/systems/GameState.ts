@@ -178,7 +178,7 @@ export const NPC_PERSONALITIES: NPCPersonality[] = [
     description: 'A rugged survivalist who adapted to the dungeon better than most.',
   },
   {
-    name: 'Lyra',
+    name: 'Lana',
     archetype: 'Herbalist / Alchemist',
     rescueLine: 'I was testing a new potion recipe. The fumes attracted every monster in the vicinity. Oops.',
     greetings: [

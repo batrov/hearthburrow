@@ -134,6 +134,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private darknessOverlay!: Phaser.GameObjects.Graphics;
   private playerSprite: Phaser.GameObjects.Image | null = null;
   private previewTile: Phaser.GameObjects.Image | null = null;
+  private facingOutlineImages: Phaser.GameObjects.Image[] = [];
   private oreImageMap: Map<string, Phaser.GameObjects.Image> = new Map();
   private rocksBrokenThisRun: number = 0;
   private itemFlyQueue: Array<{ sprite: Phaser.GameObjects.Image; resource: string }> = [];
@@ -406,6 +407,8 @@ export class ExpeditionScene extends Phaser.Scene {
     this.facingHighlight.clear();
     this.selectedObject.clear();
     if (this.previewTile) { this.previewTile.destroy(); this.previewTile = null; }
+    this.facingOutlineImages.forEach(img => img.destroy());
+    this.facingOutlineImages = [];
     const floor = this.currentFloor;
     if (!floor) return;
     const tx = this.playerX + this.facingX;
@@ -439,33 +442,6 @@ export class ExpeditionScene extends Phaser.Scene {
         }
         break;
     }
-
-    this.facingHighlight.lineStyle(2, 0xffffff, 1);
-    this.facingHighlight.beginPath();
-    this.facingHighlight.moveTo(p.x, p.y - HALF_H);
-    this.facingHighlight.lineTo(p.x + HALF_W, p.y);
-    this.facingHighlight.lineTo(p.x, p.y + HALF_H);
-    this.facingHighlight.lineTo(p.x - HALF_W, p.y);
-    this.facingHighlight.closePath();
-    this.facingHighlight.strokePath();
-
-    this.facingHighlight.lineStyle(6, 0xffffff, 0.25);
-    this.facingHighlight.beginPath();
-    this.facingHighlight.moveTo(p.x, p.y - HALF_H);
-    this.facingHighlight.lineTo(p.x + HALF_W, p.y);
-    this.facingHighlight.lineTo(p.x, p.y + HALF_H);
-    this.facingHighlight.lineTo(p.x - HALF_W, p.y);
-    this.facingHighlight.closePath();
-    this.facingHighlight.strokePath();
-
-    this.facingHighlight.lineStyle(12, 0xffffff, 0.08);
-    this.facingHighlight.beginPath();
-    this.facingHighlight.moveTo(p.x, p.y - HALF_H);
-    this.facingHighlight.lineTo(p.x + HALF_W, p.y);
-    this.facingHighlight.lineTo(p.x, p.y + HALF_H);
-    this.facingHighlight.lineTo(p.x - HALF_W, p.y);
-    this.facingHighlight.closePath();
-    this.facingHighlight.strokePath();
 
     let texKey = '';
     switch (tile.type) {
@@ -504,6 +480,20 @@ export class ExpeditionScene extends Phaser.Scene {
           } else if (ratio <= 0.66) {
             this.previewTile.setTint(0xaaaaaa);
           }
+        }
+      }
+
+      const dirs: [number, number][] = [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
+      const s = this.previewTile.scaleX;
+      for (let t = 1; t <= 3; t++) {
+        const alpha = t === 1 ? 0.85 : t === 2 ? 0.4 : 0.12;
+        for (const [dx, dy] of dirs) {
+          const img = this.add.image(previewX + dx * t, previewY + dy * t, texKey)
+            .setDepth(DEPTH.PREVIEW_TILE - 0.05)
+            .setTintFill(0xffffff)
+            .setAlpha(alpha);
+          if (s !== 1) img.setScale(s);
+          this.facingOutlineImages.push(img);
         }
       }
     }
