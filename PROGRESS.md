@@ -120,3 +120,10 @@ Resolved Bugs:
 - **Diamond glow → sprite outline** — replaced the 3-layer white diamond glow with offset-copy white outline that traces each interactive object's visible sprite shape (ores, NPCs, enemies, stairs, plates)
 - **Offset-copy technique** — 24 white `setTintFill(0xffffff)` copies per facing tile (8 directions × 3 radii): 1px at 0.85 alpha, 2px at 0.40, 3px at 0.12; placed at depth 7.05, behind the preview sprite but above the dark backdrop
 - **Persist fix** — outline array cleaned up at the top of `updateFacingHighlight()` before all early returns, preventing stale white sprites accumulating on floor tiles
+
+## ✅ Player Running Animation (June 2026)
+- **6 walk frames per direction** — 12 pre-rendered PNGs (`player_bottom_left_0`…`5`, `player_top_right_0`…`5`) loaded from disk in BootScene, replacing 2 static procedural textures
+- **Procedural fallback removed** — player section deleted from `TextureGenerator.ts` (frames now ship as real PNGs)
+- **`animFrame`/`animTimer` fields** — added to all 3 scenes (Expedition, Tavern, Homeland); `update()` advances frame every 60ms while `isMoving`, resets to frame 0 on idle
+- **`updatePlayerSprite()`** — constructs texture key as `${baseKey}_${this.animFrame}` instead of the static key
+- **Generator script** — `scripts/generate_player_frames.cjs` standalone Node script (no deps) that can re-render frames via raw PNG encoder
