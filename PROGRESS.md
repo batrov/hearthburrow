@@ -115,3 +115,8 @@ Resolved Bugs:
 - **Rescued NPCs** — recap screen now lists rescued villagers with their unique `npc_{variant}` sprite (scale 0.5) + name inline, wrapping per row
 - **Discovered recipes** — each discovered recipe shows its item sprite + name, same inline pattern; recipes without known item icons (e.g. relics) fall back to text-only
 - **Reverse lookup helper** — `itemIdFromDisplayName()` converts display names to item IDs for icon key resolution
+
+## ✅ Sprite-Shaped Facing Highlight (June 2026)
+- **Diamond glow → sprite outline** — replaced the 3-layer white diamond glow with offset-copy white outline that traces each interactive object's visible sprite shape (ores, NPCs, enemies, stairs, plates)
+- **Offset-copy technique** — 24 white `setTintFill(0xffffff)` copies per facing tile (8 directions × 3 radii): 1px at 0.85 alpha, 2px at 0.40, 3px at 0.12; placed at depth 7.05, behind the preview sprite but above the dark backdrop
+- **Persist fix** — outline array cleaned up at the top of `updateFacingHighlight()` before all early returns, preventing stale white sprites accumulating on floor tiles
