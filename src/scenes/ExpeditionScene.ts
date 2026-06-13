@@ -139,6 +139,9 @@ export class ExpeditionScene extends Phaser.Scene {
   private rocksBrokenThisRun: number = 0;
   private itemFlyQueue: Array<{ sprite: Phaser.GameObjects.Image; resource: string }> = [];
   private itemFlyBusy: boolean = false;
+  private animFrame: number = 0;
+  private animTimer: number = 0;
+  private readonly ANIM_INTERVAL: number = 60;
   private startFloor: number = 0;
   private runSeed: string = '';
   private movePath: { x: number; y: number }[] = [];
@@ -214,6 +217,8 @@ export class ExpeditionScene extends Phaser.Scene {
     this.expeditionState.reset();
     this.expeditionState.depth = this.startFloor;
     this.moveTimer = 0;
+    this.animFrame = 0;
+    this.animTimer = 0;
     this.terrainSprites = this.add.graphics().setDepth(DEPTH.TERRAIN);
     this.facingHighlight = this.add.graphics().setDepth(DEPTH.FACING_HIGHLIGHT);
     this.selectedObject = this.add.graphics().setDepth(DEPTH.SELECTED_BACKDROP);
@@ -510,7 +515,8 @@ export class ExpeditionScene extends Phaser.Scene {
   private updatePlayerSprite(): void {
     if (!this.playerSprite) return;
     const isUpFacing = this.facingY < 0 || (this.facingY === 0 && this.facingX < 0);
-    const key = isUpFacing ? 'player_top_right' : 'player_bottom_left';
+    const baseKey = isUpFacing ? 'player_top_right' : 'player_bottom_left';
+    const key = `${baseKey}_${this.animFrame}`;
     const flipX = this.facingX !== 0 && this.facingY === 0;
     if (this.textures.exists(key)) {
       this.playerSprite.setTexture(key);
@@ -1119,6 +1125,19 @@ export class ExpeditionScene extends Phaser.Scene {
         this.updateFacingHighlight();
         this.moveTimer = 0;
       }
+    }
+
+    if (this.isMoving) {
+      this.animTimer += delta;
+      if (this.animTimer >= this.ANIM_INTERVAL) {
+        this.animTimer = 0;
+        this.animFrame = (this.animFrame + 1) % 6;
+        this.updatePlayerSprite();
+      }
+    } else if (this.animFrame !== 0) {
+      this.animFrame = 0;
+      this.animTimer = 0;
+      this.updatePlayerSprite();
     }
 
     this.drawStaminaBar();

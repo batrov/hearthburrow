@@ -100,6 +100,9 @@ export class HomelandScene extends Phaser.Scene {
   private analogDx: number = 0;
   private analogDy: number = 0;
   private analogActive: boolean = false;
+  private animFrame: number = 0;
+  private animTimer: number = 0;
+  private readonly ANIM_INTERVAL: number = 60;
 
   constructor() {
     super({ key: 'HomelandScene' });
@@ -111,6 +114,8 @@ export class HomelandScene extends Phaser.Scene {
     this.panelVisible = false;
     this.currentBuilding = null;
     this.moveTimer = 0;
+    this.animFrame = 0;
+    this.animTimer = 0;
 
     this.buildingsContainer = this.add.container(0, 0).setDepth(5);
     this.drawHubTerrain();
@@ -226,7 +231,8 @@ export class HomelandScene extends Phaser.Scene {
 
   private updatePlayerSprite(): void {
     const isUpFacing = this.facingY < 0 || (this.facingY === 0 && this.facingX < 0);
-    const key = isUpFacing ? 'player_top_right' : 'player_bottom_left';
+    const baseKey = isUpFacing ? 'player_top_right' : 'player_bottom_left';
+    const key = `${baseKey}_${this.animFrame}`;
     const flipX = this.facingX !== 0 && this.facingY === 0;
     if (this.textures.exists(key)) {
       this.player.setTexture(key);
@@ -620,6 +626,18 @@ export class HomelandScene extends Phaser.Scene {
     if (this.moveTimer >= this.moveDelay) {
       this.handleMovement(delta);
       this.moveTimer = 0;
+    }
+    if (this.isMoving) {
+      this.animTimer += delta;
+      if (this.animTimer >= this.ANIM_INTERVAL) {
+        this.animTimer = 0;
+        this.animFrame = (this.animFrame + 1) % 6;
+        this.updatePlayerSprite();
+      }
+    } else if (this.animFrame !== 0) {
+      this.animFrame = 0;
+      this.animTimer = 0;
+      this.updatePlayerSprite();
     }
     this.checkProximity();
     this.handleInteraction();

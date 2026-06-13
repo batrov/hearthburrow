@@ -14,8 +14,10 @@ export class BootScene extends Phaser.Scene {
   preload(): void {
     this.load.setPath('assets/sprites');
 
-    this.load.image('player_bottom_left', 'player/player_bottom_left.png');
-    this.load.image('player_top_right', 'player/player_top_right.png');
+    for (let f = 0; f < 6; f++) {
+      this.load.image(`player_bottom_left_${f}`, `player/player_bottom_left_${f}.png`);
+      this.load.image(`player_top_right_${f}`, `player/player_top_right_${f}.png`);
+    }
 
     this.load.image('wall_FOREST', 'tiles/wall_FOREST.png');
     this.load.image('wall_CAVE', 'tiles/wall_CAVE.png');

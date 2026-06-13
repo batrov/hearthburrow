@@ -64,6 +64,9 @@ export class TavernScene extends Phaser.Scene {
   private analogActive: boolean = false;
   private analogGfx: Phaser.GameObjects.Graphics | null = null;
   private photobook!: NPCPhotobookPanel;
+  private animFrame: number = 0;
+  private animTimer: number = 0;
+  private readonly ANIM_INTERVAL: number = 60;
 
   constructor() {
     super({ key: 'TavernScene' });
@@ -80,6 +83,8 @@ export class TavernScene extends Phaser.Scene {
     this.analogDx = 0;
     this.analogDy = 0;
     this.analogGfx = null;
+    this.animFrame = 0;
+    this.animTimer = 0;
     this.playerGx = 8;
     this.playerGy = 3;
     this.facingX = 0;
@@ -151,7 +156,8 @@ export class TavernScene extends Phaser.Scene {
 
   private updatePlayerSprite(): void {
     const isUpFacing = this.facingY < 0 || (this.facingY === 0 && this.facingX < 0);
-    const key = isUpFacing ? 'player_top_right' : 'player_bottom_left';
+    const baseKey = isUpFacing ? 'player_top_right' : 'player_bottom_left';
+    const key = `${baseKey}_${this.animFrame}`;
     const flipX = this.facingX !== 0 && this.facingY === 0;
     if (this.textures.exists(key)) {
       this.player.setTexture(key);
@@ -414,6 +420,18 @@ export class TavernScene extends Phaser.Scene {
     if (this.moveTimer >= this.moveDelay) {
       this.handleMovement(delta);
       this.moveTimer = 0;
+    }
+    if (this.isMoving) {
+      this.animTimer += delta;
+      if (this.animTimer >= this.ANIM_INTERVAL) {
+        this.animTimer = 0;
+        this.animFrame = (this.animFrame + 1) % 6;
+        this.updatePlayerSprite();
+      }
+    } else if (this.animFrame !== 0) {
+      this.animFrame = 0;
+      this.animTimer = 0;
+      this.updatePlayerSprite();
     }
     const doorCell = this.findDoorCell();
     if (doorCell) {

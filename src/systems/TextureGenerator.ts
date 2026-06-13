@@ -30,41 +30,6 @@ export function generateAll(scene: Phaser.Scene): void {
     });
   }
 
-  // --- Player ---
-  make(scene, g, 'player_bottom_left', 32, 48, () => {
-    const { cx, cy } = centered(32, 48);
-    g.fillStyle(0x6699cc, 1);
-    g.beginPath();
-    g.moveTo(cx, cy - 10);
-    g.lineTo(cx + 14, cy);
-    g.lineTo(cx, cy + 10);
-    g.lineTo(cx - 14, cy);
-    g.closePath();
-    g.fill();
-    g.fillStyle(0x88ccff, 1);
-    g.fillRect(cx - 10, cy - 18, 12, 20);
-    // indicator
-    g.fillStyle(0xffdd44, 0.8);
-    g.fillCircle(cx - 8, cy + 10, 3);
-  });
-
-  make(scene, g, 'player_top_right', 32, 48, () => {
-    const { cx, cy } = centered(32, 48);
-    g.fillStyle(0x6699cc, 1);
-    g.beginPath();
-    g.moveTo(cx, cy - 10);
-    g.lineTo(cx + 14, cy);
-    g.lineTo(cx, cy + 10);
-    g.lineTo(cx - 14, cy);
-    g.closePath();
-    g.fill();
-    g.fillStyle(0x88ccff, 1);
-    g.fillRect(cx - 6, cy - 18, 12, 20);
-    // indicator
-    g.fillStyle(0xffdd44, 0.8);
-    g.fillCircle(cx + 8, cy - 6, 3);
-  });
-
   // --- Ores ---
   const oreConfigs: Record<string, { base: number; inner: number; innerW: number; innerH: number }> = {
     stone: { base: 0x5a5a6a, inner: 0x6a6a7a, innerW: 10, innerH: 10 },
