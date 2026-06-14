@@ -186,7 +186,9 @@ export class ExpeditionScene extends Phaser.Scene {
     this.selectedObject = this.add.graphics().setDepth(DEPTH.SELECTED_BACKDROP);
     this.darknessOverlay = this.add.graphics().setDepth(DEPTH.DARKNESS);
     this.darknessMaskGfx = this.add.graphics().setVisible(false);
-    this.darknessOverlay.setMask(new Phaser.Display.Masks.GeometryMask(this, this.darknessMaskGfx));
+    const darknessMask = new Phaser.Display.Masks.GeometryMask(this, this.darknessMaskGfx);
+    darknessMask.invertAlpha = true;
+    this.darknessOverlay.setMask(darknessMask);
 
     this.inventoryPanel = new InventoryPanel(
       this, this.inventory,
@@ -624,7 +626,7 @@ export class ExpeditionScene extends Phaser.Scene {
             }
             break;
         }
-        if (!this.expeditionState.visible[y]?.[x]) {
+        if (this.expeditionState.depth % 5 === 3 && !this.expeditionState.visible[y]?.[x]) {
           this.minimapGfx.fillStyle(0x0a0a1a, 0.35);
         }
         this.minimapGfx.fillRect(px, py, cell, cell);
@@ -1895,8 +1897,6 @@ export class ExpeditionScene extends Phaser.Scene {
     this.darknessOverlay.fillStyle(0x000000, 1);
     this.darknessOverlay.fillRect(sx - pad, sy - pad, w + pad * 2, h + pad * 2);
     this.darknessMaskGfx.fillStyle(0xffffff);
-    this.darknessMaskGfx.fillRect(sx - pad, sy - pad, w + pad * 2, h + pad * 2);
-    this.darknessMaskGfx.fillStyle(0x000000);
     this.darknessMaskGfx.fillCircle(cx, cy, r);
   }
 
