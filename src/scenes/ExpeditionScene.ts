@@ -100,6 +100,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private interactPrompt!: Phaser.GameObjects.Text;
   private interactTarget: { x: number; y: number; id: string } | null = null;
   private darknessOverlay!: Phaser.GameObjects.Graphics;
+  private darknessMaskGfx!: Phaser.GameObjects.Graphics;
   private playerSprite: Phaser.GameObjects.Image | null = null;
   private previewTile: Phaser.GameObjects.Image | null = null;
   private facingOutlineImages: Phaser.GameObjects.Image[] = [];
@@ -184,6 +185,8 @@ export class ExpeditionScene extends Phaser.Scene {
     this.facingHighlight = this.add.graphics().setDepth(DEPTH.FACING_HIGHLIGHT);
     this.selectedObject = this.add.graphics().setDepth(DEPTH.SELECTED_BACKDROP);
     this.darknessOverlay = this.add.graphics().setDepth(DEPTH.DARKNESS);
+    this.darknessMaskGfx = this.add.graphics().setVisible(false);
+    this.darknessOverlay.setMask(new Phaser.Display.Masks.GeometryMask(this, this.darknessMaskGfx));
 
     this.inventoryPanel = new InventoryPanel(
       this, this.inventory,
@@ -1874,6 +1877,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
   private updateDarkness(): void {
     this.darknessOverlay.clear();
+    this.darknessMaskGfx.clear();
     const depth = this.expeditionState.depth;
     const isDarkFloor = depth > 0 && depth % 5 === 3;
     if (!isDarkFloor) return;
@@ -1890,9 +1894,10 @@ export class ExpeditionScene extends Phaser.Scene {
     const pad = 2000;
     this.darknessOverlay.fillStyle(0x000000, 1);
     this.darknessOverlay.fillRect(sx - pad, sy - pad, w + pad * 2, h + pad * 2);
-    this.darknessOverlay.setBlendMode(Phaser.BlendModes.ERASE);
-    this.darknessOverlay.fillCircle(cx, cy, r);
-    this.darknessOverlay.setBlendMode(Phaser.BlendModes.NORMAL);
+    this.darknessMaskGfx.fillStyle(0xffffff);
+    this.darknessMaskGfx.fillRect(sx - pad, sy - pad, w + pad * 2, h + pad * 2);
+    this.darknessMaskGfx.fillStyle(0x000000);
+    this.darknessMaskGfx.fillCircle(cx, cy, r);
   }
 
   private checkRegenBoots(): void {
