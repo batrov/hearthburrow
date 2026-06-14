@@ -190,15 +190,15 @@ export class GamblePanel extends BasePanel {
     this.pointerGfx.clear();
     this.pointerGfx.fillStyle(0xffdd88, 1);
     this.pointerGfx.fillTriangle(
-      this.CX - 10, this.CY - this.RADIUS - 8,
-      this.CX + 10, this.CY - this.RADIUS - 8,
-      this.CX, this.CY - this.RADIUS - 24,
+      this.CX - 10, this.CY - this.RADIUS - 24,
+      this.CX + 10, this.CY - this.RADIUS - 24,
+      this.CX, this.CY - this.RADIUS - 8,
     );
     this.pointerGfx.fillStyle(0xffaa44, 1);
     this.pointerGfx.fillTriangle(
-      this.CX - 6, this.CY - this.RADIUS - 9,
-      this.CX + 6, this.CY - this.RADIUS - 9,
-      this.CX, this.CY - this.RADIUS - 20,
+      this.CX - 6, this.CY - this.RADIUS - 22,
+      this.CX + 6, this.CY - this.RADIUS - 22,
+      this.CX, this.CY - this.RADIUS - 10,
     );
   }
 
