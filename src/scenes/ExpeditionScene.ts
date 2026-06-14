@@ -229,7 +229,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.setBounds(xMin, yMin, worldWidth(floor.cols, floor.rows), worldHeight(floor.cols, floor.rows));
 
     this.expeditionState.initExplored(floor.cols, floor.rows);
-    this.revealSurroundings(8);
+    this.revealSurroundings();
     this.updateDarkness();
   }
 
@@ -475,9 +475,16 @@ export class ExpeditionScene extends Phaser.Scene {
     this.player.setDepth(playerDepth(this.playerX, this.playerY));
   }
 
-  private revealSurroundings(radius: number = 10): void {
+  private revealSurroundings(): void {
     const floor = this.currentFloor;
     if (!floor) return;
+    const depth = this.expeditionState.depth;
+    const isDarkFloor = depth > 0 && depth % 5 === 3;
+    let radius = 10;
+    if (isDarkFloor) {
+      const px = gameState.getLanternRange(depth);
+      radius = Math.floor(px / 45) || 1;
+    }
     this.expeditionState.reveal(this.playerX, this.playerY, radius);
     this.drawMinimap();
   }
@@ -1444,7 +1451,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.playerY = floor.entryY;
     this.rebuildFloor();
     this.expeditionState.initExplored(floor.cols, floor.rows);
-    this.revealSurroundings(8);
+    this.revealSurroundings();
   }
 
   private handleAscend(): void {
@@ -1460,7 +1467,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.playerY = floor.stairsDownY;
       this.rebuildFloor();
       this.expeditionState.initExplored(floor.cols, floor.rows);
-      this.revealSurroundings(8);
+      this.revealSurroundings();
     }
   }
 
