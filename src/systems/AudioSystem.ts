@@ -395,6 +395,17 @@ export class AudioSystem {
       default: this.playNote('triangle', 300, 100, 0.05, 0.1); break;
     }
   }
+
+  /** Ascending casino-style chime for roulette wins. */
+  playBingo(): void {
+    this.playNote('sine', 523, 523, 0.1, 0.08, 0);
+    this.playNote('sine', 659, 659, 0.1, 0.08, 0.08);
+    this.playNote('sine', 784, 784, 0.1, 0.08, 0.16);
+    this.playNote('sine', 1047, 1047, 0.12, 0.25, 0.24);
+    this.playNote('triangle', 523, 523, 0.04, 0.4, 0.24);
+    this.playNote('triangle', 659, 659, 0.04, 0.4, 0.24);
+    this.playNote('triangle', 784, 784, 0.04, 0.4, 0.24);
+  }
 }
 
 export const audio = new AudioSystem();

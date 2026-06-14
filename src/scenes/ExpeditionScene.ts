@@ -8,6 +8,7 @@ import { gameState, itemDisplayName, itemIconKey, NPC_PERSONALITIES } from '../s
 import { InventoryPanel } from '../ui/InventoryPanel';
 import { EventPanel, EventChoice, EventConfig } from '../ui/EventPanel';
 import { CombatPanel, CombatResult, EnemyConfig } from '../ui/CombatPanel';
+import { GamblePanel, RouletteSegment } from '../ui/GamblePanel';
 import { audio } from '../systems/AudioSystem';
 import { getSpriteConfig } from '../systems/SpriteConfig';
 import {
@@ -94,6 +95,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private eventActive: boolean = false;
   private combatPanel!: CombatPanel;
   private combatActive: boolean = false;
+  private gamblePanel!: GamblePanel;
   private minimapBg!: Phaser.GameObjects.Graphics;
   private minimapGfx!: Phaser.GameObjects.Graphics;
   private minimapDot!: Phaser.GameObjects.Rectangle;
@@ -200,6 +202,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.eventActive = false;
     this.combatPanel = new CombatPanel(this);
     this.combatActive = false;
+    this.gamblePanel = new GamblePanel(this);
     this.interactTarget = null;
 
     this.minimapBg = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD_BG);
@@ -987,6 +990,13 @@ export class ExpeditionScene extends Phaser.Scene {
       return;
     }
 
+    if (this.gamblePanel.isVisible()) {
+      if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
+        this.gamblePanel.onPress();
+      }
+      return;
+    }
+
     if (this.stairAction) {
       if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
         const action = this.stairAction;
@@ -1219,6 +1229,38 @@ export class ExpeditionScene extends Phaser.Scene {
     });
   }
 
+  private getGambleSegments(depth: number): RouletteSegment[] {
+    if (depth <= 4) {
+      return [
+        { label: 'Stone ×12', weight: 2, color: 0x888888, reward: { id: 'stone', quantity: 12 } },
+        { label: 'Stone ×20', weight: 1, color: 0x777777, reward: { id: 'stone', quantity: 20 } },
+        { label: 'Bronze ×3', weight: 2, color: 0xcd7f32, reward: { id: 'bronze_ore', quantity: 3 } },
+        { label: 'Bronze ×6', weight: 1, color: 0xcc8844, reward: { id: 'bronze_ore', quantity: 6 } },
+        { label: 'Silver ×1', weight: 0.5, color: 0xcccccc, reward: { id: 'silver_ore', quantity: 1 } },
+        { label: 'Better Luck', weight: 1.5, color: 0x444444 },
+        { label: 'Goat!', weight: 1, color: 0x664422 },
+      ];
+    }
+    if (depth <= 9) {
+      return [
+        { label: 'Bronze ×5', weight: 2, color: 0xcd7f32, reward: { id: 'bronze_ore', quantity: 5 } },
+        { label: 'Bronze ×9', weight: 1, color: 0xcc8844, reward: { id: 'bronze_ore', quantity: 9 } },
+        { label: 'Silver ×3', weight: 2, color: 0xcccccc, reward: { id: 'silver_ore', quantity: 3 } },
+        { label: 'Silver ×6', weight: 1, color: 0xbbbbbb, reward: { id: 'silver_ore', quantity: 6 } },
+        { label: 'Better Luck', weight: 1.5, color: 0x444444 },
+        { label: 'Goat!', weight: 1.5, color: 0x664422 },
+      ];
+    }
+    return [
+      { label: 'Silver ×5', weight: 2, color: 0xcccccc, reward: { id: 'silver_ore', quantity: 5 } },
+      { label: 'Silver ×10', weight: 1, color: 0xbbbbbb, reward: { id: 'silver_ore', quantity: 10 } },
+      { label: 'Gold ×2', weight: 1.5, color: 0xffd700, reward: { id: 'gold_ore', quantity: 2 } },
+      { label: 'Gold ×4', weight: 0.5, color: 0xffaa00, reward: { id: 'gold_ore', quantity: 4 } },
+      { label: 'Better Luck', weight: 2, color: 0x444444 },
+      { label: 'Goat!', weight: 1, color: 0x664422 },
+    ];
+  }
+
   private buildEventConfig(id: string): EventConfig | null {
     const stone = () => this.inventory.count('stone');
     const removeStone = (n: number) => this.inventory.removeItem('stone', n);
@@ -1308,18 +1350,24 @@ export class ExpeditionScene extends Phaser.Scene {
       },
 
       gambling_goblin: () => {
-        const cost = 5;
+        const depth = this.expeditionState.depth;
+        const cost = 5 + Math.floor(depth / 5);
         const canGamble = stone() >= cost;
+        const segments = this.getGambleSegments(depth);
         return {
           title: 'Gambling Goblin',
-          description: 'A goblin challenges you to a game of chance. Risk 5 Stone for a shot at 3 Silver Ore!',
+          description: `A goblin challenges you to a game of chance. Risk ${cost} Stone for a spin!`,
           choices: [
             {
-              label: `Gamble 5 Stone ${canGamble ? '(50% chance for 3 Silver Ore)' : '(not enough stone)'}`,
+              label: `Gamble ${cost} Stone ${canGamble ? '' : '(not enough stone)'}`,
               action: () => {
                 if (stone() >= cost) {
                   removeStone(cost);
-                  if (Math.random() < 0.5) addItem('silver_ore', 3);
+                  this.gamblePanel.show(segments, cost, (reward) => {
+                    if (reward) {
+                      this.giveItem(reward.id, reward.quantity);
+                    }
+                  });
                 }
               },
             },
