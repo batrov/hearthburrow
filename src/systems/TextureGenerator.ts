@@ -30,6 +30,49 @@ export function generateAll(scene: Phaser.Scene): void {
     });
   }
 
+  // --- Floor & Corridor tiles (5 biomes, matching ExpeditionScene palette) ---
+  const floorPalettes: Record<string, { floorA: number; floorB: number; corridor: number }> = {
+    FOREST: { floorA: 0x1a1a2a, floorB: 0x1e1e30, corridor: 0x151520 },
+    CAVE: { floorA: 0x2a1a12, floorB: 0x30201a, corridor: 0x221510 },
+    ICE: { floorA: 0x8a9aaa, floorB: 0x7a8a9a, corridor: 0x6a7a8a },
+    LAVA: { floorA: 0x2a1a0a, floorB: 0x3a2010, corridor: 0x1a0a08 },
+    RUINS: { floorA: 0x1a0e22, floorB: 0x22122a, corridor: 0x140a1a },
+  };
+
+  const tileW = 160, tileH = 80, tileHW = 80, tileHH = 40;
+  for (const [biome, colors] of Object.entries(floorPalettes)) {
+    make(scene, g, `floor_${biome}_a`, tileW, tileH, () => {
+      g.fillStyle(colors.floorA, 1);
+      g.beginPath();
+      g.moveTo(tileHW, 0);
+      g.lineTo(tileW, tileHH);
+      g.lineTo(tileHW, tileH);
+      g.lineTo(0, tileHH);
+      g.closePath();
+      g.fill();
+    });
+    make(scene, g, `floor_${biome}_b`, tileW, tileH, () => {
+      g.fillStyle(colors.floorB, 1);
+      g.beginPath();
+      g.moveTo(tileHW, 0);
+      g.lineTo(tileW, tileHH);
+      g.lineTo(tileHW, tileH);
+      g.lineTo(0, tileHH);
+      g.closePath();
+      g.fill();
+    });
+    make(scene, g, `corridor_${biome}`, tileW, tileH, () => {
+      g.fillStyle(colors.corridor, 1);
+      g.beginPath();
+      g.moveTo(tileHW, 0);
+      g.lineTo(tileW, tileHH);
+      g.lineTo(tileHW, tileH);
+      g.lineTo(0, tileHH);
+      g.closePath();
+      g.fill();
+    });
+  }
+
   // --- Ores ---
   const oreConfigs: Record<string, { base: number; inner: number; innerW: number; innerH: number }> = {
     stone: { base: 0x5a5a6a, inner: 0x6a6a7a, innerW: 10, innerH: 10 },

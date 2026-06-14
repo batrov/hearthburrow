@@ -4,7 +4,7 @@ import { MiningSystem } from '../systems/MiningSystem';
 import { InventorySystem } from '../systems/InventorySystem';
 import { DungeonGenerator, DungeonFloor, DungeonTile } from '../systems/DungeonGenerator';
 import { ExpeditionState } from '../systems/ExpeditionState';
-import { gameState, itemDisplayName, NPC_PERSONALITIES } from '../systems/GameState';
+import { gameState, itemDisplayName, itemIconKey, NPC_PERSONALITIES } from '../systems/GameState';
 import { InventoryPanel } from '../ui/InventoryPanel';
 import { EventPanel, EventChoice, EventConfig } from '../ui/EventPanel';
 import { CombatPanel, CombatResult, EnemyConfig } from '../ui/CombatPanel';
@@ -16,51 +16,14 @@ import {
   HALF_W, HALF_H, worldWidth, worldHeight,
 } from '../systems/IsoUtils';
 
-interface Palette {
-  wall: [number, number, number];
-  floor: [number, number];
-  corridor: number;
+const BIOMES = ['FOREST', 'CAVE', 'ICE', 'LAVA', 'RUINS'];
+
+function getBiomeKey(depth: number): string {
+  return BIOMES[Math.floor(depth / 5) % 5];
 }
 
 function getWallTextureKey(depth: number): string {
-  const biomes = ['FOREST', 'CAVE', 'ICE', 'LAVA', 'RUINS'];
-  return `wall_${biomes[Math.floor(depth / 5) % 5]}`;
-}
-
-function getDepthPalette(depth: number): Palette {
-  if (depth <= 4) {
-    return {
-      wall: [0x3a3a4a, 0x2a2a3a, 0x222230],
-      floor: [0x1a1a2a, 0x1e1e30],
-      corridor: 0x151520,
-    };
-  }
-  if (depth <= 9) {
-    return {
-      wall: [0x4a3a2a, 0x3a2a1a, 0x302218],
-      floor: [0x2a1a12, 0x30201a],
-      corridor: 0x221510,
-    };
-  }
-  if (depth <= 14) {
-    return {
-      wall: [0x4a6a8a, 0x3a5a7a, 0x2a4a6a],
-      floor: [0x8a9aaa, 0x7a8a9a],
-      corridor: 0x6a7a8a,
-    };
-  }
-  if (depth <= 19) {
-    return {
-      wall: [0x5a2a1a, 0x4a1a12, 0x3a120a],
-      floor: [0x2a1a0a, 0x3a2010],
-      corridor: 0x1a0a08,
-    };
-  }
-  return {
-    wall: [0x3a2a4a, 0x2a1a3a, 0x20122a],
-    floor: [0x1a0e22, 0x22122a],
-    corridor: 0x140a1a,
-  };
+  return `wall_${getBiomeKey(depth)}`;
 }
 
 function playerDepth(x: number, y: number): number {
@@ -85,7 +48,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private dungeonGen: DungeonGenerator;
   private expeditionState: ExpeditionState;
   private currentFloor: DungeonFloor | null = null;
-  private terrainSprites!: Phaser.GameObjects.Graphics;
+  private floorSpriteObjects: Phaser.GameObjects.Image[] = [];
   private tileObjects: Phaser.GameObjects.Image[] = [];
   private selectedObject!: Phaser.GameObjects.Graphics;
   private facingHighlight!: Phaser.GameObjects.Graphics;
@@ -144,6 +107,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private rocksBrokenThisRun: number = 0;
   private itemFlyQueue: Array<{ sprite: Phaser.GameObjects.Image; resource: string }> = [];
   private itemFlyBusy: boolean = false;
+  private activeObtainPopups: Phaser.GameObjects.Container[] = [];
   private animFrame: number = 0;
   private animTimer: number = 0;
   private readonly ANIM_INTERVAL: number = 60;
@@ -211,11 +175,11 @@ export class ExpeditionScene extends Phaser.Scene {
     this.mining.setPickaxeTier(gameState.currentPickaxeTier);
     this.inventory = new InventorySystem(this.debugMode ? 100 : 16 + gameState.inventorySlotBonus, false);
     for (const [id, qty] of Object.entries(this.loadoutConsumables)) {
-      if (qty > 0) this.inventory.addItem(id, qty);
+      if (qty > 0) this.giveItem(id, qty);
     }
     if (this.debugMode) {
-      this.inventory.addItem('stamina_potion', 5);
-      this.inventory.addItem('mining_bomb', 5);
+      this.giveItem('stamina_potion', 5);
+      this.giveItem('mining_bomb', 5);
     }
     gameState.runVillagersRescued = [];
     gameState.runRecipesDiscovered = [];
@@ -224,7 +188,6 @@ export class ExpeditionScene extends Phaser.Scene {
     this.moveTimer = 0;
     this.animFrame = 0;
     this.animTimer = 0;
-    this.terrainSprites = this.add.graphics().setDepth(DEPTH.TERRAIN);
     this.facingHighlight = this.add.graphics().setDepth(DEPTH.FACING_HIGHLIGHT);
     this.selectedObject = this.add.graphics().setDepth(DEPTH.SELECTED_BACKDROP);
     this.darknessOverlay = this.add.graphics().setDepth(DEPTH.DARKNESS);
@@ -273,7 +236,8 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private drawFloor(): void {
-    this.terrainSprites.clear();
+    this.floorSpriteObjects.forEach(o => o.destroy());
+    this.floorSpriteObjects = [];
     this.tileObjects.forEach(o => o.destroy());
     this.tileObjects = [];
     this.oreImageMap.clear();
@@ -284,7 +248,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const floor = this.currentFloor;
     if (!floor) return;
 
-    const pal = getDepthPalette(floor.depth);
+    const biome = getBiomeKey(floor.depth);
 
     const tiles: { x: number; y: number }[] = [];
     for (let y = 0; y < floor.rows; y++) {
@@ -296,39 +260,18 @@ export class ExpeditionScene extends Phaser.Scene {
 
     for (const { x, y } of tiles) {
       const tile = floor.tiles[y][x];
-      const checker = (x + y) % 2 === 0;
+      if (tile.type === 'wall') continue;
 
-      switch (tile.type) {
-        case 'floor':
-          drawDiamondAt(this.terrainSprites, x, y, pal.floor[0]);
-          if (checker) drawDiamondAt(this.terrainSprites, x, y, pal.floor[1], 0.5);
-          break;
-        case 'corridor':
-          drawDiamondAt(this.terrainSprites, x, y, pal.corridor);
-          break;
-        case 'mineable':
-          drawDiamondAt(this.terrainSprites, x, y, pal.floor[0]);
-          if (checker) drawDiamondAt(this.terrainSprites, x, y, pal.floor[1], 0.5);
-          break;
-        case 'stairs_up':
-          drawDiamondAt(this.terrainSprites, x, y, 0x1a2a1a);
-          break;
-        case 'stairs_down':
-          drawDiamondAt(this.terrainSprites, x, y, 0x1a1a2e);
-          break;
-        case 'pressure_plate':
-          drawDiamondAt(this.terrainSprites, x, y, pal.floor[0]);
-          if (checker) drawDiamondAt(this.terrainSprites, x, y, pal.floor[1], 0.5);
-          break;
-        case 'blocked':
-          drawDiamondAt(this.terrainSprites, x, y, 0x2a2a3a);
-          break;
-        default:
-          if (tile.type.startsWith('event_') || tile.type === 'enemy' || tile.type === 'event_boss' || tile.type === 'boss_body') {
-            drawDiamondAt(this.terrainSprites, x, y, tile.broken ? pal.floor[0] : 0x1a1a2a);
-            if (tile.broken && checker) drawDiamondAt(this.terrainSprites, x, y, pal.floor[1], 0.5);
-          }
-          break;
+      const p = gridToIso(x, y);
+      const isCorridor = tile.type === 'corridor';
+      const key = isCorridor ? `corridor_${biome}` : `floor_${biome}_a`;
+
+      const img = this.add.image(p.x, p.y, key).setDepth(DEPTH.TERRAIN).setScale(0.5);
+      this.floorSpriteObjects.push(img);
+
+      if (!isCorridor && (x + y) % 2 === 0) {
+        const check = this.add.image(p.x, p.y, `floor_${biome}_b`).setDepth(DEPTH.TERRAIN + 0.01).setScale(0.5);
+        this.floorSpriteObjects.push(check);
       }
     }
 
@@ -432,31 +375,9 @@ export class ExpeditionScene extends Phaser.Scene {
     const tile = floor.tiles[ty][tx];
     if (tile.type === 'floor' || tile.type === 'corridor' || tile.type === 'wall') return;
     if (tile.broken) return;
-    const pal = getDepthPalette(floor.depth);
-    const checker = (tx + ty) % 2 === 0;
     const p = gridToIso(tx, ty);
 
-    switch (tile.type) {
-      case 'mineable':
-      case 'pressure_plate':
-        drawDiamondAt(this.selectedObject, tx, ty, pal.floor[0]);
-        if (checker) drawDiamondAt(this.selectedObject, tx, ty, pal.floor[1], 0.5);
-        break;
-      case 'stairs_up':
-        drawDiamondAt(this.selectedObject, tx, ty, 0x1a2a1a);
-        break;
-      case 'stairs_down':
-        drawDiamondAt(this.selectedObject, tx, ty, 0x1a1a2e);
-        break;
-      case 'blocked':
-        drawDiamondAt(this.selectedObject, tx, ty, 0x2a2a3a);
-          break;
-        default:
-        if (tile.type.startsWith('event_') || tile.type === 'enemy' || tile.type === 'event_boss' || tile.type === 'boss_body') {
-          drawDiamondAt(this.selectedObject, tx, ty, 0x1a1a2a);
-        }
-        break;
-    }
+    drawDiamondAt(this.selectedObject, tx, ty, 0xffffff, 0.3);
 
     let texKey = '';
     switch (tile.type) {
@@ -1286,7 +1207,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const stone = () => this.inventory.count('stone');
     const removeStone = (n: number) => this.inventory.removeItem('stone', n);
     const addItem = (id: string, qty: number) => {
-      this.inventory.addItem(id, qty);
+      this.giveItem(id, qty);
       audio.playItemPickup();
     };
 
@@ -1454,7 +1375,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private buyAtShop(itemId: string, cost: number): void {
     if (this.inventory.count('carrot') >= cost) {
       this.inventory.removeItem('carrot', cost);
-      this.inventory.addItem(itemId, 1);
+      this.giveItem(itemId, 1);
     }
   }
 
@@ -2121,7 +2042,7 @@ export class ExpeditionScene extends Phaser.Scene {
         if (result === 'victory') {
           const lootMult = ringEffects.doubleLoot ? 2 : 1;
         for (const r of rewards) {
-          this.inventory.addItem(r.id, r.quantity * lootMult);
+          this.giveItem(r.id, r.quantity * lootMult);
           this.createItemPopup(tx, ty, r.id);
           audio.playItemPickup();
         }
@@ -2318,6 +2239,57 @@ export class ExpeditionScene extends Phaser.Scene {
     this.createPopup(text, cx, 180, '#44ff88', { duration: 1200, moveY: -30, scaleTo: 0.9 });
   }
 
+  private giveItem(id: string, qty: number): void {
+    this.inventory.addItem(id, qty);
+    this.drawInventoryGauge();
+    this.queueObtainPopup(id, qty);
+  }
+
+  private queueObtainPopup(id: string, qty: number): void {
+    if (this.activeObtainPopups.length >= 8) return;
+
+    const y = 116 + this.activeObtainPopups.length * 36;
+    const container = this.add.container(20, y).setScrollFactor(0).setDepth(DEPTH.HUD + 2);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0a0a1a, 0.8);
+    bg.fillRoundedRect(0, 0, 220, 36, 4);
+    container.add(bg);
+
+    const texKey = itemIconKey(id);
+    const sprite = this.add.image(18, 18, this.textures.exists(texKey) ? texKey : '__DEFAULT');
+    sprite.setScale(0.7);
+    container.add(sprite);
+
+    if (qty > 1) {
+      const badge = this.add.text(30, 26, `x${qty}`, {
+        fontSize: '9px', fontFamily: 'monospace', color: '#ffdd88',
+      }).setOrigin(1, 1);
+      container.add(badge);
+    }
+
+    const label = this.add.text(38, 10, itemDisplayName(id), {
+      fontSize: '14px', fontFamily: 'monospace', color: '#e8d5b7',
+    });
+    container.add(label);
+
+    this.activeObtainPopups.push(container);
+    container.setAlpha(0);
+
+    this.tweens.add({ targets: container, alpha: 1, duration: 100, ease: 'Quad.easeOut' });
+
+    this.time.delayedCall(1500, () => {
+      this.tweens.add({
+        targets: container, alpha: 0, duration: 200, ease: 'Quad.easeIn',
+        onComplete: () => {
+          const idx = this.activeObtainPopups.indexOf(container);
+          if (idx >= 0) this.activeObtainPopups.splice(idx, 1);
+          container.destroy();
+        },
+      });
+    });
+  }
+
   private trashItem(itemId: string): void {
     if (this.inventory.count(itemId) <= 0) return;
     this.inventory.removeItem(itemId, 1);
@@ -2391,8 +2363,7 @@ export class ExpeditionScene extends Phaser.Scene {
       ease: 'Quad.easeIn',
       onComplete: () => {
         audio.playResourcePickup(resource);
-        this.inventory.addItem(resource, 1);
-        this.drawInventoryGauge();
+        this.giveItem(resource, 1);
         sprite.destroy();
         this.time.delayedCall(100, () => this.processItemFlyQueue());
       }

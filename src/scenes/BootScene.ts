@@ -25,6 +25,13 @@ export class BootScene extends Phaser.Scene {
     this.load.image('wall_LAVA', 'tiles/wall_LAVA.png');
     this.load.image('wall_RUINS', 'tiles/wall_RUINS.png');
 
+    const BIOMES = ['FOREST', 'CAVE', 'ICE', 'LAVA', 'RUINS'];
+    for (const b of BIOMES) {
+      this.load.image(`floor_${b}_a`, `tiles/floor_${b}_a.png`);
+      this.load.image(`floor_${b}_b`, `tiles/floor_${b}_b.png`);
+      this.load.image(`corridor_${b}`, `tiles/corridor_${b}.png`);
+    }
+
     this.load.image('stairs_up', 'tiles/stairs_up.png');
     this.load.image('stairs_down', 'tiles/stairs_down.png');
     this.load.image('pressure_plate', 'tiles/pressure_plate.png');

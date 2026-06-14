@@ -4,6 +4,13 @@
 
 ---
 
+## ✅ Per-Biome Floor Sprites (June 2026)
+- **Sprite-based terrain** — floor/corridor tiles no longer use procedural `Graphics.drawDiamondAt`; each biome has dedicated `floor_{BIOME}_a`, `floor_{BIOME}_b` (checker), and `corridor_{BIOME}` 160×80 PNG sprites scaled 0.5×
+- **Placeholder generation** — 15 colored-diamond PNGs auto-generated via PIL; TextureGenerator creates matching fallbacks so the game works without any PNG on disk
+- **`getBiomeKey(depth)` helper** — extracted shared biome→depth mapping, used by both wall and floor/corridor lookups
+- **White selection highlight** — facing interactive tiles now shows a uniform `0xffffff` at 0.3 alpha diamond instead of per-type colored backgrounds
+- **`getDepthPalette()` / `Palette` removed** — dead code after the sprite conversion
+
 ## ✅ Mobile Controls
 - **Click-to-move** with BFS pathfinding (expedition + homeland)
 - **Virtual analog stick** — tap-anywhere joystick, 4-cardinal, continuous hold

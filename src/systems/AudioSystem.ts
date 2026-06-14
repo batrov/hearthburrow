@@ -358,7 +358,10 @@ export class AudioSystem {
 
   playResourcePickup(resourceId: string): void {
     switch (resourceId) {
-      case 'stone': this.playNote('triangle', 130, 60, 0.1, 0.12); break;
+      case 'stone':
+        this.playNote('sine', 700, 250, 0.14, 0.1);
+        this.playNote('sine', 1100, 800, 0.07, 0.06, 0.01);
+        break;
       case 'bronze_ore': this.playNote('square', 400, 800, 0.05, 0.08); break;
       case 'silver_ore': this.playNote('square', 600, 1000, 0.05, 0.07); break;
       case 'gold_ore':
