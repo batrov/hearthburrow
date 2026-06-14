@@ -4,6 +4,13 @@
 
 ---
 
+## ✅ Expedition Recap Scroll (June 2026)
+- **Rescued/Discovered moved inside panel** — both sections now sit below Items Collected/Lost within the bordered recap panel instead of floating outside at y≥570
+- **Scrollable content** — all content (items + rescued + discovered) lives in a masked `Container`; W/S or mouse wheel scrolls when content exceeds viewport height
+- **Scrollbar indicator** — thin 4px bar on the right panel edge appears when `maxScroll > 0`, tracks scroll position
+- **No more truncation** — `renderList` shows all items instead of capping at `maxItemsPerCol` with `...`
+- **Hint updated** — now reads `[SPACE] Return to Homeland   [W/S] Scroll`
+
 ## ✅ Building Construction Animation (June 2026)
 - **5-second construction** — restoring a building shows a centered progress bar panel (title, filling green bar, percentage text) instead of instantly popping in
 - **Building shake** — the unrestored building tiles shake in place (3px oscillation, 60ms yoyo) during construction

@@ -2,6 +2,12 @@ import Phaser from 'phaser';
 import { gameState, itemDisplayName, itemIconKey, itemIdFromDisplayName } from '../systems/GameState';
 
 export class ExpeditionRecapScene extends Phaser.Scene {
+  private scrollY: number = 0;
+  private maxScroll: number = 0;
+  private contentContainer!: Phaser.GameObjects.Container;
+  private scrollbar!: Phaser.GameObjects.Graphics;
+  private readonly SCROLL_SPEED = 28;
+
   constructor() {
     super({ key: 'ExpeditionRecapScene' });
   }
@@ -31,17 +37,17 @@ export class ExpeditionRecapScene extends Phaser.Scene {
       fontSize: '12px', fontFamily: 'monospace', color: '#7a8a9a',
     }).setOrigin(0.5);
 
-    const panelX = 120;
-    const panelW = 720;
-    const panelY = 100;
-    const panelH = 460;
+    const panelX = 120, panelW = 720, panelY = 100, panelH = 460;
     const colGap = 40;
     const colW = (panelW - colGap * 3) / 2;
     const leftX = panelX + colGap;
     const rightX = leftX + colW + colGap * 2;
-    const headerY = panelY + 20;
-    const itemStartY = headerY + 30;
     const lineH = 24;
+
+    const viewportX = panelX + 10;
+    const viewportY = panelY + 25;
+    const viewportW = panelW - 20;
+    const viewportH = panelH - 40;
 
     const bg = this.add.graphics();
     bg.fillStyle(0x12121e, 0.8);
@@ -49,75 +55,117 @@ export class ExpeditionRecapScene extends Phaser.Scene {
     bg.lineStyle(1, 0x2a2a3a, 0.6);
     bg.strokeRoundedRect(panelX, panelY, panelW, panelH, 8);
 
-    this.add.text(leftX, headerY, 'Items Collected', {
-      fontSize: '15px', fontFamily: 'monospace', color: '#88dd88', fontStyle: 'bold',
-    });
+    this.contentContainer = this.add.container(0, 0);
 
-    this.add.text(rightX, headerY, 'Items Lost', {
-      fontSize: '15px', fontFamily: 'monospace', color: '#dd6666', fontStyle: 'bold',
-    });
+    const maskShape = this.make.graphics();
+    maskShape.fillRect(viewportX, viewportY, viewportW, viewportH);
+    const mask = maskShape.createGeometryMask();
+    this.contentContainer.setMask(mask);
 
-    const maxItemsPerCol = Math.floor((panelY + panelH - itemStartY - 10) / lineH);
+    this.scrollbar = this.add.graphics();
+
+    let contentY = viewportY;
 
     const netItems = this.computeNetItems(result.itemsObtained, result.itemsLost);
 
-    this.renderList(leftX, itemStartY, lineH, netItems, maxItemsPerCol, '#c8b898', '#88dd88');
+    const noItems = netItems.length === 0 && result.itemsLost.length === 0;
+    if (!noItems) {
+      const titleCollected = this.add.text(leftX, contentY, 'Items Collected', {
+        fontSize: '15px', fontFamily: 'monospace', color: '#88dd88', fontStyle: 'bold',
+      });
+      this.contentContainer.add(titleCollected);
 
-    this.renderList(rightX, itemStartY, lineH, result.itemsLost, maxItemsPerCol, '#c8b898', '#dd6666');
+      const titleLost = this.add.text(rightX, contentY, 'Items Lost', {
+        fontSize: '15px', fontFamily: 'monospace', color: '#dd6666', fontStyle: 'bold',
+      });
+      this.contentContainer.add(titleLost);
 
-    let nextY = 570;
+      contentY += 24;
+
+      const next1 = this.renderList(leftX, contentY, lineH, netItems, '#c8b898', '#88dd88');
+      const next2 = this.renderList(rightX, contentY, lineH, result.itemsLost, '#c8b898', '#dd6666');
+      contentY = Math.max(next1, next2) + 8;
+    }
 
     const rescued = result.villagersRescued;
     if (rescued.length > 0) {
-      this.add.text(leftX, nextY, 'Rescued', {
+      const rescuedLabel = this.add.text(leftX, contentY, 'Rescued', {
         fontSize: '13px', fontFamily: 'monospace', color: '#44cc66', fontStyle: 'bold',
       });
-      nextY += 18;
+      this.contentContainer.add(rescuedLabel);
+      contentY += 18;
+
       let rx = leftX;
       const maxRX = panelX + panelW - 20;
       for (const v of rescued) {
         const iconKey = 'npc_' + v.variant;
         const entryW = 12 + v.name.length * 8 + 16;
-        if (rx + entryW > maxRX) { rx = leftX; nextY += 18; }
+        if (rx + entryW > maxRX) { rx = leftX; contentY += 18; }
         if (this.textures.exists(iconKey)) {
-          this.add.image(rx, nextY + 6, iconKey).setScale(0.5);
+          const img = this.add.image(rx, contentY + 6, iconKey).setScale(0.5);
+          this.contentContainer.add(img);
         }
-        this.add.text(rx + 12, nextY, v.name, {
+        const t = this.add.text(rx + 12, contentY, v.name, {
           fontSize: '13px', fontFamily: 'monospace', color: '#c8b898',
         });
+        this.contentContainer.add(t);
         rx += entryW;
       }
-      nextY += 22;
+      contentY += 22;
     }
 
     const recipes = result.recipesDiscovered;
     if (recipes.length > 0) {
-      nextY = Math.max(nextY, 598);
-      this.add.text(leftX, nextY, 'Discovered', {
+      const recipeLabel = this.add.text(leftX, contentY, 'Discovered', {
         fontSize: '13px', fontFamily: 'monospace', color: '#88ddff', fontStyle: 'bold',
       });
-      nextY += 18;
+      this.contentContainer.add(recipeLabel);
+      contentY += 18;
+
       let rx = leftX;
       const maxRX = panelX + panelW - 20;
       for (const name of recipes) {
         const itemId = itemIdFromDisplayName(name);
         const entryW = (itemId ? 12 : 0) + name.length * 8 + 16;
-        if (rx + entryW > maxRX) { rx = leftX; nextY += 18; }
+        if (rx + entryW > maxRX) { rx = leftX; contentY += 18; }
         if (itemId && this.textures.exists(itemIconKey(itemId))) {
-          this.add.image(rx, nextY + 6, itemIconKey(itemId)).setScale(0.5);
+          const img = this.add.image(rx, contentY + 6, itemIconKey(itemId)).setScale(0.5);
+          this.contentContainer.add(img);
         }
-        this.add.text(rx + (itemId ? 12 : 0), nextY, name, {
+        const t = this.add.text(rx + (itemId ? 12 : 0), contentY, name, {
           fontSize: '13px', fontFamily: 'monospace', color: '#b8b8c8',
         });
+        this.contentContainer.add(t);
         rx += entryW;
       }
-      nextY += 22;
+      contentY += 22;
     }
 
-    const hintY = Math.max(nextY, 626);
-    this.add.text(cx, hintY, '[SPACE] Return to Homeland', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#6a5a8a',
+    const contentBottom = contentY + 10;
+    const viewportBottom = viewportY + viewportH;
+    this.maxScroll = Math.max(0, contentBottom - viewportBottom);
+
+    const hintY = panelY + panelH + 16;
+    this.add.text(cx, hintY, '[SPACE] Return to Homeland   [W/S] Scroll', {
+      fontSize: '13px', fontFamily: 'monospace', color: '#6a5a8a',
     }).setOrigin(0.5);
+
+    this.updateScrollbar(viewportX, viewportY, viewportH);
+
+    const doScroll = (dy: number) => {
+      this.scrollY = Phaser.Math.Clamp(this.scrollY + dy, 0, this.maxScroll);
+      this.contentContainer.y = -this.scrollY;
+      this.updateScrollbar(viewportX, viewportY, viewportH);
+    };
+
+    this.input.keyboard!.on('keydown-W', () => doScroll(-this.SCROLL_SPEED));
+    this.input.keyboard!.on('keydown-UP', () => doScroll(-this.SCROLL_SPEED));
+    this.input.keyboard!.on('keydown-S', () => doScroll(this.SCROLL_SPEED));
+    this.input.keyboard!.on('keydown-DOWN', () => doScroll(this.SCROLL_SPEED));
+
+    this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gx: number[], _gy: number[], _gz: number[], dz: number) => {
+      doScroll(dz > 0 ? this.SCROLL_SPEED : -this.SCROLL_SPEED);
+    });
 
     this.input.keyboard!.once('keydown-SPACE', () => {
       if (gameState.restoredBuildings.has('farm') && gameState.farmPlanted > 0) {
@@ -130,6 +178,18 @@ export class ExpeditionRecapScene extends Phaser.Scene {
         this.scene.start('HomelandScene');
       });
     });
+  }
+
+  private updateScrollbar(vx: number, vy: number, vh: number): void {
+    this.scrollbar.clear();
+    if (this.maxScroll <= 0) return;
+
+    const barH = Math.max(20, vh * (vh / (vh + this.maxScroll)));
+    const barY = vy + (this.scrollY / this.maxScroll) * (vh - barH);
+    const barX = vx + 698;
+
+    this.scrollbar.fillStyle(0x5a5a7a, 0.5);
+    this.scrollbar.fillRoundedRect(barX, barY, 4, barH, 2);
   }
 
   private computeNetItems(
@@ -151,36 +211,32 @@ export class ExpeditionRecapScene extends Phaser.Scene {
   private renderList(
     x: number, startY: number, lineH: number,
     items: { id: string; quantity: number }[],
-    maxItems: number,
     nameColor: string, qtyColor: string
-  ): void {
-    if (items.length === 0) {
-      this.add.text(x, startY, '(none)', {
-        fontSize: '13px', fontFamily: 'monospace', color: '#5a5a5a',
-      });
-      return;
-    }
+  ): number {
+    if (items.length === 0) return startY;
 
     const sorted = [...items].sort((a, b) => a.id.localeCompare(b.id));
-    const shown = sorted.slice(0, maxItems);
     const labelW = 140;
 
-    for (let i = 0; i < shown.length; i++) {
-      const item = shown[i];
+    for (let i = 0; i < sorted.length; i++) {
+      const item = sorted[i];
       const y = startY + i * lineH;
 
       const iconKey = itemIconKey(item.id);
       if (this.textures.exists(iconKey)) {
-        this.add.image(x, y + 7, iconKey).setScale(0.7);
+        const img = this.add.image(x, y + 7, iconKey).setScale(0.7);
+        this.contentContainer.add(img);
       }
 
-      this.add.text(x + 18, y, itemDisplayName(item.id), {
+      const nameText = this.add.text(x + 18, y, itemDisplayName(item.id), {
         fontSize: '13px', fontFamily: 'monospace', color: nameColor,
       });
+      this.contentContainer.add(nameText);
 
       const qtyText = this.add.text(x + 18 + labelW, y, 'x0', {
         fontSize: '13px', fontFamily: 'monospace', color: qtyColor,
       });
+      this.contentContainer.add(qtyText);
 
       const data = { count: 0 };
       this.tweens.add({
@@ -195,10 +251,6 @@ export class ExpeditionRecapScene extends Phaser.Scene {
       });
     }
 
-    if (sorted.length > maxItems) {
-      this.add.text(x, startY + maxItems * lineH, '...', {
-        fontSize: '13px', fontFamily: 'monospace', color: '#5a5a5a',
-      });
-    }
+    return startY + sorted.length * lineH;
   }
 }
