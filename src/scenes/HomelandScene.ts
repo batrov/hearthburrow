@@ -1313,7 +1313,7 @@ export class HomelandScene extends Phaser.Scene {
     }
     gameState.save();
 
-    gameState.currentRunSeed = this.gateSeed;
+    gameState.currentRunSeed = this.gateSeed || Math.random().toString(36).substring(2, 10);
     gameState.save();
 
     this.closePanel();

@@ -146,6 +146,12 @@ export class ExpeditionRecapScene extends Phaser.Scene {
     this.maxScroll = Math.max(0, contentBottom - viewportBottom);
 
     const hintY = panelY + panelH + 16;
+    if (gameState.currentRunSeed) {
+      this.add.text(cx, hintY - 12, `Seed: ${gameState.currentRunSeed}`, {
+        fontSize: '11px', fontFamily: 'monospace', color: '#5a5a6a',
+      }).setOrigin(0.5);
+    }
+
     this.add.text(cx, hintY, '[SPACE] Return to Homeland   [W/S] Scroll', {
       fontSize: '13px', fontFamily: 'monospace', color: '#6a5a8a',
     }).setOrigin(0.5);
