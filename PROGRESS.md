@@ -86,6 +86,13 @@ Resolved Bugs:
 - **NPC Photobook panel** — `[P]` key opens a full panel listing all rescued NPCs with variant number, name, and rescue depth; W/S scroll, ESC close
 - **Rescue popup** — rescuing an NPC now shows a floating `Rescued: {name}!` notification via `createPopup`
 
+## ✅ Sprite Config System (June 2026)
+- **Centralized `sprite-offsets.json`** — all sprite positioning offsets, scale, and origin live in one JSON file instead of hardcoded across 3 scenes
+- **Prefix-based wildcard matching** — `player_*` matches all player frames, `npc_*` matches all NPC variants, `ore_*` covers all ore types, etc.; longest pattern wins for specificity
+- **Per-sprite config** — `originX/Y`, `offsetX/Y`, `scale` per texture key, applied in `makeImg()` and all player/NPC create/reposition sites
+- **`player_bottom_left_0.png`** — resized from 37×48 → 32×48 to match other frames, removing need for per-frame config
+- **`pixelArt: true`** — Phaser now uses nearest-neighbor filtering globally, eliminating blur on all scaled sprites (ores 1.5×, boss 0.25×, NPCs 0.5×, etc.)
+
 ## ✅ Expedition Polish (June 2026)
 - **NPC variant sprites** — trapped villagers in the dungeon render their unique `npc_{variant}` texture instead of the generic `event_villager` sprite (works in `drawInteractiveTiles` and `updateFacingHighlight` preview)
 - **Glow highlight** — facing highlight changed from flat white diamond to a 3-layer concentric diamond glow (2px solid inner, 6px at 0.25 alpha, 12px at 0.08 alpha)
