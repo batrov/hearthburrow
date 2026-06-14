@@ -1,6 +1,24 @@
 # Progress Report
 
-> Current state against GDD goals — feature-complete for MVP. Next phase: testing, balancing, and asset integration.
+> Current state against GDD goals — v0.2 with roulette, lighting, and shop economy changes.
+
+## ✅ Roulette Wheel Mini-Game (June 2026)
+- **Visual spinning wheel** — new `GamblePanel` with color-coded pie-slice segments, fixed golden pointer, physics-based deceleration (random friction 0.95–0.995) on SPACE/click
+- **Biome-tiered rewards** — FOREST (stone/bronze/silver), CAVE (bronze/silver), ICE+ (silver/gold) — only items mineable at that depth
+- **Reward sprites** — ore icons rendered at each segment's arc midpoint, rotating with the wheel
+- **Cost scales with depth** — `5 + floor(depth/5)` stone; deducted on gamble, reward given on result close
+- **Bingo SFX** — ascending C-E-G-C chime on win, `playError()` on loss
+
+## ✅ Lantern & Lighting Overhaul (June 2026)
+- **Circular light cutout** — `GeometryMask` with `invertAlpha=true` punches a smooth circle in the darkness overlay instead of 4 rectangle edges
+- **Minimap respects lighting** — `visible[][]` grid tracks currently-lit tiles; unlit explored tiles render at 0.35 alpha on the minimap (dark floors only)
+- **Reveal radius follows lantern** — `revealSurroundings()` computes grid radius from `getLanternRange(depth)` instead of hardcoded 8, using isometric conversion factor 45px/tile
+- **Seed always displayed** — recap screen shows 8-char random seed fallback for unseeded runs
+
+## ✅ Wandering Shop Economy (June 2026)
+- **Gated behind Trading Post** — `placeShopTile()` now checks `gameState.restoredBuildings.has('trading_post')`
+- **Homeland storage integration** — carrot count/check/deduction uses `gameState.inventory` (homeland storage) instead of expedition pack; `gameState.save()` after purchase
+- **Visible carrot count** — shop description shows `"You have X carrots in storage. What catches your eye?"`
 
 ---
 
