@@ -621,6 +621,9 @@ export class ExpeditionScene extends Phaser.Scene {
             }
             break;
         }
+        if (!this.expeditionState.visible[y]?.[x]) {
+          this.minimapGfx.fillStyle(0x0a0a1a, 0.35);
+        }
         this.minimapGfx.fillRect(px, py, cell, cell);
       }
     }
@@ -1886,10 +1889,10 @@ export class ExpeditionScene extends Phaser.Scene {
     const h = cam.height;
     const pad = 2000;
     this.darknessOverlay.fillStyle(0x000000, 1);
-    this.darknessOverlay.fillRect(sx - pad, sy - pad, w + pad * 2, cy - r - sy + pad);
-    this.darknessOverlay.fillRect(sx - pad, cy + r, w + pad * 2, sy + h + pad - (cy + r));
-    this.darknessOverlay.fillRect(sx - pad, cy - r, cx - r - sx + pad, 2 * r);
-    this.darknessOverlay.fillRect(cx + r, cy - r, sx + w + pad - (cx + r), 2 * r);
+    this.darknessOverlay.fillRect(sx - pad, sy - pad, w + pad * 2, h + pad * 2);
+    this.darknessOverlay.setBlendMode(Phaser.BlendModes.ERASE);
+    this.darknessOverlay.fillCircle(cx, cy, r);
+    this.darknessOverlay.setBlendMode(Phaser.BlendModes.NORMAL);
   }
 
   private checkRegenBoots(): void {
