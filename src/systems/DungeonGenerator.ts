@@ -162,7 +162,7 @@ export class DungeonGenerator {
 
       const exitRoomIndex = rooms.length - 1;
 
-      if (depth >= 2) {
+      if (depth >= 2 && gameState.restoredBuildings.has('trading_post')) {
         this.placeShopTile(tiles, rooms);
       }
 

@@ -1377,10 +1377,10 @@ export class ExpeditionScene extends Phaser.Scene {
       },
 
       midrun_shop: () => {
-        const hasCarrots = (n: number) => this.inventory.count('carrot') >= n;
+        const hasCarrots = (n: number) => gameState.inventory.count('carrot') >= n;
         return {
           title: 'Wandering Shop',
-          description: 'A merchant has set up shop mid-dungeon. What catches your eye?',
+          description: `A merchant has set up shop mid-dungeon. You have ${gameState.inventory.count('carrot')} carrots in storage. What catches your eye?`,
           choices: [
             { label: `Stamina Potion — 5 carrots ${hasCarrots(5) ? '' : '(not enough)'}`, action: () => this.buyAtShop('stamina_potion', 5) },
             { label: `Teleport Scroll — 8 carrots ${hasCarrots(8) ? '' : '(not enough)'}`, action: () => this.buyAtShop('teleport_scroll', 8) },
@@ -1437,8 +1437,9 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private buyAtShop(itemId: string, cost: number): void {
-    if (this.inventory.count('carrot') >= cost) {
-      this.inventory.removeItem('carrot', cost);
+    if (gameState.inventory.count('carrot') >= cost) {
+      gameState.inventory.removeItem('carrot', cost);
+      gameState.save();
       this.giveItem(itemId, 1);
     }
   }
