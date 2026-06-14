@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { BasePanel } from './BasePanel';
 import { audio } from '../systems/AudioSystem';
+import { itemIconKey } from '../systems/GameState';
 
 export interface RouletteSegment {
   label: string;
@@ -20,6 +21,7 @@ export class GamblePanel extends BasePanel {
   private hintText: Phaser.GameObjects.Text;
 
   private segments: RouletteSegment[] = [];
+  private wheelSprites: Phaser.GameObjects.Image[] = [];
   private spinVelocity: number = 0;
   private friction: number = 0;
   private spinning: boolean = false;
@@ -108,11 +110,11 @@ export class GamblePanel extends BasePanel {
   }
 
   onPress(): void {
-    if (!this._visible || this.resolved) return;
-    if (this.spinning && !this.decelerating) {
-      this.stopSpin();
-    } else if (!this.spinning && this.resolved) {
+    if (!this._visible) return;
+    if (this.resolved) {
       this.close();
+    } else if (this.spinning && !this.decelerating) {
+      this.stopSpin();
     }
   }
 
@@ -147,6 +149,8 @@ export class GamblePanel extends BasePanel {
 
   private drawWheel(): void {
     this.wheelGfx.clear();
+    this.wheelSprites.forEach(s => s.destroy());
+    this.wheelSprites = [];
     const totalWeight = this.segments.reduce((s, seg) => s + seg.weight, 0);
     let currentAngle = -Math.PI / 2;
 
@@ -160,6 +164,19 @@ export class GamblePanel extends BasePanel {
       this.wheelGfx.fillPath();
       this.wheelGfx.lineStyle(1, 0xffffff, 0.3);
       this.wheelGfx.strokePath();
+
+      if (seg.reward && this.scene.textures.exists(itemIconKey(seg.reward.id))) {
+        const midAngle = currentAngle + segAngle / 2;
+        const iconDist = this.RADIUS * 0.62;
+        const img = this.scene.add.image(
+          Math.cos(midAngle) * iconDist,
+          Math.sin(midAngle) * iconDist,
+          itemIconKey(seg.reward.id),
+        ).setScale(0.55).setDepth(1);
+        this.wheelContainer.add(img);
+        this.wheelSprites.push(img);
+      }
+
       currentAngle += segAngle;
     }
 
@@ -241,6 +258,8 @@ export class GamblePanel extends BasePanel {
     if (this.spinning) {
       this.scene.events.off('update', this.onUpdate, this);
     }
+    this.wheelSprites.forEach(s => s.destroy());
+    this.wheelSprites = [];
     this._visible = false;
     this.container.setVisible(false);
   }
