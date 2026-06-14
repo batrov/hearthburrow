@@ -195,6 +195,7 @@ export class HomelandScene extends Phaser.Scene {
         for (let dx = 0; dx < b.gw; dx++) {
           const p = gridToIso(b.gx + dx, b.gy + dy);
           const img = this.add.image(p.x, p.y, texKey).setAlpha(alpha);
+          img.setData('bid', b.id);
           this.buildingsContainer.add(img);
         }
       }
@@ -1003,29 +1004,91 @@ export class HomelandScene extends Phaser.Scene {
 
   private tryRestore(buildingId: string): void {
     const building = getBuilding(buildingId);
-    const success = restoreBuilding(buildingId);
     this.restoreMode = false;
     this.closePanel();
 
-    if (success) {
-      this.drawHubBuildings();
+    const container = this.add.container(960 / 2, 640 / 2).setScrollFactor(0).setDepth(250);
 
-      const name = building?.name ?? buildingId.replace(/_/g, ' ');
-      const popup = this.add.text(960 / 2, 640 / 2, `${name} Restored!`, {
-        fontSize: '18px', fontFamily: 'monospace', color: '#44cc66', fontStyle: 'bold', align: 'center',
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(250);
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0a0a1a, 0.85);
+    bg.fillRoundedRect(-160, -60, 320, 120, 10);
+    bg.lineStyle(2, 0x6a5a8a, 1);
+    bg.strokeRoundedRect(-160, -60, 320, 120, 10);
+    container.add(bg);
 
+    const title = this.add.text(0, -40, `Constructing ${building?.name ?? ''}...`, {
+      fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7',
+    }).setOrigin(0.5);
+    container.add(title);
+
+    const barW = 240, barH = 16, barX = -barW / 2, barY = -8;
+
+    const barBg = this.add.graphics();
+    barBg.fillStyle(0x1a1a2a, 1);
+    barBg.fillRoundedRect(barX, barY, barW, barH, 4);
+    container.add(barBg);
+
+    const barFill = this.add.graphics();
+    container.add(barFill);
+
+    const statusText = this.add.text(0, 20, 'Building... 0%', {
+      fontSize: '12px', fontFamily: 'monospace', color: '#8a9aaa',
+    }).setOrigin(0.5);
+    container.add(statusText);
+
+    const buildingTiles = this.buildingsContainer.getAll().filter(
+      obj => (obj as Phaser.GameObjects.Image).getData?.('bid') === buildingId
+    ) as Phaser.GameObjects.Image[];
+
+    for (const img of buildingTiles) {
       this.tweens.add({
-        targets: popup,
-        y: popup.y - 50,
-        alpha: 0,
-        duration: 1500,
-        ease: 'Quad.easeOut',
-        onComplete: () => {
-          popup.destroy();
-        },
+        targets: img,
+        x: img.x + 3,
+        duration: 60,
+        yoyo: true,
+        repeat: Math.floor(5000 / 120),
+        ease: 'Sine.easeInOut',
       });
     }
+
+    audio.playConstruction();
+
+    this.tweens.addCounter({
+      from: 0,
+      to: barW - 4,
+      duration: 5000,
+      ease: 'Linear',
+      onUpdate: (tween) => {
+        const val = tween.getValue() ?? 0;
+        barFill.clear();
+        barFill.fillStyle(0x44cc66, 1);
+        barFill.fillRoundedRect(barX + 2, barY + 2, val, barH - 4, 3);
+        statusText.setText(`Building... ${Math.floor(val / (barW - 4) * 100)}%`);
+      },
+      onComplete: () => {
+        container.destroy(true);
+
+        const success = restoreBuilding(buildingId);
+        if (success) {
+          this.drawHubBuildings();
+          audio.playBuildComplete();
+
+          const name = building?.name ?? buildingId.replace(/_/g, ' ');
+          const popup = this.add.text(960 / 2, 640 / 2, `${name} Restored!`, {
+            fontSize: '18px', fontFamily: 'monospace', color: '#44cc66', fontStyle: 'bold', align: 'center',
+          }).setOrigin(0.5).setScrollFactor(0).setDepth(250);
+
+          this.tweens.add({
+            targets: popup,
+            y: popup.y - 50,
+            alpha: 0,
+            duration: 1500,
+            ease: 'Quad.easeOut',
+            onComplete: () => popup.destroy(),
+          });
+        }
+      },
+    });
   }
 
   private showGatePanel(): void {

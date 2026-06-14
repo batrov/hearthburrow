@@ -356,6 +356,24 @@ export class AudioSystem {
     });
   }
 
+  /** Rhythmic hammer clanks — 8 strikes over ~5s for building construction. */
+  playConstruction(): void {
+    for (let i = 0; i < 8; i++) {
+      this.playNote('square', 250, 180, 0.08, 0.1, i * 0.6);
+    }
+  }
+
+  /** Triumphant rising arpeggio for building completion. */
+  playBuildComplete(): void {
+    this.playNote('sine', 523, 523, 0.1, 0.3, 0);
+    this.playNote('sine', 659, 659, 0.1, 0.3, 0.15);
+    this.playNote('sine', 784, 784, 0.1, 0.3, 0.3);
+    this.playNote('sine', 1047, 1047, 0.12, 0.5, 0.45);
+    this.playNote('triangle', 523, 523, 0.05, 0.6, 0.45);
+    this.playNote('triangle', 659, 659, 0.05, 0.6, 0.45);
+    this.playNote('triangle', 784, 784, 0.05, 0.6, 0.45);
+  }
+
   playResourcePickup(resourceId: string): void {
     switch (resourceId) {
       case 'stone':

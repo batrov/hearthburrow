@@ -4,6 +4,13 @@
 
 ---
 
+## ✅ Building Construction Animation (June 2026)
+- **5-second construction** — restoring a building shows a centered progress bar panel (title, filling green bar, percentage text) instead of instantly popping in
+- **Building shake** — the unrestored building tiles shake in place (3px oscillation, 60ms yoyo) during construction
+- **Construction SFX** — `playConstruction()` fires 8 rhythmic square-wave clanks (250→180Hz, 0.6s apart) over the animation duration
+- **Completion fanfare** — `playBuildComplete()` plays an ascending C-E-G-C arpeggio with sustaining triangle chord when the building finishes
+- **Deferred restoration** — materials deducted and `drawHubBuildings()` called only after the 5s animation completes, then the "Restored!" float text appears
+
 ## ✅ Per-Biome Floor Sprites (June 2026)
 - **Sprite-based terrain** — floor/corridor tiles no longer use procedural `Graphics.drawDiamondAt`; each biome has dedicated `floor_{BIOME}_a`, `floor_{BIOME}_b` (checker), and `corridor_{BIOME}` 160×80 PNG sprites scaled 0.5×
 - **Placeholder generation** — 15 colored-diamond PNGs auto-generated via PIL; TextureGenerator creates matching fallbacks so the game works without any PNG on disk
