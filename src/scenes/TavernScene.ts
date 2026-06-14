@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { gameState, NPC_PERSONALITIES } from '../systems/GameState';
 import { audio } from '../systems/AudioSystem';
+import { getSpriteConfig } from '../systems/SpriteConfig';
 import {
   gridToIso, isoToGrid, findPath,
   drawDiamond, drawExtrudedTile,
@@ -146,8 +147,16 @@ export class TavernScene extends Phaser.Scene {
 
   private createPlayer(): void {
     const p = gridToScreen(this.playerGx, this.playerGy);
-    this.player = this.add.image(p.x, p.y, 'player_bottom_left')
-      .setDepth(10 + (this.playerGx + this.playerGy) * 0.01);
+    const cfg = getSpriteConfig('player_bottom_left');
+    this.player = this.add.image(
+      p.x + (cfg.offsetX ?? 0),
+      p.y + (cfg.offsetY ?? 0),
+      'player_bottom_left',
+    ).setDepth(10 + (this.playerGx + this.playerGy) * 0.01);
+    if (cfg.originX !== undefined || cfg.originY !== undefined) {
+      this.player.setOrigin(cfg.originX ?? 0.5, cfg.originY ?? 0.5);
+    }
+    if (cfg.scale !== undefined) this.player.setScale(cfg.scale);
     this.playerLabel = this.add.text(p.x, p.y - 30, 'You', {
       fontSize: '11px', fontFamily: 'monospace', color: '#aaddff',
     }).setOrigin(0.5);
@@ -167,7 +176,8 @@ export class TavernScene extends Phaser.Scene {
 
   private repositionPlayer(): void {
     const p = gridToScreen(this.playerGx, this.playerGy);
-    this.player.setPosition(p.x, p.y);
+    const cfg = getSpriteConfig('player_bottom_left');
+    this.player.setPosition(p.x + (cfg.offsetX ?? 0), p.y + (cfg.offsetY ?? 0));
     this.player.setDepth(10 + (this.playerGx + this.playerGy) * 0.01);
     this.playerLabel.setPosition(p.x, p.y - 30);
   }
@@ -181,9 +191,17 @@ export class TavernScene extends Phaser.Scene {
       const pos = gridToScreen(gpos.x, gpos.y);
       const depth = 8 + (gpos.x + gpos.y) * 0.01;
 
-      const container = this.add.container(pos.x, pos.y).setDepth(depth);
+      const npcCfg = getSpriteConfig(`npc_${npc.variant}`);
+      const container = this.add.container(
+        pos.x + (npcCfg.offsetX ?? 0),
+        pos.y + (npcCfg.offsetY ?? 0),
+      ).setDepth(depth);
 
       const sprite = this.add.image(0, 0, `npc_${npc.variant}`);
+      if (npcCfg.originX !== undefined || npcCfg.originY !== undefined) {
+        sprite.setOrigin(npcCfg.originX ?? 0.5, npcCfg.originY ?? 0.5);
+      }
+      if (npcCfg.scale !== undefined) sprite.setScale(npcCfg.scale);
       container.add(sprite);
 
       const label = this.add.text(0, 16, npc.name, {
@@ -470,11 +488,12 @@ export class TavernScene extends Phaser.Scene {
     this.playerGy = ny;
 
     const target = gridToScreen(nx, ny);
+    const cfg = getSpriteConfig('player_bottom_left');
     this.isMoving = true;
     this.tweens.add({
       targets: this.player,
-      x: target.x,
-      y: target.y,
+      x: target.x + (cfg.offsetX ?? 0),
+      y: target.y + (cfg.offsetY ?? 0),
       duration: 100,
       ease: 'Linear',
       onComplete: () => { this.isMoving = false; },

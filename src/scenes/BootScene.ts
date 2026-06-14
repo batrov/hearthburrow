@@ -67,6 +67,22 @@ export class BootScene extends Phaser.Scene {
     for (let i = 0; i < 20; i++) {
       this.load.image(`npc_${i}`, `npcs/npc_${i}.png`);
     }
+
+    const itemSprites = [
+      'pickaxe_1', 'pickaxe_2', 'pickaxe_3', 'pickaxe_4',
+      'ring_critical', 'ring_damage', 'ring_precision', 'ring_hunter',
+      'boots_stamina_bronze', 'boots_stamina_silver', 'boots_stamina_gold',
+      'boots_luck_bronze', 'boots_luck_silver', 'boots_luck_gold',
+      'boots_regen',
+      'lantern_bronze', 'lantern_silver', 'lantern_gold',
+      'stamina_potion', 'teleport_scroll', 'mining_bomb',
+      'arrow_left', 'arrow_right',
+    ];
+    for (const id of itemSprites) {
+      this.load.image(`item_${id}`, `items/${id}.png`);
+    }
+
+    this.load.image('portrait', 'player/portrait.png');
   }
 
   create(): void {

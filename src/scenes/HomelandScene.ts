@@ -8,6 +8,7 @@ import { FarmPanel } from '../ui/FarmPanel';
 import { canRestore, restoreBuilding, isRestored } from '../systems/BuildingSystem';
 import { getBuilding } from '../systems/DataRegistry';
 import { audio } from '../systems/AudioSystem';
+import { getSpriteConfig } from '../systems/SpriteConfig';
 import {
   gridToIso, isoToGrid, findPath,
   HALF_W, HALF_H, worldWidth, worldHeight,
@@ -103,6 +104,23 @@ export class HomelandScene extends Phaser.Scene {
   private animFrame: number = 0;
   private animTimer: number = 0;
   private readonly ANIM_INTERVAL: number = 60;
+
+  // Gate panel container-based UI
+  private gateContainer!: Phaser.GameObjects.Container;
+  private gateBg!: Phaser.GameObjects.Graphics;
+  private gatePortrait!: Phaser.GameObjects.Image;
+  private gateTitle!: Phaser.GameObjects.Text;
+  private gateEquipMarkers: Phaser.GameObjects.Text[] = [];
+  private gateEquipIcons: Phaser.GameObjects.Image[] = [];
+  private gateEquipLabels: Phaser.GameObjects.Text[] = [];
+  private gateEquipArrowsL: Phaser.GameObjects.Image[] = [];
+  private gateEquipArrowsR: Phaser.GameObjects.Image[] = [];
+  private gateConsumableIcons: Phaser.GameObjects.Image[] = [];
+  private gateConsumableTexts: Phaser.GameObjects.Text[] = [];
+  private gateConsumableHeader!: Phaser.GameObjects.Text;
+  private gateBottomMarkers: Phaser.GameObjects.Text[] = [];
+  private gateBottomTexts: Phaser.GameObjects.Text[] = [];
+  private gateFooter!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: 'HomelandScene' });
@@ -222,7 +240,16 @@ export class HomelandScene extends Phaser.Scene {
 
   private drawPlayer(): void {
     const p = gridToIso(this.playerGx, this.playerGy);
-    this.player = this.add.image(p.x, p.y, 'player_bottom_left').setDepth(10);
+    const cfg = getSpriteConfig('player_bottom_left');
+    this.player = this.add.image(
+      p.x + (cfg.offsetX ?? 0),
+      p.y + (cfg.offsetY ?? 0),
+      'player_bottom_left',
+    ).setDepth(10);
+    if (cfg.originX !== undefined || cfg.originY !== undefined) {
+      this.player.setOrigin(cfg.originX ?? 0.5, cfg.originY ?? 0.5);
+    }
+    if (cfg.scale !== undefined) this.player.setScale(cfg.scale);
     this.playerLabel = this.add.text(p.x, p.y - 30, 'You', {
       fontSize: '11px', fontFamily: 'monospace', color: '#aaddff',
     }).setOrigin(0.5);
@@ -242,7 +269,8 @@ export class HomelandScene extends Phaser.Scene {
 
   private repositionPlayer(): void {
     const p = gridToIso(this.playerGx, this.playerGy);
-    this.player.setPosition(p.x, p.y);
+    const cfg = getSpriteConfig('player_bottom_left');
+    this.player.setPosition(p.x + (cfg.offsetX ?? 0), p.y + (cfg.offsetY ?? 0));
     this.playerLabel.setPosition(p.x, p.y - 30);
   }
 
@@ -259,6 +287,104 @@ export class HomelandScene extends Phaser.Scene {
       fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7',
       align: 'center', lineSpacing: 8,
     }).setOrigin(0.5).setDepth(91).setScrollFactor(0).setAlpha(0);
+
+    this.buildGateUI();
+  }
+
+  private buildGateUI(): void {
+    if (this.gateContainer) {
+      this.gateContainer.destroy(true);
+      this.gateContainer = null!;
+    }
+    this.gateEquipMarkers = [];
+    this.gateEquipIcons = [];
+    this.gateEquipLabels = [];
+    this.gateEquipArrowsL = [];
+    this.gateEquipArrowsR = [];
+    this.gateConsumableIcons = [];
+    this.gateConsumableTexts = [];
+    this.gateBottomMarkers = [];
+    this.gateBottomTexts = [];
+
+    const PL = 130, PT = 40, PW = 700, PH = 560;
+    const CX = 395;
+    const TEXT_STYLE = { fontSize: '14px', fontFamily: 'monospace', color: '#e8d5b7' };
+    const ROW_YS = [114, 152, 190, 228, 266];
+    const CONS_YS = [324, 356, 388];
+    const BOTTOM_YS = [440, 470, 500, 530];
+
+    this.gateContainer = this.add.container(0, 0).setDepth(90).setScrollFactor(0);
+    this.gateContainer.setVisible(false);
+
+    this.gateBg = this.add.graphics();
+    this.gateContainer.add(this.gateBg);
+
+    this.gatePortrait = this.add.image(258, 180, 'portrait');
+    this.gateContainer.add(this.gatePortrait);
+
+    this.gateTitle = this.add.text(480, 58, 'Expedition Loadout', {
+      fontSize: '20px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
+    }).setOrigin(0.5);
+    this.gateContainer.add(this.gateTitle);
+
+    for (let i = 0; i < 5; i++) {
+      const ry = ROW_YS[i];
+      const marker = this.add.text(CX, ry + 6, ' ', TEXT_STYLE);
+      this.gateContainer.add(marker);
+      this.gateEquipMarkers.push(marker);
+
+      const icon = this.add.image(CX + 18, ry, 'item_pickaxe_1');
+      this.gateContainer.add(icon);
+      this.gateEquipIcons.push(icon);
+
+      const label = this.add.text(CX + 40, ry + 6, '', TEXT_STYLE);
+      this.gateContainer.add(label);
+      this.gateEquipLabels.push(label);
+
+      const arrL = this.add.image(722, ry, 'item_arrow_left').setInteractive({ useHandCursor: true });
+      arrL.setData('row', i).setData('dir', -1);
+      arrL.on('pointerdown', () => this.handleArrowClick(i, -1));
+      this.gateContainer.add(arrL);
+      this.gateEquipArrowsL.push(arrL);
+
+      const arrR = this.add.image(756, ry, 'item_arrow_right').setInteractive({ useHandCursor: true });
+      arrR.setData('row', i).setData('dir', 1);
+      arrR.on('pointerdown', () => this.handleArrowClick(i, 1));
+      this.gateContainer.add(arrR);
+      this.gateEquipArrowsR.push(arrR);
+    }
+
+    this.gateConsumableHeader = this.add.text(CX, 304, 'Consumables:', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#b8a898',
+    });
+    this.gateContainer.add(this.gateConsumableHeader);
+
+    for (let i = 0; i < 3; i++) {
+      const cy = CONS_YS[i];
+      const icon = this.add.image(CX + 18, cy, 'item_stamina_potion');
+      this.gateContainer.add(icon);
+      this.gateConsumableIcons.push(icon);
+
+      const text = this.add.text(CX + 40, cy + 6, '', TEXT_STYLE);
+      this.gateContainer.add(text);
+      this.gateConsumableTexts.push(text);
+    }
+
+    for (let i = 0; i < 4; i++) {
+      const by = BOTTOM_YS[i];
+      const marker = this.add.text(CX, by + 6, ' ', TEXT_STYLE);
+      this.gateContainer.add(marker);
+      this.gateBottomMarkers.push(marker);
+
+      const text = this.add.text(CX + 18, by + 6, '', TEXT_STYLE);
+      this.gateContainer.add(text);
+      this.gateBottomTexts.push(text);
+    }
+
+    this.gateFooter = this.add.text(480, 564, '', {
+      fontSize: '13px', fontFamily: 'monospace', color: '#8a7a9a', align: 'center',
+    }).setOrigin(0.5);
+    this.gateContainer.add(this.gateFooter);
   }
 
   private setupInput(): void {
@@ -672,11 +798,12 @@ export class HomelandScene extends Phaser.Scene {
     this.playerGy = ny;
 
     const target = gridToIso(nx, ny);
+    const cfg = getSpriteConfig('player_bottom_left');
     this.isMoving = true;
     this.tweens.add({
       targets: this.player,
-      x: target.x,
-      y: target.y,
+      x: target.x + (cfg.offsetX ?? 0),
+      y: target.y + (cfg.offsetY ?? 0),
       duration: 100,
       ease: 'Linear',
       onComplete: () => { this.isMoving = false; },
@@ -947,10 +1074,12 @@ export class HomelandScene extends Phaser.Scene {
     };
     this.input.keyboard!.on('keydown', this.seedKeyHandler);
 
+    this.gateContainer.setVisible(true);
     this.renderGatePanel();
   }
 
   private renderGatePanel(): void {
+    const PL = 130, PT = 40, PW = 700, PH = 560;
     const names: Record<number, string> = {
       1: 'Common Pickaxe',
       2: 'Bronze Pickaxe',
@@ -959,92 +1088,144 @@ export class HomelandScene extends Phaser.Scene {
     };
     const maxStamina = this.debugMode ? 10000 : 100 + gameState.maxStaminaBonus;
     const invSlots = 16 + gameState.inventorySlotBonus;
+    const foundRelics = gameState.getFoundRelics();
 
-    const pickaxeLines = this.pickaxeOptions
-      .map((o, i) => {
-        const marker = i === this.selectedPickaxeIdx && this.gateTab === 0 ? '▶' : ' ';
-        if (o.tier === 1) {
-          return `  ${marker} ${names[o.tier]}`;
+    this.gateBg.clear();
+    this.gateBg.fillStyle(0x0a0a1a, 0.85);
+    this.gateBg.fillRoundedRect(PL, PT, PW, PH, 12);
+    this.gateBg.lineStyle(2, 0x6a5a8a, 1);
+    this.gateBg.strokeRoundedRect(PL, PT, PW, PH, 12);
+
+    // Equipment rows
+    for (let i = 0; i < 5; i++) {
+      const marker = this.gateEquipMarkers[i];
+      const icon = this.gateEquipIcons[i];
+      const label = this.gateEquipLabels[i];
+
+      let selected = false;
+      let hasOpt = false;
+      let iconKey = '';
+      let text = '(none)';
+
+      switch (i) {
+        case 0: {
+          selected = this.gateTab === 0;
+          const opt = this.pickaxeOptions[this.selectedPickaxeIdx];
+          if (opt) {
+            hasOpt = true;
+            iconKey = `item_pickaxe_${opt.tier}`;
+            const n = names[opt.tier];
+            if (opt.tier === 1) {
+              text = n;
+            } else {
+              const remaining = gameState.remainingPickaxeRuns(opt.tier);
+              const qty = gameState.inventory.count(`pickaxe_${opt.tier}`);
+              text = `${n} (${remaining}/5) [x${qty}]`;
+            }
+          }
+          break;
         }
-        const remaining = gameState.remainingPickaxeRuns(o.tier);
-        const qty = gameState.inventory.count(`pickaxe_${o.tier}`);
-        return `  ${marker} ${names[o.tier]} (${remaining}/5) [x${qty}]`;
-      })
-      .join('\n');
+        case 1: {
+          selected = this.gateTab === 1;
+          const opt = this.selectedRing1Idx >= 0 ? this.ringOptions[this.selectedRing1Idx] : null;
+          if (opt) {
+            hasOpt = true;
+            iconKey = `item_${opt.id}`;
+            text = `Ring 1: ${opt.name}`;
+          } else {
+            text = 'Ring 1: (none)';
+          }
+          break;
+        }
+        case 2: {
+          selected = this.gateTab === 2;
+          const opt = this.selectedRing2Idx >= 0 ? this.ringOptions[this.selectedRing2Idx] : null;
+          if (opt) {
+            hasOpt = true;
+            iconKey = `item_${opt.id}`;
+            text = `Ring 2: ${opt.name}`;
+          } else {
+            text = 'Ring 2: (none)';
+          }
+          break;
+        }
+        case 3: {
+          selected = this.gateTab === 3;
+          const opt = this.selectedBootsIdx >= 0 ? this.bootOptions[this.selectedBootsIdx] : null;
+          if (opt) {
+            hasOpt = true;
+            iconKey = `item_${opt.id}`;
+            const runsStr = opt.runs === Infinity ? '' : ` (${opt.runs}/5)`;
+            text = `Boots: ${opt.name}${runsStr}`;
+          } else {
+            text = 'Boots: (none)';
+          }
+          break;
+        }
+        case 4: {
+          selected = this.gateTab === 4;
+          const opt = this.selectedLanternIdx >= 0 ? this.lanternOptions[this.selectedLanternIdx] : null;
+          if (opt) {
+            hasOpt = true;
+            iconKey = `item_${opt.id}`;
+            const runsStr = opt.runs === Infinity ? '' : ` (${opt.runs}/5)`;
+            text = `Lantern: ${opt.name}${runsStr}`;
+          } else {
+            text = 'Lantern: (none)';
+          }
+          break;
+        }
+      }
 
-    const ring1Marker = this.gateTab === 1 ? '▶' : ' ';
-    const ring2Marker = this.gateTab === 2 ? '▶' : ' ';
-    const ring1Name = this.selectedRing1Idx >= 0 ? this.ringOptions[this.selectedRing1Idx]?.name ?? '(none)' : '(none)';
-    const ring2Name = this.selectedRing2Idx >= 0 ? this.ringOptions[this.selectedRing2Idx]?.name ?? '(none)' : '(none)';
+      marker.setText(selected ? '▶' : ' ');
+      if (hasOpt && iconKey && this.textures.exists(iconKey)) {
+        icon.setTexture(iconKey);
+      }
+      icon.setVisible(hasOpt);
+      label.setText(text);
+    }
 
-    const ringLines = [
-      `  ${ring1Marker} Ring 1: ${ring1Name}`,
-      `  ${ring2Marker} Ring 2: ${ring2Name}`,
-    ].join('\n');
+    // Consumables
+    for (let i = 0; i < 3; i++) {
+      const ct = this.consumableTypes[i];
+      const icon = this.gateConsumableIcons[i];
+      const text = this.gateConsumableTexts[i];
+      const qty = this.consumableLoadout[ct.id];
+      const available = gameState.inventory.count(ct.id);
+      const selected = this.gateTab === 5 && i === this.consumableSelectionIdx;
 
-    const bootsMarker = this.gateTab === 3 ? '▶' : ' ';
-    const bootsName = this.selectedBootsIdx >= 0 ? this.bootOptions[this.selectedBootsIdx]?.name ?? '(none)' : '(none)';
-    const bootsRuns = this.selectedBootsIdx >= 0 ? this.bootOptions[this.selectedBootsIdx]?.runs ?? 0 : 0;
-    const bootsRunsStr = bootsRuns === Infinity ? '' : ` (${bootsRuns}/5)`;
-    const bootsLine = `  ${bootsMarker} Boots: ${bootsName}${bootsRunsStr}`;
+      const iconKey = `item_${ct.id}`;
+      if (this.textures.exists(iconKey)) {
+        icon.setTexture(iconKey);
+      }
+      icon.setVisible(true);
+      text.setText(`${selected ? '▶' : ' '} ${ct.name}  ${qty} (have ${available})`);
+    }
 
-    const lanternMarker = this.gateTab === 4 ? '▶' : ' ';
-    const lanternName = this.selectedLanternIdx >= 0 ? this.lanternOptions[this.selectedLanternIdx]?.name ?? '(none)' : '(none)';
-    const lanternRuns = this.selectedLanternIdx >= 0 ? this.lanternOptions[this.selectedLanternIdx]?.runs ?? 0 : 0;
-    const lanternRunsStr = lanternRuns === Infinity ? '' : ` (${lanternRuns}/5)`;
-    const lanternLine = `  ${lanternMarker} Lantern: ${lanternName}${lanternRunsStr}`;
+    // Bottom rows: 0=debug, 1=floor, 2=seed, 3=reset
+    this.gateBottomMarkers[0].setText(this.gateTab === 6 ? '▶' : ' ');
+    this.gateBottomTexts[0].setText(`Debug Mode: ${this.debugMode ? 'ON' : 'OFF'}`);
 
-    const consumableLines = this.consumableTypes
-      .map((ct, i) => {
-        const marker = this.gateTab === 5 && i === this.consumableSelectionIdx ? '▶' : ' ';
-        const qty = this.consumableLoadout[ct.id];
-        const available = gameState.inventory.count(ct.id);
-        return `  ${marker} ${ct.name.padEnd(18)} ${qty} (have ${available})`;
-      })
-      .join('\n');
+    this.gateBottomMarkers[1].setText(this.gateTab === 7 ? '▶' : ' ');
+    const elevStr = this.selectedElevatorFloor === 0 ? '0 (Homeland)' : `${this.selectedElevatorFloor}`;
+    this.gateBottomTexts[1].setText(`Start Floor: ${elevStr}`);
 
-    const dbgMarker = this.gateTab === 6 ? '▶' : ' ';
-    const dbgLine = `  ${dbgMarker} Debug Mode: ${this.debugMode ? 'ON' : 'OFF'}`;
-
-    const elevMarker = this.gateTab === 7 ? '▶' : ' ';
-    const elevFloorStr = this.selectedElevatorFloor === 0 ? '0 (Homeland)' : `${this.selectedElevatorFloor}`;
-    const elevLine = `  ${elevMarker} Start Floor: ${elevFloorStr}`;
-
-    const resetMarker = this.gateTab === 8 ? '▶' : ' ';
-    const resetLine = `  ${resetMarker} Reset Game${this.resetConfirm ? '  [SPACE] confirm' : ''}`;
-
-    const seedMarker = this.gateTab === 9 ? '▶' : ' ';
+    this.gateBottomMarkers[2].setText(this.gateTab === 9 ? '▶' : ' ');
     const seedDisplay = this.gateSeed || '(none - random)';
     const seedStatus = this.seedEditing ? ' [EDITING]' : '';
-    const seedLine = `  ${seedMarker} Seed: ${seedDisplay}${seedStatus}`;
+    this.gateBottomTexts[2].setText(`Seed: ${seedDisplay}${seedStatus}`);
 
-    this.panelBg.clear();
-    this.panelBg.fillStyle(0x0a0a1a, 0.85);
-    this.panelBg.fillRoundedRect(960 / 2 - 260, 640 / 2 - 240, 520, 480, 10);
-    this.panelBg.lineStyle(2, 0x6a5a8a, 1);
-    this.panelBg.strokeRoundedRect(960 / 2 - 260, 640 / 2 - 240, 520, 480, 10);
-    this.panelBg.setAlpha(1);
+    this.gateBottomMarkers[3].setText(this.gateTab === 8 ? '▶' : ' ');
+    this.gateBottomTexts[3].setText(`Reset Game${this.resetConfirm ? '  [SPACE] confirm' : ''}`);
 
-    const foundRelics = gameState.getFoundRelics();
-    const relicLine = foundRelics.length > 0 ? `\nRelics: ${foundRelics.length} found` : '';
-
-    this.panelText.setText(
-      `Expedition Loadout\n\n` +
-      `${pickaxeLines}\n\n` +
-      `${ringLines}\n\n` +
-      `${bootsLine}\n` +
-      `${lanternLine}\n\n` +
-      `Consumables:\n${consumableLines}\n\n` +
-      `${dbgLine}\n` +
-      `${elevLine}\n` +
-      `${seedLine}\n` +
-      `${resetLine}${relicLine}\n\n` +
-      `   [↑/↓] select slot  [←/→] change\n\n` +
-      `Max Stamina: ${maxStamina}\n` +
-      `Inventory: ${invSlots} slots\n\n` +
-      `[SPACE] Enter  |  [ESC] cancel`
-    );
-    this.panelText.setAlpha(1);
+    // Footer
+    let footer = `[↑/↓] select  [←/→] change  [SPACE] Enter  [ESC] cancel\n`;
+    footer += `Max Stamina: ${maxStamina}  |  Inventory: ${invSlots} slots`;
+    if (foundRelics.length > 0) {
+      footer += `  |  Relics: ${foundRelics.length}`;
+    }
+    this.gateFooter.setText(footer);
+    this.gateFooter.setAlpha(1);
   }
 
   private startExpedition(): void {
@@ -1082,6 +1263,39 @@ export class HomelandScene extends Phaser.Scene {
     });
   }
 
+  private handleArrowClick(row: number, dir: number): void {
+    const tabMap = [0, 1, 2, 3, 4];
+    this.gateTab = tabMap[row];
+    switch (row) {
+      case 0: {
+        const idx = this.selectedPickaxeIdx + dir;
+        if (idx >= 0 && idx < this.pickaxeOptions.length) this.selectedPickaxeIdx = idx;
+        break;
+      }
+      case 1: {
+        const idx = this.selectedRing1Idx + dir;
+        if (idx >= -1 && idx < this.ringOptions.length) this.selectedRing1Idx = idx;
+        break;
+      }
+      case 2: {
+        const idx = this.selectedRing2Idx + dir;
+        if (idx >= -1 && idx < this.ringOptions.length) this.selectedRing2Idx = idx;
+        break;
+      }
+      case 3: {
+        const idx = this.selectedBootsIdx + dir;
+        if (idx >= -1 && idx < this.bootOptions.length) this.selectedBootsIdx = idx;
+        break;
+      }
+      case 4: {
+        const idx = this.selectedLanternIdx + dir;
+        if (idx >= -1 && idx < this.lanternOptions.length) this.selectedLanternIdx = idx;
+        break;
+      }
+    }
+    this.renderGatePanel();
+  }
+
   private showBuildingPanel(building: HubBuildingDef): void {
     this.panelVisible = true;
     this.restoreMode = false;
@@ -1116,6 +1330,7 @@ export class HomelandScene extends Phaser.Scene {
     this.farmPanel.hide();
     this.panelBg.setAlpha(0);
     this.panelText.setAlpha(0);
+    this.gateContainer.setVisible(false);
   }
 
   private showTradePanel(): void {

@@ -9,6 +9,7 @@ import { InventoryPanel } from '../ui/InventoryPanel';
 import { EventPanel, EventChoice, EventConfig } from '../ui/EventPanel';
 import { CombatPanel, CombatResult, EnemyConfig } from '../ui/CombatPanel';
 import { audio } from '../systems/AudioSystem';
+import { getSpriteConfig } from '../systems/SpriteConfig';
 import {
   gridToIso, isoToGrid, findPath,
   tileSortKey, drawDiamondAt,
@@ -352,10 +353,18 @@ export class ExpeditionScene extends Phaser.Scene {
       const p = gridToIso(x, y);
       const depth = 6 + (x + y) * 0.001;
 
-      const makeImg = (key: string, originY?: number) => {
-        const img = this.add.image(p.x, p.y, key).setDepth(depth);
+      const makeImg = (key: string) => {
+        const cfg = getSpriteConfig(key);
+        const img = this.add.image(
+          p.x + (cfg.offsetX ?? 0),
+          p.y + (cfg.offsetY ?? 0),
+          key,
+        ).setDepth(depth);
         img.setData('gx', x).setData('gy', y);
-        if (originY !== undefined) img.setOrigin(0.5, originY);
+        if (cfg.originX !== undefined || cfg.originY !== undefined) {
+          img.setOrigin(cfg.originX ?? 0.5, cfg.originY ?? 0.5);
+        }
+        if (cfg.scale !== undefined) img.setScale(cfg.scale);
         this.tileObjects.push(img);
         return img;
       };
@@ -363,13 +372,12 @@ export class ExpeditionScene extends Phaser.Scene {
       switch (tile.type) {
         case 'wall':
           if (hasWallTex) {
-            makeImg(wallKey, 0.6875);
+            makeImg(wallKey);
           }
           break;
         case 'mineable':
           if (!tile.broken && this.textures.exists('ore_' + tile.resource)) {
             const img = makeImg('ore_' + tile.resource);
-            img.setScale(1.5);
             this.oreImageMap.set(`${x},${y}`, img);
             const tint = this.getDamageTint(tile);
             if (tint !== null) img.setTint(tint);
@@ -397,10 +405,8 @@ export class ExpeditionScene extends Phaser.Scene {
             if (this.textures.exists('enemy_' + tile.resource)) makeImg('enemy_' + tile.resource);
           } else if (tile.type === 'event_boss' && !tile.broken) {
             if (this.textures.exists('enemy_boss')) {
-              const img = this.add.image(p.x, p.y, 'enemy_boss')
-                .setDepth(6 + (x + y + 3) * 0.001);
-              img.setData('gx', x).setData('gy', y);
-              this.tileObjects.push(img);
+              const img = makeImg('enemy_boss');
+              img.setDepth(6 + (x + y + 3) * 0.001);
             }
           }
           break;
@@ -475,9 +481,15 @@ export class ExpeditionScene extends Phaser.Scene {
           previewY = cp.y;
         }
       }
+      const previewCfg = getSpriteConfig(texKey);
+      previewX += previewCfg.offsetX ?? 0;
+      previewY += previewCfg.offsetY ?? 0;
       this.previewTile = this.add.image(previewX, previewY, texKey).setDepth(DEPTH.PREVIEW_TILE);
+      if (previewCfg.originX !== undefined || previewCfg.originY !== undefined) {
+        this.previewTile.setOrigin(previewCfg.originX ?? 0.5, previewCfg.originY ?? 0.5);
+      }
+      if (previewCfg.scale !== undefined) this.previewTile.setScale(previewCfg.scale);
       if (tile.type === 'mineable') {
-        this.previewTile.setScale(1.5);
         if (tile.maxDurability > 0) {
           const ratio = tile.durability / tile.maxDurability;
           if (ratio <= 0.33) {
@@ -507,7 +519,16 @@ export class ExpeditionScene extends Phaser.Scene {
 
   private createPlayer(): void {
     const p = gridToIso(this.playerX, this.playerY);
-    this.playerSprite = this.add.image(p.x, p.y, 'player_bottom_left').setDepth(DEPTH.PLAYER);
+    const cfg = getSpriteConfig('player_bottom_left');
+    this.playerSprite = this.add.image(
+      p.x + (cfg.offsetX ?? 0),
+      p.y + (cfg.offsetY ?? 0),
+      'player_bottom_left',
+    ).setDepth(DEPTH.PLAYER);
+    if (cfg.originX !== undefined || cfg.originY !== undefined) {
+      this.playerSprite.setOrigin(cfg.originX ?? 0.5, cfg.originY ?? 0.5);
+    }
+    if (cfg.scale !== undefined) this.playerSprite.setScale(cfg.scale);
     this.player = this.playerSprite as unknown as Phaser.GameObjects.Container;
     this.updatePlayerSprite();
   }
@@ -526,7 +547,8 @@ export class ExpeditionScene extends Phaser.Scene {
 
   private repositionPlayer(): void {
     const p = gridToIso(this.playerX, this.playerY);
-    this.player.setPosition(p.x, p.y);
+    const cfg = getSpriteConfig('player_bottom_left');
+    this.player.setPosition(p.x + (cfg.offsetX ?? 0), p.y + (cfg.offsetY ?? 0));
   }
 
   private revealSurroundings(radius: number = 10): void {
@@ -1588,11 +1610,12 @@ export class ExpeditionScene extends Phaser.Scene {
     this.floorEntry = false;
 
     const target = gridToIso(nx, ny);
+    const cfg = getSpriteConfig('player_bottom_left');
     this.isMoving = true;
     this.tweens.add({
       targets: this.player,
-      x: target.x,
-      y: target.y,
+      x: target.x + (cfg.offsetX ?? 0),
+      y: target.y + (cfg.offsetY ?? 0),
       duration: 100,
       ease: 'Linear',
       onComplete: () => { this.isMoving = false; },
