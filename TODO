@@ -1,3 +1,18 @@
-- Show unique conversation in prompt per NPC when rescuing NPC in the dungeon
-- Replace glowing diamond during player's object selection by target sprite border which follow selected object sprite shape, border should be surrounding the selected object
-- Result screen should also show rescued villagers and learned recipe during the run
+Expedition preparation UI Revamp
+- Show chosen pickaxe sprite during selection, cycle through available pickaxe by pressing left/right
+- Show chosen rings icon, cycle through available ring by pressing left/right
+- Add arrows sprite for cycling through options, clickable for touch screen support
+- Add 256 x 256 sprite for showing character photo in the left side of the options
+- Make sure the UI container fits all contents
+
+Dynamic lighting
+
+Homeland revamp:
+- Add building construction animation (5 seconds) when constructing a building
+- Play construction SFX during the construction
+- Play satisfying SFX on finishing a building
+
+
+Revamp Expedition Results
+- Adjust Rescued and Discovered UI information to below of the Items Collected
+  - if the list is too long, it can be scrolled
