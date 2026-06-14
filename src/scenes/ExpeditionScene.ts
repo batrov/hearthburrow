@@ -174,13 +174,6 @@ export class ExpeditionScene extends Phaser.Scene {
     this.mining = new MiningSystem();
     this.mining.setPickaxeTier(gameState.currentPickaxeTier);
     this.inventory = new InventorySystem(this.debugMode ? 100 : 16 + gameState.inventorySlotBonus, false);
-    for (const [id, qty] of Object.entries(this.loadoutConsumables)) {
-      if (qty > 0) this.giveItem(id, qty);
-    }
-    if (this.debugMode) {
-      this.giveItem('stamina_potion', 5);
-      this.giveItem('mining_bomb', 5);
-    }
     gameState.runVillagersRescued = [];
     gameState.runRecipesDiscovered = [];
     this.expeditionState.reset();
@@ -516,6 +509,14 @@ export class ExpeditionScene extends Phaser.Scene {
     }).setScrollFactor(0).setDepth(DEPTH.HUD);
 
     this.drawInventoryGauge();
+
+    for (const [id, qty] of Object.entries(this.loadoutConsumables)) {
+      if (qty > 0) this.giveItem(id, qty);
+    }
+    if (this.debugMode) {
+      this.giveItem('stamina_potion', 5);
+      this.giveItem('mining_bomb', 5);
+    }
 
     this.add.text(20, 92, '[TAB] Inventory', {
       fontSize: '11px', fontFamily: 'monospace', color: '#4a5a4a',
