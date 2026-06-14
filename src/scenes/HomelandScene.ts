@@ -245,7 +245,7 @@ export class HomelandScene extends Phaser.Scene {
       p.x + (cfg.offsetX ?? 0),
       p.y + (cfg.offsetY ?? 0),
       'player_bottom_left',
-    ).setDepth(10);
+    ).setDepth(6 + (this.playerGx + this.playerGy) * 0.001 + 0.0005);
     if (cfg.originX !== undefined || cfg.originY !== undefined) {
       this.player.setOrigin(cfg.originX ?? 0.5, cfg.originY ?? 0.5);
     }
@@ -271,6 +271,7 @@ export class HomelandScene extends Phaser.Scene {
     const p = gridToIso(this.playerGx, this.playerGy);
     const cfg = getSpriteConfig('player_bottom_left');
     this.player.setPosition(p.x + (cfg.offsetX ?? 0), p.y + (cfg.offsetY ?? 0));
+    this.player.setDepth(6 + (this.playerGx + this.playerGy) * 0.001 + 0.0005);
     this.playerLabel.setPosition(p.x, p.y - 30);
   }
 
@@ -804,6 +805,7 @@ export class HomelandScene extends Phaser.Scene {
       targets: this.player,
       x: target.x + (cfg.offsetX ?? 0),
       y: target.y + (cfg.offsetY ?? 0),
+      depth: 6 + (nx + ny) * 0.001 + 0.0005,
       duration: 100,
       ease: 'Linear',
       onComplete: () => { this.isMoving = false; },

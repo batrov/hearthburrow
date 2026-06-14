@@ -63,9 +63,13 @@ function getDepthPalette(depth: number): Palette {
   };
 }
 
+function playerDepth(x: number, y: number): number {
+  return 6 + (x + y) * 0.001 + 0.0005;
+}
+
 const DEPTH = {
   TERRAIN: 4, INTERACTIVE_BASE: 6, SELECTED_BACKDROP: 7, PREVIEW_TILE: 7.1,
-  PLAYER: 8, FACING_HIGHLIGHT: 12, EFFECTS: 14, PARTICLES: 15, BOMB: 20,
+  FACING_HIGHLIGHT: 12, EFFECTS: 14, PARTICLES: 15, BOMB: 20,
   ITEM_POPUP: 25, ITEM_SPRITE: 26, DARKNESS: 48, HUD_BG: 50, HUD: 51, MINIMAP_DOT: 52,
   INTERACT_PROMPT: 55, OVERLAY: 100, OVERLAY_TEXT: 101,
   POPUP: 200, CLICK_ZONES: 210, ANALOG: 250,
@@ -524,7 +528,7 @@ export class ExpeditionScene extends Phaser.Scene {
       p.x + (cfg.offsetX ?? 0),
       p.y + (cfg.offsetY ?? 0),
       'player_bottom_left',
-    ).setDepth(DEPTH.PLAYER);
+    ).setDepth(playerDepth(this.playerX, this.playerY));
     if (cfg.originX !== undefined || cfg.originY !== undefined) {
       this.playerSprite.setOrigin(cfg.originX ?? 0.5, cfg.originY ?? 0.5);
     }
@@ -549,6 +553,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const p = gridToIso(this.playerX, this.playerY);
     const cfg = getSpriteConfig('player_bottom_left');
     this.player.setPosition(p.x + (cfg.offsetX ?? 0), p.y + (cfg.offsetY ?? 0));
+    this.player.setDepth(playerDepth(this.playerX, this.playerY));
   }
 
   private revealSurroundings(radius: number = 10): void {
@@ -1616,6 +1621,7 @@ export class ExpeditionScene extends Phaser.Scene {
       targets: this.player,
       x: target.x + (cfg.offsetX ?? 0),
       y: target.y + (cfg.offsetY ?? 0),
+      depth: playerDepth(nx, ny),
       duration: 100,
       ease: 'Linear',
       onComplete: () => { this.isMoving = false; },

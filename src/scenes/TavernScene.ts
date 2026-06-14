@@ -152,7 +152,7 @@ export class TavernScene extends Phaser.Scene {
       p.x + (cfg.offsetX ?? 0),
       p.y + (cfg.offsetY ?? 0),
       'player_bottom_left',
-    ).setDepth(10 + (this.playerGx + this.playerGy) * 0.01);
+    ).setDepth(6 + (this.playerGx + this.playerGy) * 0.01 + 0.005);
     if (cfg.originX !== undefined || cfg.originY !== undefined) {
       this.player.setOrigin(cfg.originX ?? 0.5, cfg.originY ?? 0.5);
     }
@@ -178,7 +178,7 @@ export class TavernScene extends Phaser.Scene {
     const p = gridToScreen(this.playerGx, this.playerGy);
     const cfg = getSpriteConfig('player_bottom_left');
     this.player.setPosition(p.x + (cfg.offsetX ?? 0), p.y + (cfg.offsetY ?? 0));
-    this.player.setDepth(10 + (this.playerGx + this.playerGy) * 0.01);
+    this.player.setDepth(6 + (this.playerGx + this.playerGy) * 0.01 + 0.005);
     this.playerLabel.setPosition(p.x, p.y - 30);
   }
 
@@ -189,7 +189,7 @@ export class TavernScene extends Phaser.Scene {
       const npc = rescued[i];
       const gpos = NPC_GRID[i];
       const pos = gridToScreen(gpos.x, gpos.y);
-      const depth = 8 + (gpos.x + gpos.y) * 0.01;
+      const depth = 6 + (gpos.x + gpos.y) * 0.01 + 0.003;
 
       const npcCfg = getSpriteConfig(`npc_${npc.variant}`);
       const container = this.add.container(
@@ -494,6 +494,7 @@ export class TavernScene extends Phaser.Scene {
       targets: this.player,
       x: target.x + (cfg.offsetX ?? 0),
       y: target.y + (cfg.offsetY ?? 0),
+      depth: 6 + (nx + ny) * 0.01 + 0.005,
       duration: 100,
       ease: 'Linear',
       onComplete: () => { this.isMoving = false; },

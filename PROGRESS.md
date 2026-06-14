@@ -86,6 +86,11 @@ Resolved Bugs:
 - **NPC Photobook panel** — `[P]` key opens a full panel listing all rescued NPCs with variant number, name, and rescue depth; W/S scroll, ESC close
 - **Rescue popup** — rescuing an NPC now shows a floating `Rescued: {name}!` notification via `createPopup`
 
+## ✅ Dynamic Player Depth (June 2026)
+- **Painter's-algorithm depth** — player and NPC depth now uses `6 + (x+y)*interval` instead of fixed values, correctly interleaving with walls so south/east walls partially occlude the player
+- **Applied to all 3 scenes** — Expedition (`6 + (x+y)*0.001 + 0.0005`), Tavern (player `+0.005`, NPCs `+0.003`), Homeland (`6 + (x+y)*0.001 + 0.0005`)
+- **Smooth tweening** — player depth animated alongside position in movement tweens for seamless transitions
+
 ## ✅ Sprite Config System (June 2026)
 - **Centralized `sprite-offsets.json`** — all sprite positioning offsets, scale, and origin live in one JSON file instead of hardcoded across 3 scenes
 - **Prefix-based wildcard matching** — `player_*` matches all player frames, `npc_*` matches all NPC variants, `ore_*` covers all ore types, etc.; longest pattern wins for specificity
