@@ -46,7 +46,6 @@ const EVENT_POOL: { type: TileType; eventId: string }[] = [
   { type: 'event_merchant', eventId: 'wandering_trader' },
   { type: 'event_villager', eventId: 'trapped_villager' },
   { type: 'event_goblin', eventId: 'gambling_goblin' },
-  { type: 'event_shop', eventId: 'midrun_shop' },
 ];
 
 const ENEMY_POOL: { type: string; weight: number }[] = [
