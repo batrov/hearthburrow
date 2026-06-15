@@ -8,13 +8,6 @@ Found bug:
 - seed: z2cugj15, floor 12
   - all pressure plate already pressed, but stair do not appeared
 
-Once rescued, NPC will give one time reward to player after an interaction in tavern and unlock Miner's Potion recipe
-- Miner's Spirit
-  - It is used as a crafting materials for Miner's Potion
-- Miner's Potion
-  - Consumed upon craft, increase max stamina by 5
-- NPC no longer increase stamina on rescue
-
 Player walking animation
 - Currently it only loops through sprite 0 to sprite 1
 - Ideally, on walk, it cycles through sprite 1 - 5

@@ -195,7 +195,7 @@ export class HomelandScene extends Phaser.Scene {
         for (let dx = 0; dx < b.gw; dx++) {
           const p = gridToIso(b.gx + dx, b.gy + dy);
           const img = this.add.image(p.x, p.y, texKey).setAlpha(alpha);
-          img.setData('bid', b.id);
+          img.setData('bid', b.buildingId || b.id);
           this.buildingsContainer.add(img);
         }
       }
@@ -1120,7 +1120,7 @@ export class HomelandScene extends Phaser.Scene {
     this.selectedElevatorFloor = this.elevatorFloorOptions.includes(0) ? 0 : (this.elevatorFloorOptions[0] ?? 0);
     this.resetConfirm = false;
     this.maxTab = 9;
-    this.gateSeed = gameState.currentRunSeed;
+    this.gateSeed = gameState.currentRunSeed || Math.random().toString(36).substring(2, 10);
     this.seedEditing = false;
 
     this.gateTab = 0;
@@ -1323,7 +1323,7 @@ export class HomelandScene extends Phaser.Scene {
         debug: this.debugMode,
         consumables,
         startFloor: this.selectedElevatorFloor,
-        seed: this.gateSeed,
+        seed: gameState.currentRunSeed,
       });
     });
   }
