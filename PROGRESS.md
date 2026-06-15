@@ -172,6 +172,15 @@ Resolved Bugs:
 - **Offset-copy technique** — 24 white `setTintFill(0xffffff)` copies per facing tile (8 directions × 3 radii): 1px at 0.85 alpha, 2px at 0.40, 3px at 0.12; placed at depth 7.05, behind the preview sprite but above the dark backdrop
 - **Persist fix** — outline array cleaned up at the top of `updateFacingHighlight()` before all early returns, preventing stale white sprites accumulating on floor tiles
 
+## ✅ NPC Rescue → Tavern Reward System (June 2026)
+- **Stamina bonus removed from rescue** — `gameState.maxStaminaBonus += 2` eliminated from `trapped_villager` handler; rescuing no longer gives direct stamina
+- **Miner's Spirit one-time reward** — first talk with each rescued NPC in the tavern grants 1 `miners_spirit` item (stored in homeland inventory)
+- **Miner's Potion recipe** — discovered on first NPC tavern talk; crafted in the homeland Crafting Station from 1 Miner's Spirit; consumed on craft to permanently add +5 max stamina
+- **Recipe hint in panel** — undiscovered recipe shows `"Rescue a villager and talk to them at the Tavern"` in the crafting panel
+- **Stacked obtain popups** — item and recipe notifications appear in the top-left corner matching the dungeon `queueObtainPopup` pattern (sprite + name + fade tween), stacked when both fire
+- **SFX** — `playItemPickup()` chime for spirit acquisition; `playPuzzleComplete()` arpeggio for recipe discovery
+- **20 spirits available** — each of the 20 unique NPCs can give one spirit on first tavern talk, enabling up to +100 max stamina from potion crafts
+
 ## ✅ Player Running Animation (June 2026)
 - **6 walk frames per direction** — 12 pre-rendered PNGs (`player_bottom_left_0`…`5`, `player_top_right_0`…`5`) loaded from disk in BootScene, replacing 2 static procedural textures
 - **Procedural fallback removed** — player section deleted from `TextureGenerator.ts` (frames now ship as real PNGs)

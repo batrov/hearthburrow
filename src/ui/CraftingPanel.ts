@@ -25,6 +25,7 @@ const RECIPE_INFO: Record<string, { desc: string; unlock?: string }> = {
   lantern_bronze: { desc: '+60px light radius for 5 expeditions', unlock: 'Reach floor 3 (dark)' },
   lantern_silver: { desc: '+60px light radius for 5 expeditions', unlock: 'Craft bronze version first' },
   lantern_gold: { desc: '+60px light radius for 5 expeditions', unlock: 'Craft silver version first' },
+  miners_potion: { desc: 'Permanently +5 max stamina (consumed on craft)', unlock: 'Rescue a villager and talk to them at the Tavern' },
 };
 
 export class CraftingPanel extends BasePanel {

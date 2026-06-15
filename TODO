@@ -1,18 +1,26 @@
-Expedition preparation UI Revamp
-- Show chosen pickaxe sprite during selection, cycle through available pickaxe by pressing left/right
-- Show chosen rings icon, cycle through available ring by pressing left/right
-- Add arrows sprite for cycling through options, clickable for touch screen support
-- Add 256 x 256 sprite for showing character photo in the left side of the options
-- Make sure the UI container fits all contents
-
 Dynamic lighting
 
-Homeland revamp:
-- Add building construction animation (5 seconds) when constructing a building
-- Play construction SFX during the construction
-- Play satisfying SFX on finishing a building
+Wandering shop should only appears after trading post construction
+- Carrots are deducted directly from the homeland storage instead of player inventory
+- Show available carrots during interaction with wandering shop
 
+Found bug:
+- seed: z2cugj15, floor 12
+  - all pressure plate already pressed, but stair do not appeared
 
-Revamp Expedition Results
-- Adjust Rescued and Discovered UI information to below of the Items Collected
-  - if the list is too long, it can be scrolled
+Once rescued, NPC will give one time reward to player after an interaction in tavern and unlock Miner's Potion recipe
+- Miner's Spirit
+  - It is used as a crafting materials for Miner's Potion
+- Miner's Potion
+  - Consumed upon craft, increase max stamina by 5
+- NPC no longer increase stamina on rescue
+
+Player walking animation
+- Currently it only loops through sprite 0 to sprite 1
+- Ideally, on walk, it cycles through sprite 1 - 5
+- On idle, it uses sprite 0
+- Take inspiration from pokemon emerald / fire red running animation
+
+Bug:
+- seed shown in result page is different from the last actual run if using random seed
+- should randomize seed first before expedition

@@ -6,7 +6,8 @@
     { "id": "gold_ore", "name": "Gold Ore", "tier": 3, "rarity": "rare", "maxStack": 99 },
     { "id": "crystal", "name": "Crystal", "tier": 3, "rarity": "rare", "maxStack": 99 },
     { "id": "monster_drop", "name": "Monster Essence", "tier": 1, "rarity": "uncommon", "maxStack": 99 },
-    { "id": "carrot", "name": "Carrot", "tier": 1, "rarity": "common", "maxStack": 99 }
+    { "id": "carrot", "name": "Carrot", "tier": 1, "rarity": "common", "maxStack": 99 },
+    { "id": "miners_spirit", "name": "Miner's Spirit", "tier": 3, "rarity": "rare", "maxStack": 99 }
   ],
   "equipment": [
     { "id": "pickaxe_1", "name": "Common Pickaxe", "tier": 1, "slot": "pickaxe", "mining_power": 1 },
@@ -31,6 +32,7 @@
   "consumables": [
     { "id": "stamina_potion", "name": "Stamina Potion", "effect": "restore_stamina", "value": 30 },
     { "id": "teleport_scroll", "name": "Teleport Scroll", "effect": "safe_extract", "value": 0 },
-    { "id": "mining_bomb", "name": "Mining Bomb", "effect": "break_tiles", "value": 3 }
+    { "id": "mining_bomb", "name": "Mining Bomb", "effect": "break_tiles", "value": 3 },
+    { "id": "miners_potion", "name": "Miner's Potion", "effect": "max_stamina", "value": 5 }
   ]
 }

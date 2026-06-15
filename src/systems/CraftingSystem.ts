@@ -70,6 +70,14 @@ export class CraftingSystem {
       gameState.inventory.removeItem(itemId, qty);
     }
 
+    // Miner's Potion is consumed on craft — apply effect directly
+    if (recipe.result === 'miners_potion') {
+      gameState.maxStaminaBonus += 5;
+      gameState.addCraftedItem(recipe.result);
+      gameState.save();
+      return true;
+    }
+
     const hadItem = gameState.inventory.count(recipe.result) > 0;
 
     gameState.inventory.addItem(recipe.result, recipe.quantity);

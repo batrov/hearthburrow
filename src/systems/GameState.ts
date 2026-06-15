@@ -282,6 +282,8 @@ const ITEM_NAMES: Record<string, string> = {
   lantern_bronze: 'Bronze Lantern',
   lantern_silver: 'Silver Lantern',
   lantern_gold: 'Gold Lantern',
+  miners_spirit: "Miner's Spirit",
+  miners_potion: "Miner's Potion",
 };
 
 /** Get the human-readable display name for an item ID. Falls back to replacing underscores with spaces. */
@@ -470,9 +472,9 @@ class GameState {
     };
     const bonus = this.equippedLantern ? (tierRanges[this.equippedLantern] ?? 0) : 0;
     if (isDarkFloor) {
-      return 90 + bonus * 60;
+      return 90 + bonus * 30;
     }
-    return bonus * 60;
+    return bonus * 30;
   }
 
   /** Check if an item has per-run durability (boots, lanterns). */

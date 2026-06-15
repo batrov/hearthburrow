@@ -398,6 +398,22 @@ export function generateAll(scene: Phaser.Scene): void {
       g.lineStyle(1, 0xffffff, 0.5);
       g.strokeCircle(cx, cy, 7);
     },
+    miners_spirit: (cx, cy) => {
+      g.fillStyle(0x8844aa, 1);
+      g.fillCircle(cx, cy, 6);
+      g.fillStyle(0xaa66cc, 0.8);
+      g.fillCircle(cx, cy, 3);
+      g.fillStyle(0xcccccc, 1);
+      g.fillRect(cx - 2, cy - 9, 4, 4);
+    },
+    miners_potion: (cx, cy) => {
+      g.fillStyle(0xcccccc, 1);
+      g.fillRect(cx - 3, cy - 8, 6, 4);
+      g.fillStyle(0xddaa44, 1);
+      g.fillRoundedRect(cx - 5, cy - 4, 10, 10, 3);
+      g.fillStyle(0xffdd88, 0.6);
+      g.fillCircle(cx, cy, 2);
+    },
     relic_luck: (cx, cy) => {
       g.fillStyle(0x44cc66, 1);
       g.fillCircle(cx, cy, 7);

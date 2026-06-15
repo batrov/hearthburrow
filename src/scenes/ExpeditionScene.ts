@@ -1339,7 +1339,6 @@ export class ExpeditionScene extends Phaser.Scene {
                     gameState.villagerRescueFloors.add(depth);
                     gameState.villagersRescued++;
                     gameState.runVillagersRescued.push({ variant, name });
-                gameState.maxStaminaBonus += 2;
                 gameState.save();
                 this.createPopup(`Rescued: ${name}!`, this.cameras.main.width / 2, 300, '#44cc66');
               },

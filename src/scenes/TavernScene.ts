@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { gameState, NPC_PERSONALITIES } from '../systems/GameState';
+import { gameState, NPC_PERSONALITIES, itemDisplayName, itemIconKey } from '../systems/GameState';
 import { audio } from '../systems/AudioSystem';
 import { getSpriteConfig } from '../systems/SpriteConfig';
 import {
@@ -555,7 +555,9 @@ export class TavernScene extends Phaser.Scene {
     if (!personality) return;
 
     const greeting = personality.greetings[(npc.talkCount ?? 0) % personality.greetings.length];
+    const isFirstTalk = npc.talkCount === 0;
     npc.talkCount++;
+
     gameState.save();
 
     this.greetingActive = true;
@@ -574,6 +576,24 @@ export class TavernScene extends Phaser.Scene {
       fontSize: '13px', fontFamily: 'monospace', color: '#e8d5b7', align: 'center',
     }).setOrigin(0.5).setDepth(201);
 
+    if (isFirstTalk) {
+      const recipeWasNew = !gameState.crafting.isDiscovered('miners_potion');
+      gameState.inventory.addItem('miners_spirit', 1);
+      if (recipeWasNew) {
+        gameState.crafting.discover('miners_potion');
+      }
+      gameState.save();
+
+      this.showObtainPopup('miners_spirit', 1, undefined, 0);
+      if (recipeWasNew) {
+        this.showObtainPopup('miners_potion', 1, 'New Recipe', 1);
+      }
+      audio.playItemPickup();
+      if (recipeWasNew) {
+        audio.playPuzzleComplete();
+      }
+    }
+
     const closeHint = this.add.text(960 / 2, 640 / 2 + 40, '[SPACE / ESC] close', {
       fontSize: '11px', fontFamily: 'monospace', color: '#6a5a4a',
     }).setOrigin(0.5).setDepth(201);
@@ -590,6 +610,43 @@ export class TavernScene extends Phaser.Scene {
 
     this.input.keyboard!.on('keydown-SPACE', close);
     this.input.keyboard!.on('keydown-ESC', close);
+  }
+
+  private showObtainPopup(id: string, qty: number, prefix?: string, stackIndex: number = 0): void {
+    const y = 116 + stackIndex * 36;
+    const container = this.add.container(20, y).setScrollFactor(0).setDepth(250);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0a0a1a, 0.8);
+    bg.fillRoundedRect(0, 0, 220, 36, 4);
+    container.add(bg);
+
+    const texKey = itemIconKey(id);
+    const sprite = this.add.image(18, 18, this.textures.exists(texKey) ? texKey : '__DEFAULT');
+    sprite.setScale(0.7);
+    container.add(sprite);
+
+    if (qty > 1) {
+      const badge = this.add.text(30, 26, `x${qty}`, {
+        fontSize: '9px', fontFamily: 'monospace', color: '#ffdd88',
+      }).setOrigin(1, 1);
+      container.add(badge);
+    }
+
+    const labelText = prefix ? `${prefix}: ${itemDisplayName(id)}` : itemDisplayName(id);
+    const label = this.add.text(38, 10, labelText, {
+      fontSize: '14px', fontFamily: 'monospace', color: '#e8d5b7',
+    });
+    container.add(label);
+
+    container.setAlpha(0);
+    this.tweens.add({ targets: container, alpha: 1, duration: 100, ease: 'Quad.easeOut' });
+    this.time.delayedCall(1500, () => {
+      this.tweens.add({
+        targets: container, alpha: 0, duration: 200, ease: 'Quad.easeIn',
+        onComplete: () => container.destroy(),
+      });
+    });
   }
 
   private leave(): void {
