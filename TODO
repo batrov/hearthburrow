@@ -1,9 +1,5 @@
 Dynamic lighting
 
-Wandering shop should only appears after trading post construction
-- Carrots are deducted directly from the homeland storage instead of player inventory
-- Show available carrots during interaction with wandering shop
-
 Found bug:
 - seed: z2cugj15, floor 12
   - all pressure plate already pressed, but stair do not appeared
@@ -13,7 +9,3 @@ Player walking animation
 - Ideally, on walk, it cycles through sprite 1 - 5
 - On idle, it uses sprite 0
 - Take inspiration from pokemon emerald / fire red running animation
-
-Bug:
-- seed shown in result page is different from the last actual run if using random seed
-- should randomize seed first before expedition

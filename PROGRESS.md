@@ -106,6 +106,7 @@
 
 Resolved Bugs:
 - Pressure plate puzzle stairs not spawning — `completePuzzle` only searched for `type === 'floor'`, but stepped-on plates are `type === 'pressure_plate'`. Fixed by including `pressure_plate` in the candidate search. Also updated `stairsDownX/Y` after placement for correct ascending landing.
+- Building shake animation not playing — `setData('bid', b.id)` used `HUB_BUILDINGS.id` (e.g. `'tavern'`) but `tryRestore` looked up by `buildingId` (e.g. `'housing'`). Fixed by using `b.buildingId || b.id` so filter matches.
 
 ## ✅ Item Sprite Polish (June 2026)
 - **ExpeditionRecapScene** — item sprites now shown next to each item name in the collected/lost lists

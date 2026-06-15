@@ -443,13 +443,16 @@ export class TavernScene extends Phaser.Scene {
       this.animTimer += delta;
       if (this.animTimer >= this.ANIM_INTERVAL) {
         this.animTimer = 0;
-        this.animFrame = (this.animFrame + 1) % 6;
+        this.animFrame = (this.animFrame % 5) + 1;
         this.updatePlayerSprite();
       }
-    } else if (this.animFrame !== 0) {
-      this.animFrame = 0;
-      this.animTimer = 0;
-      this.updatePlayerSprite();
+    } else {
+      this.animTimer += delta;
+      if (this.animTimer > 250 && this.animFrame !== 0) {
+        this.animFrame = 0;
+        this.animTimer = 0;
+        this.updatePlayerSprite();
+      }
     }
     const doorCell = this.findDoorCell();
     if (doorCell) {
