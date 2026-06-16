@@ -16,7 +16,6 @@ export interface EnemyConfig {
 }
 
 export class CombatPanel extends BasePanel {
-  private overlay: Phaser.GameObjects.Graphics;
   private enemyNameText: Phaser.GameObjects.Text;
   private hpBar: Phaser.GameObjects.Graphics;
   private hpText: Phaser.GameObjects.Text;
@@ -30,6 +29,7 @@ export class CombatPanel extends BasePanel {
   private staminaGfx: Phaser.GameObjects.Graphics;
   private staminaLabel: Phaser.GameObjects.Text;
 
+  private touchZone: Phaser.GameObjects.Rectangle;
   private result: CombatResult = null;
   private enemyHP: number = 0;
   private enemyMaxHP: number = 0;
@@ -52,7 +52,19 @@ export class CombatPanel extends BasePanel {
     super(scene);
 
     this.overlay = scene.add.graphics();
-    this.overlay.setInteractive(new Phaser.Geom.Rectangle(0, 0, 960, 640), Phaser.Geom.Rectangle.Contains);
+    this.overlay.setInteractive(new Phaser.Geom.Rectangle(0, 0, 960, 640), Phaser.Geom.Rectangle.Contains).setData('isUI', true);
+    this.overlay.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (!this._visible) return;
+      if (this.result === 'victory') {
+        this.handleCollect();
+        return;
+      }
+      if (pointer.y > 400) {
+        this.handleRetreat();
+      } else {
+        this.handleStrike();
+      }
+    });
     this.container.add(this.overlay);
 
     this.enemyNameText = scene.add.text(960 / 2, 150, '', {
@@ -99,6 +111,11 @@ export class CombatPanel extends BasePanel {
     this.hintText = scene.add.text(960 / 2, 520, '[SPACE] Strike  |  [ESC] Retreat', {
       fontSize: '12px', fontFamily: 'monospace', color: '#5a4a6a',
     }).setOrigin(0.5);
+    this.hintText.setInteractive().setData('isUI', true);
+    this.hintText.on('pointerdown', () => {
+      if (!this._visible) return;
+      this.result === 'victory' ? this.handleCollect() : this.handleStrike();
+    });
     this.container.add(this.hintText);
 
     this.staminaLabel = scene.add.text(960 / 2, 525, '', {
@@ -108,6 +125,22 @@ export class CombatPanel extends BasePanel {
 
     this.staminaGfx = scene.add.graphics();
     this.container.add(this.staminaGfx);
+
+    this.touchZone = scene.add.rectangle(480, 320, 960, 640, 0x000000, 0)
+      .setInteractive({ useHandCursor: true }).setData('isUI', true)
+      .setDepth(199).setScrollFactor(0).setVisible(false);
+    this.touchZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (!this._visible) return;
+      if (this.result === 'victory') {
+        this.handleCollect();
+        return;
+      }
+      if (pointer.y > 400) {
+        this.handleRetreat();
+      } else {
+        this.handleStrike();
+      }
+    });
   }
 
   show(
@@ -146,6 +179,7 @@ export class CombatPanel extends BasePanel {
     this.drawTimingBar(config.hitZoneWidth);
     this.startMarker(config.timingSpeed);
 
+    this.touchZone.setVisible(true);
     this.container.setVisible(true);
     this.container.setAlpha(0);
     this.scene.tweens.add({
@@ -175,6 +209,7 @@ export class CombatPanel extends BasePanel {
     this._visible = false;
     this.currentEnemy = null;
     this.enemySprite.setVisible(false);
+    this.touchZone.setVisible(false);
     this.container.setVisible(false);
     this.result = null;
   }
@@ -209,7 +244,7 @@ export class CombatPanel extends BasePanel {
         this.marker.setVisible(false);
         this.showFeedback('VICTORY!', '#44cc66');
         audio.playVictory();
-        this.hintText.setText('[SPACE] Collect rewards');
+        this.hintText.setText('[SPACE/TAP] Collect rewards');
         return 'kill';
       }
 

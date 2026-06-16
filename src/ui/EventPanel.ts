@@ -14,20 +14,20 @@ export interface EventConfig {
 }
 
 export class EventPanel extends BasePanel {
-  private overlay: Phaser.GameObjects.Graphics;
   private titleText: Phaser.GameObjects.Text;
   private descText: Phaser.GameObjects.Text;
   private choicesText: Phaser.GameObjects.Text;
   private hintText: Phaser.GameObjects.Text;
   private onComplete: (() => void) | null = null;
   private selectedIndex: number = 0;
+  private choiceZones: Phaser.GameObjects.Rectangle[] = [];
 
   constructor(scene: Phaser.Scene) {
     super(scene);
 
-    this.overlay = scene.add.graphics();
-    this.overlay.setInteractive(new Phaser.Geom.Rectangle(0, 0, 960, 640), Phaser.Geom.Rectangle.Contains);
-    this.container.add(this.overlay);
+    this.createOverlay();
+    this.overlay!.setData('isUI', true);
+    this.addTouchZones();
 
     this.titleText = scene.add.text(960 / 2, 160, '', {
       fontSize: '22px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
@@ -50,6 +50,31 @@ export class EventPanel extends BasePanel {
       fontSize: '12px', fontFamily: 'monospace', color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
+
+    this.addCloseButton();
+  }
+
+  addTouchZones(): void {
+    if (this.choiceZones.length > 0) return;
+    const startY = 290;
+    const lineH = 36;
+    for (let i = 0; i < 6; i++) {
+      const zone = this.scene.add.rectangle(960 / 2, startY + i * lineH, 400, lineH, 0xffffff, 0)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(210);
+      const idx = i;
+      zone.on('pointerdown', () => {
+        if (!this._visible || idx >= this.currentChoices.length) return;
+        this.selectChoice(idx);
+      });
+      zone.on('pointerover', () => {
+        if (!this._visible || idx >= this.currentChoices.length) return;
+        this.selectedIndex = idx;
+        this.renderChoices();
+      });
+      this.container.add(zone);
+      this.choiceZones.push(zone);
+    }
   }
 
   confirm(): void {
@@ -75,19 +100,19 @@ export class EventPanel extends BasePanel {
     this.selectedIndex = 0;
     this.currentChoices = config.choices;
 
-    this.overlay.clear();
-    this.overlay.fillStyle(0x0a0a1a, 0.9);
-    this.overlay.fillRect(0, 0, 960, 640);
+    this.overlay!.clear();
+    this.overlay!.fillStyle(0x0a0a1a, 0.9);
+    this.overlay!.fillRect(0, 0, 960, 640);
 
-    this.overlay.lineStyle(2, 0x5a4a7a, 0.6);
-    this.overlay.strokeRoundedRect(960 / 2 - 260, 120, 520, 420, 10);
+    this.overlay!.lineStyle(2, 0x5a4a7a, 0.6);
+    this.overlay!.strokeRoundedRect(960 / 2 - 260, 120, 520, 420, 10);
 
     this.titleText.setText(config.title);
     this.descText.setText(config.description);
 
     this.renderChoices();
 
-    this.hintText.setText('[W/S] Navigate  [SPACE] Confirm');
+    this.hintText.setText('[W/S] Navigate  [SPACE] Confirm  [TAP] Select');
 
     this.container.setVisible(true);
     this.container.setAlpha(0);

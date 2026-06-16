@@ -11,7 +11,6 @@ export interface RouletteSegment {
 }
 
 export class GamblePanel extends BasePanel {
-  private overlay: Phaser.GameObjects.Graphics;
   private wheelContainer: Phaser.GameObjects.Container;
   private wheelGfx: Phaser.GameObjects.Graphics;
   private pointerGfx: Phaser.GameObjects.Graphics;
@@ -37,10 +36,8 @@ export class GamblePanel extends BasePanel {
   constructor(scene: Phaser.Scene) {
     super(scene);
 
-    this.overlay = scene.add.graphics();
-    this.overlay.setInteractive(new Phaser.Geom.Rectangle(0, 0, 960, 640), Phaser.Geom.Rectangle.Contains);
-    this.overlay.on('pointerdown', () => this.onPress());
-    this.container.add(this.overlay);
+    this.createOverlay();
+    this.overlay!.on('pointerdown', () => this.onPress());
 
     this.wheelGfx = scene.add.graphics();
     this.wheelContainer = scene.add.container(this.CX, this.CY, [this.wheelGfx]);
@@ -67,6 +64,8 @@ export class GamblePanel extends BasePanel {
       align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.resultText);
+
+    this.addCloseButton();
   }
 
   show(
@@ -83,11 +82,11 @@ export class GamblePanel extends BasePanel {
     this.spinVelocity = 0;
     this.wheelContainer.angle = 0;
 
-    this.overlay.clear();
-    this.overlay.fillStyle(0x0a0a1a, 0.85);
-    this.overlay.fillRect(0, 0, 960, 640);
-    this.overlay.lineStyle(2, 0x5a4a7a, 0.6);
-    this.overlay.strokeRoundedRect(this.CX - 200, this.CY - this.RADIUS - 70, 400, this.RADIUS * 2 + 130, 12);
+    this.overlay!.clear();
+    this.overlay!.fillStyle(0x0a0a1a, 0.85);
+    this.overlay!.fillRect(0, 0, 960, 640);
+    this.overlay!.lineStyle(2, 0x5a4a7a, 0.6);
+    this.overlay!.strokeRoundedRect(this.CX - 200, this.CY - this.RADIUS - 70, 400, this.RADIUS * 2 + 130, 12);
 
     this.titleText.setText(`Roulette! (Cost: ${cost} Stone)`);
     this.hintText.setText('[SPACE] Stop the wheel!');

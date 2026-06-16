@@ -35,7 +35,6 @@ const ITEM_INFO: Record<string, { desc: string }> = {
 };
 
 export class InventoryPanel extends BasePanel {
-  private overlay: Phaser.GameObjects.Graphics;
   private titleText: Phaser.GameObjects.Text;
   private itemRows: Phaser.GameObjects.Container;
   private hintText: Phaser.GameObjects.Text;
@@ -62,9 +61,7 @@ export class InventoryPanel extends BasePanel {
     this.onUse = onUse;
     this.onTrash = onTrash;
 
-    this.overlay = scene.add.graphics();
-    this.overlay.setInteractive(new Phaser.Geom.Rectangle(0, 0, 960, 640), Phaser.Geom.Rectangle.Contains);
-    this.container.add(this.overlay);
+    this.createOverlay();
 
     this.titleText = scene.add.text(960 / 2, 30, title, {
       fontSize: '22px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
@@ -89,6 +86,8 @@ export class InventoryPanel extends BasePanel {
       align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.descriptionText);
+
+    this.addCloseButton();
   }
 
   handleInput(key: string): void {
@@ -113,29 +112,14 @@ export class InventoryPanel extends BasePanel {
     }
   }
 
-  show(): void {
-    this.setVisible(true);
-    this.dirty = true;
-
-    this.container.setAlpha(0);
-    this.scene.tweens.add({
-      targets: this.container,
-      alpha: 1,
-      duration: 150,
-      ease: 'Quad.easeOut',
-    });
+  toggle(): void {
+    if (this._visible) this.hide();
+    else this.show();
   }
 
-  hide(): void {
-    this.scene.tweens.add({
-      targets: this.container,
-      alpha: 0,
-      duration: 150,
-      ease: 'Quad.easeIn',
-      onComplete: () => {
-        this.setVisible(false);
-      },
-    });
+  show(): void {
+    this.fadeIn();
+    this.dirty = true;
   }
 
   refresh(): void {

@@ -29,7 +29,6 @@ const RECIPE_INFO: Record<string, { desc: string; unlock?: string }> = {
 };
 
 export class CraftingPanel extends BasePanel {
-  private overlay: Phaser.GameObjects.Graphics;
   private titleText: Phaser.GameObjects.Text;
   private recipeLines: Phaser.GameObjects.Container;
   private hintText: Phaser.GameObjects.Text;
@@ -41,9 +40,7 @@ export class CraftingPanel extends BasePanel {
   constructor(scene: Phaser.Scene) {
     super(scene);
 
-    this.overlay = scene.add.graphics();
-    this.overlay.setInteractive(new Phaser.Geom.Rectangle(0, 0, 960, 640), Phaser.Geom.Rectangle.Contains);
-    this.container.add(this.overlay);
+    this.createOverlay();
 
     this.titleText = scene.add.text(960 / 2, 40, 'Crafting Station', {
       fontSize: '22px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
@@ -63,32 +60,14 @@ export class CraftingPanel extends BasePanel {
       fontSize: '11px', fontFamily: 'monospace', color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
+
+    this.addCloseButton();
   }
 
   show(): void {
-    this.setVisible(true);
     this.selectedIndex = 0;
     this.refresh();
-
-    this.container.setAlpha(0);
-    this.scene.tweens.add({
-      targets: this.container,
-      alpha: 1,
-      duration: 150,
-      ease: 'Quad.easeOut',
-    });
-  }
-
-  hide(): void {
-    this.scene.tweens.add({
-      targets: this.container,
-      alpha: 0,
-      duration: 150,
-      ease: 'Quad.easeIn',
-      onComplete: () => {
-        this.setVisible(false);
-      },
-    });
+    this.fadeIn();
   }
 
   navigateUp(): void {
@@ -230,7 +209,6 @@ export class CraftingPanel extends BasePanel {
     this.overlay.clear();
     this.overlay.fillStyle(0x0a0a1a, 0.88);
     this.overlay.fillRect(0, 0, 960, 640);
-
     this.overlay.lineStyle(1, 0x3a3a4a, 0.5);
     this.overlay.strokeRect(40, 65, 880, 530);
 

@@ -34,7 +34,6 @@ const PROJECTS: ResearchProject[] = [
 ];
 
 export class ResearchPanel extends BasePanel {
-  private bg: Phaser.GameObjects.Graphics;
   private text: Phaser.GameObjects.Text;
   private selectionIndex: number = 0;
   private clickZones: Phaser.GameObjects.Zone[] = [];
@@ -42,24 +41,21 @@ export class ResearchPanel extends BasePanel {
   constructor(scene: Phaser.Scene) {
     super(scene);
 
-    this.bg = scene.add.graphics();
-    this.container.add(this.bg);
+    this.createOverlay();
 
     this.text = scene.add.text(960 / 2, 50, '', {
       fontSize: '14px', fontFamily: 'monospace', color: '#e8d5b7',
       align: 'center', lineSpacing: 6,
     }).setOrigin(0.5, 0);
     this.container.add(this.text);
+
+    this.addCloseButton();
   }
 
   show(): void {
-    this.setVisible(true);
     this.selectionIndex = 0;
     this.render();
-  }
-
-  hide(): void {
-    this.setVisible(false);
+    this.fadeIn();
   }
 
   navigateUp(): void {
@@ -126,11 +122,11 @@ export class ResearchPanel extends BasePanel {
   }
 
   private render(): void {
-    this.bg.clear();
-    this.bg.fillStyle(0x0a0a1a, 0.92);
-    this.bg.fillRect(0, 0, 960, 640);
-    this.bg.lineStyle(1, 0x3a3a4a, 0.5);
-    this.bg.strokeRect(40, 40, 880, 560);
+    this.overlay!.clear();
+    this.overlay!.fillStyle(0x0a0a1a, 0.92);
+    this.overlay!.fillRect(0, 0, 960, 640);
+    this.overlay!.lineStyle(1, 0x3a3a4a, 0.5);
+    this.overlay!.strokeRect(40, 40, 880, 560);
 
     this.clickZones.forEach(z => z.destroy());
     this.clickZones = [];

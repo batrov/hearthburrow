@@ -3,7 +3,6 @@ import { gameState, NPC_PERSONALITIES } from '../systems/GameState';
 import { BasePanel } from './BasePanel';
 
 export class NPCPhotobookPanel extends BasePanel {
-  private overlay: Phaser.GameObjects.Graphics;
   private titleText: Phaser.GameObjects.Text;
   private contentText: Phaser.GameObjects.Text;
   private hintText: Phaser.GameObjects.Text;
@@ -14,9 +13,8 @@ export class NPCPhotobookPanel extends BasePanel {
   constructor(scene: Phaser.Scene) {
     super(scene);
 
-    this.overlay = scene.add.graphics();
-    this.overlay.setInteractive(new Phaser.Geom.Rectangle(0, 0, 960, 640), Phaser.Geom.Rectangle.Contains);
-    this.container.add(this.overlay);
+    this.createOverlay();
+    this.overlay.setData('isUI', true);
 
     this.titleText = scene.add.text(960 / 2, 30, 'NPC Photobook', {
       fontSize: '22px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
@@ -33,6 +31,20 @@ export class NPCPhotobookPanel extends BasePanel {
       fontSize: '11px', fontFamily: 'monospace', color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
+
+    const upBtn = scene.add.text(960 / 2, 68, '▲', {
+      fontSize: '16px', fontFamily: 'monospace', color: '#886644',
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(210);
+    upBtn.on('pointerdown', () => { this.handleInput('W'); this.dirty = true; });
+    this.container.add(upBtn);
+
+    const downBtn = scene.add.text(960 / 2, 580, '▼', {
+      fontSize: '16px', fontFamily: 'monospace', color: '#886644',
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(210);
+    downBtn.on('pointerdown', () => { this.handleInput('S'); this.dirty = true; });
+    this.container.add(downBtn);
+
+    this.addCloseButton(920, 30);
   }
 
   handleInput(key: string): void {
@@ -46,21 +58,19 @@ export class NPCPhotobookPanel extends BasePanel {
     }
   }
 
+  toggle(): void {
+    if (this._visible) this.hide();
+    else this.show();
+  }
+
   show(): void {
-    this.setVisible(true);
     this.dirty = true;
     this.selectionIndex = 0;
-    this.container.setAlpha(0);
-    this.scene.tweens.add({
-      targets: this.container, alpha: 1, duration: 150, ease: 'Quad.easeOut',
-    });
+    this.fadeIn();
   }
 
   hide(): void {
-    this.scene.tweens.add({
-      targets: this.container, alpha: 0, duration: 150, ease: 'Quad.easeIn',
-      onComplete: () => { this.setVisible(false); },
-    });
+    this.fadeOut();
   }
 
   draw(): void {
@@ -86,7 +96,7 @@ export class NPCPhotobookPanel extends BasePanel {
 
     if (this.entries.length === 0) {
       this.contentText.setText('No villagers rescued yet.\nVenture into the dungeon to find them!');
-      this.hintText.setText('[ESC/TAB] close');
+      this.hintText.setText('[ESC/TAB/TAP] close');
       return;
     }
 
@@ -110,6 +120,6 @@ export class NPCPhotobookPanel extends BasePanel {
 
     this.contentText.setText(lines.join('\n') + info);
 
-    this.hintText.setText('[W/S] scroll  [ESC/TAB] close');
+    this.hintText.setText('[W/S] scroll  [ESC/TAB] close  [▲/▼] tap');
   }
 }
