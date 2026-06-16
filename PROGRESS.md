@@ -189,3 +189,18 @@ Resolved Bugs:
 - **`animFrame`/`animTimer` fields** — added to all 3 scenes (Expedition, Tavern, Homeland); `update()` advances frame every 60ms while `isMoving`, resets to frame 0 on idle
 - **`updatePlayerSprite()`** — constructs texture key as `${baseKey}_${this.animFrame}` instead of the static key
 - **Generator script** — `scripts/generate_player_frames.cjs` standalone Node script (no deps) that can re-render frames via raw PNG encoder
+
+---
+
+## ✅ Mobile Build (June 2026)
+- **PWA foundation** — VitePWA plugin, manifest (standalone/portrait), workbox caching, 192+512 icons
+- **Mobile HTML tags** — theme-color, viewport-fit=cover, touch-action: manipulation, safe-area padding, canvas touch-action: none
+- **Multi-touch config** — `input.activePointers: 2`, `input.touch: { capture: true }`
+- **On-screen Action Buttons** — ⚡Potion/📜Scroll/💣Bomb/❌Exit + ⚔️Fight button, scrollFactor(0), auto-hide on modals
+- **Building/gate interaction zones** — semi-transparent Rectangles on HomelandScene with pointer handlers
+- **Touch panel controls** — CombatPanel (tap zones), EventPanel (6 choice zones), FarmPanel (buttons), NPCPhotobookPanel (▲/▼ scroll)
+- **[X] Close buttons** — all popups have top-right close button
+- **Phase 1: AnalogStickInput** — extracted shared class, ~180 lines eliminated across 3 scenes
+- **Phase 2: BasePanel lifecycle** — `fadeIn()`/`fadeOut()`, `createOverlay()`, `addCloseButton()` helpers; all 9 panel subclasses migrated
+- **Phase 3: HomelandScene panels extracted** — BuildingInfoPanel, RestorePanel, GatePanel as proper BasePanel subclasses; HomelandScene drops ~686 lines
+- **Phase 4: isModalActive unified** — all 3 scenes use consistent getter pattern; ExpeditionScene covers all panels

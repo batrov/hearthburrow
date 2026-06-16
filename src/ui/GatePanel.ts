@@ -60,6 +60,9 @@ export class GatePanel extends BasePanel {
   };
 
   private seedKeyHandler: ((event: KeyboardEvent) => void) | null = null;
+  private embarkBtn!: Phaser.GameObjects.Text;
+  private closeBtn!: Phaser.GameObjects.Text;
+  private destroyed = false;
 
   constructor(scene: Phaser.Scene) {
     super(scene);
@@ -143,16 +146,20 @@ export class GatePanel extends BasePanel {
 
     this.container.add(this.scene.add.image(258, 180, 'portrait'));
 
-    this.addCloseButton(810, 50);
-
-    const embarkBtn = this.scene.add.text(258, 258, '[ EMBARK ]', {
+    this.embarkBtn = this.scene.add.text(258, 258, '[ EMBARK ]', {
       fontSize: '15px', fontFamily: 'monospace', color: '#ffcc44',
       backgroundColor: '#442a1acc', padding: { x: 12, y: 6 },
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setData('isUI', true);
-    embarkBtn.on('pointerdown', () => {
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(220).setInteractive({ useHandCursor: true }).setData('isUI', true);
+    this.embarkBtn.on('pointerdown', () => {
       if (this.isVisible() && this.gateTab !== 8 && this.gateTab !== 9) this.handleSpace();
     });
-    this.container.add(embarkBtn);
+    this.embarkBtn.setVisible(false);
+
+    this.closeBtn = this.scene.add.text(810, 50, '[X]', {
+      fontSize: '16px', fontFamily: 'monospace', color: '#aa6666',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(220).setInteractive({ useHandCursor: true }).setData('isUI', true);
+    this.closeBtn.on('pointerdown', () => this.hide());
+    this.closeBtn.setVisible(false);
   }
 
   show(): void {
@@ -200,6 +207,8 @@ export class GatePanel extends BasePanel {
     this.scene.input.keyboard!.on('keydown', this.seedKeyHandler);
 
     this.render();
+    this.embarkBtn.setVisible(true);
+    this.closeBtn.setVisible(true);
     this.fadeIn();
   }
 
@@ -210,6 +219,8 @@ export class GatePanel extends BasePanel {
     }
     this.seedEditing = false;
     this.consumableLoadout = {};
+    this.embarkBtn.setVisible(false);
+    this.closeBtn.setVisible(false);
     this.onCloseCb();
     super.hide();
   }
@@ -515,5 +526,17 @@ export class GatePanel extends BasePanel {
     }
     this.gateFooter.setText(footer);
     this.gateFooter.setAlpha(1);
+  }
+
+  destroy(): void {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    if (this.seedKeyHandler) {
+      this.scene.input.keyboard!.off('keydown', this.seedKeyHandler);
+      this.seedKeyHandler = null;
+    }
+    if (this.embarkBtn) { this.embarkBtn.destroy(); }
+    if (this.closeBtn) { this.closeBtn.destroy(); }
+    super.destroy();
   }
 }
