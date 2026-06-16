@@ -1646,11 +1646,9 @@ export class ExpeditionScene extends Phaser.Scene {
     const tile = floor.tiles[ty][tx];
     if (tile.type !== 'mineable' || tile.broken) return;
 
-    console.log('dur 0: ', tile.durability);
     tile.durability -= this.mining.getDamage();
     audio.playMineHit(tile.maxDurability);
     this.cameras.main.shake(50, 0.006);
-    console.log('dur 1: ', tile.durability);
 
     // Update damage appearance on the existing ore image
     const hitImg = this.oreImageMap.get(`${tx},${ty}`);

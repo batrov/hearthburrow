@@ -146,7 +146,7 @@ export class GatePanel extends BasePanel {
 
     this.container.add(this.scene.add.image(258, 180, 'portrait'));
 
-    this.embarkBtn = this.scene.add.text(258, 258, '[ EMBARK ]', {
+    this.embarkBtn = this.scene.add.text(258, 320, '[ EMBARK ]', {
       fontSize: '15px', fontFamily: 'monospace', color: '#ffcc44',
       backgroundColor: '#442a1acc', padding: { x: 12, y: 6 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(220).setInteractive({ useHandCursor: true }).setData('isUI', true);
@@ -193,8 +193,10 @@ export class GatePanel extends BasePanel {
     this.debugMode = false;
 
     this.seedKeyHandler = (event: KeyboardEvent) => {
-      if (this.gateTab !== 9 || !this.isVisible() || !this.seedEditing) return;
-      if (event.key === 'Backspace') {
+      if (this.gateTab !== 8 || !this.isVisible() || !this.seedEditing) return;
+      if (event.key === ' ') {
+        return
+      } else if (event.key === 'Backspace') {
         this.gateSeed = this.gateSeed.slice(0, -1);
         this.render();
       } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
@@ -259,6 +261,9 @@ export class GatePanel extends BasePanel {
   }
 
   handleUp(): void {
+    if (this.seedEditing) {
+      return
+    }
     if (this.gateTab === 5) {
       if (this.consumableSelectionIdx > 0) {
         this.consumableSelectionIdx--;
@@ -266,13 +271,19 @@ export class GatePanel extends BasePanel {
         this.gateTab = 4;
       }
     } else {
-      this.gateTab = Math.max(0, this.gateTab - 1);
+      this.gateTab--;
+      if (this.gateTab < 0) {
+        this.gateTab = this.maxTab;
+      }
       if (this.gateTab === 5) this.consumableSelectionIdx = this.consumableTypes.length - 1;
     }
     this.render();
   }
 
   handleDown(): void {
+    if (this.seedEditing) {
+      return
+    }
     if (this.gateTab === 5) {
       if (this.consumableSelectionIdx < this.consumableTypes.length - 1) {
         this.consumableSelectionIdx++;
@@ -280,7 +291,10 @@ export class GatePanel extends BasePanel {
         this.gateTab = 6;
       }
     } else {
-      this.gateTab = Math.min(this.maxTab, this.gateTab + 1);
+      this.gateTab++;
+      if (this.gateTab > this.maxTab) {
+        this.gateTab = 0;
+      }
       if (this.gateTab === 5) this.consumableSelectionIdx = 0;
     }
     this.render();
@@ -343,7 +357,7 @@ export class GatePanel extends BasePanel {
   }
 
   handleSpace(): void {
-    if (this.gateTab === 8) {
+    if (this.gateTab === 9) {
       if (this.resetConfirm) {
         gameState.resetProgress();
         this.hide();
@@ -355,7 +369,7 @@ export class GatePanel extends BasePanel {
         this.resetConfirm = true;
         this.render();
       }
-    } else if (this.gateTab === 9) {
+    } else if (this.gateTab === 8) {
       this.seedEditing = !this.seedEditing;
       this.render();
     } else {
@@ -511,12 +525,12 @@ export class GatePanel extends BasePanel {
     const elevStr = this.selectedElevatorFloor === 0 ? '0 (Homeland)' : `${this.selectedElevatorFloor}`;
     this.gateBottomTexts[1].setText(`Start Floor: ${elevStr}`);
 
-    this.gateBottomMarkers[2].setText(this.gateTab === 9 ? '▶' : ' ');
+    this.gateBottomMarkers[2].setText(this.gateTab === 8 ? '▶' : ' ');
     const seedDisplay = this.gateSeed || '(none - random)';
     const seedStatus = this.seedEditing ? ' [EDITING]' : '';
     this.gateBottomTexts[2].setText(`Seed: ${seedDisplay}${seedStatus}`);
 
-    this.gateBottomMarkers[3].setText(this.gateTab === 8 ? '▶' : ' ');
+    this.gateBottomMarkers[3].setText(this.gateTab === 9 ? '▶' : ' ');
     this.gateBottomTexts[3].setText(`Reset Game${this.resetConfirm ? '  [SPACE] confirm' : ''}`);
 
     let footer = `[↑/↓] select  [←/→] change  [SPACE] Enter  [ESC] cancel\n`;
