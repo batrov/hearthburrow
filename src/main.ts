@@ -12,6 +12,10 @@ const config: Phaser.Types.Core.GameConfig = {
   height: 640,
   backgroundColor: '#1a1a2e',
   pixelArt: true,
+  input: {
+    activePointers: 2,
+    touch: { capture: true },
+  },
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,

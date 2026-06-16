@@ -6,6 +6,9 @@ import { BasePanel } from './BasePanel';
 export class FarmPanel extends BasePanel {
   private bg: Phaser.GameObjects.Graphics;
   private text: Phaser.GameObjects.Text;
+  private plantBtn: Phaser.GameObjects.Text;
+  private harvestBtn: Phaser.GameObjects.Text;
+  private closeBtn: Phaser.GameObjects.Text;
 
   constructor(scene: Phaser.Scene) {
     super(scene);
@@ -18,6 +21,26 @@ export class FarmPanel extends BasePanel {
       align: 'center', lineSpacing: 6,
     }).setOrigin(0.5, 0);
     this.container.add(this.text);
+
+    this.plantBtn = scene.add.text(960 / 2 - 80, 570, '[PLANT]', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#44cc66',
+      backgroundColor: '#1a2a1a', padding: { x: 16, y: 8 },
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(210);
+    this.plantBtn.on('pointerdown', () => this.plant());
+    this.container.add(this.plantBtn);
+
+    this.harvestBtn = scene.add.text(960 / 2 + 80, 570, '[HARVEST]', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#ccaa44',
+      backgroundColor: '#2a1a0a', padding: { x: 16, y: 8 },
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(210);
+    this.harvestBtn.on('pointerdown', () => this.harvest());
+    this.container.add(this.harvestBtn);
+
+    this.closeBtn = scene.add.text(960 - 40, 40, '[X]', {
+      fontSize: '16px', fontFamily: 'monospace', color: '#886666',
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(210);
+    this.closeBtn.on('pointerdown', () => this.hide());
+    this.container.add(this.closeBtn);
   }
 
   show(): void {
@@ -67,7 +90,7 @@ export class FarmPanel extends BasePanel {
       `Plant 1 Carrot → yields ${yieldPerExpedition} per expedition\n` +
       `(Harvest grows after each expedition)\n\n` +
       `You have ${carrots} Carrots\n\n` +
-      `[Z] Plant one  |  [X] Harvest all  |  [ESC] close`
+      `[Z] Plant one  |  [X] Harvest all  |  [ESC/TAP] close`
     );
   }
 }
