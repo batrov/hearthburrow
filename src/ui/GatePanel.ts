@@ -141,7 +141,18 @@ export class GatePanel extends BasePanel {
     }).setOrigin(0.5);
     this.container.add(this.gateFooter);
 
+    this.container.add(this.scene.add.image(258, 180, 'portrait'));
+
     this.addCloseButton(810, 50);
+
+    const embarkBtn = this.scene.add.text(258, 258, '[ EMBARK ]', {
+      fontSize: '15px', fontFamily: 'monospace', color: '#ffcc44',
+      backgroundColor: '#442a1acc', padding: { x: 12, y: 6 },
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setData('isUI', true);
+    embarkBtn.on('pointerdown', () => {
+      if (this.isVisible() && this.gateTab !== 8 && this.gateTab !== 9) this.handleSpace();
+    });
+    this.container.add(embarkBtn);
   }
 
   show(): void {
@@ -188,6 +199,7 @@ export class GatePanel extends BasePanel {
     };
     this.scene.input.keyboard!.on('keydown', this.seedKeyHandler);
 
+    this.render();
     this.fadeIn();
   }
 
