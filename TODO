@@ -1,11 +1,1 @@
 Dynamic lighting
-
-Found bug:
-- seed: z2cugj15, floor 12
-  - all pressure plate already pressed, but stair do not appeared
-
-Player walking animation
-- Currently it only loops through sprite 0 to sprite 1
-- Ideally, on walk, it cycles through sprite 1 - 5
-- On idle, it uses sprite 0
-- Take inspiration from pokemon emerald / fire red running animation
