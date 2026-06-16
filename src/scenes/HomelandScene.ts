@@ -5,6 +5,9 @@ import { CraftingPanel } from '../ui/CraftingPanel';
 import { TradePanel } from '../ui/TradePanel';
 import { ResearchPanel } from '../ui/ResearchPanel';
 import { FarmPanel } from '../ui/FarmPanel';
+import { BuildingInfoPanel } from '../ui/BuildingInfoPanel';
+import { RestorePanel } from '../ui/RestorePanel';
+import { GatePanel } from '../ui/GatePanel';
 import { canRestore, restoreBuilding, isRestored } from '../systems/BuildingSystem';
 import { getBuilding } from '../systems/DataRegistry';
 import { audio } from '../systems/AudioSystem';
@@ -55,45 +58,15 @@ export class HomelandScene extends Phaser.Scene {
   private playerGx: number = 7;
   private playerGy: number = 8;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
-  private seedKeyHandler: ((event: KeyboardEvent) => void) | null = null;
   private promptText!: Phaser.GameObjects.Text;
-  private panelBg!: Phaser.GameObjects.Graphics;
-  private panelText!: Phaser.GameObjects.Text;
-  private panelVisible: boolean = false;
-  private restoreMode: boolean = false;
   private restoreBuildingId: string = '';
-  private gateMode: boolean = false;
-  private pickaxeOptions: { id: string; tier: number }[] = [];
-  private selectedPickaxeIdx: number = 0;
-  private ringOptions: { id: string; name: string }[] = [];
-  private selectedRing1Idx: number = -1;
-  private selectedRing2Idx: number = -1;
-  private bootOptions: { id: string; name: string; runs: number }[] = [];
-  private selectedBootsIdx: number = -1;
-  private lanternOptions: { id: string; name: string; runs: number }[] = [];
-  private selectedLanternIdx: number = -1;
-  private gateTab: number = 0;
   private currentBuilding: HubBuildingDef | null = null;
-  private debugMode: boolean = false;
-  private consumableTypes: { id: string; name: string }[] = [
-    { id: 'stamina_potion', name: 'Stamina Potion' },
-    { id: 'teleport_scroll', name: 'Teleport Scroll' },
-    { id: 'mining_bomb', name: 'Mining Bomb' },
-  ];
-  private consumableLoadout: Record<string, number> = {};
-  private consumableSelectionIdx: number = 0;
-  private elevatorFloorOptions: number[] = [];
-  private selectedElevatorFloor: number = 0;
-  private resetConfirm: boolean = false;
-  private maxTab: number = 8;
-  private gateSeed: string = '';
-  private seedEditing: boolean = false;
-  private panelCloseBtn: Phaser.GameObjects.Text | null = null;
-  private restoreCloseBtn: Phaser.GameObjects.Text | null = null;
-  private restoreContent: Phaser.GameObjects.Container | null = null;
   private moveTimer: number = 0;
   private moveDelay: number = 150;
   private isMoving: boolean = false;
+  private buildingInfoPanel!: BuildingInfoPanel;
+  private restorePanel!: RestorePanel;
+  private gatePanel!: GatePanel;
   private inventoryPanel!: InventoryPanel;
   private craftingPanel!: CraftingPanel;
   private tradePanel!: TradePanel;
@@ -107,25 +80,6 @@ export class HomelandScene extends Phaser.Scene {
   private animTimer: number = 0;
   private readonly ANIM_INTERVAL: number = 60;
 
-  // Gate panel container-based UI
-  private gateContainer!: Phaser.GameObjects.Container;
-  private gateBg!: Phaser.GameObjects.Graphics;
-  private gatePortrait!: Phaser.GameObjects.Image;
-  private gateTitle!: Phaser.GameObjects.Text;
-  private gateEquipMarkers: Phaser.GameObjects.Text[] = [];
-  private gateEquipIcons: Phaser.GameObjects.Image[] = [];
-  private gateEquipLabels: Phaser.GameObjects.Text[] = [];
-  private gateEquipArrowsL: Phaser.GameObjects.Image[] = [];
-  private gateEquipArrowsR: Phaser.GameObjects.Image[] = [];
-  private gateConsumableIcons: Phaser.GameObjects.Image[] = [];
-  private gateConsumableTexts: Phaser.GameObjects.Text[] = [];
-  private gateConsumableHeader!: Phaser.GameObjects.Text;
-  private gateBottomMarkers: Phaser.GameObjects.Text[] = [];
-  private gateBottomTexts: Phaser.GameObjects.Text[] = [];
-  private gateFooter!: Phaser.GameObjects.Text;
-  private gateEmbarkBtn!: Phaser.GameObjects.Text;
-  private gateCloseBtn!: Phaser.GameObjects.Text;
-
   constructor() {
     super({ key: 'HomelandScene' });
   }
@@ -133,7 +87,6 @@ export class HomelandScene extends Phaser.Scene {
   create(): void {
     this.cameras.main.fadeIn(400, 0, 0, 0);
     this.cameras.main.setBackgroundColor('#0a0a0a');
-    this.panelVisible = false;
     this.currentBuilding = null;
     this.moveTimer = 0;
     this.animFrame = 0;
@@ -153,6 +106,11 @@ export class HomelandScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, true, 0.5, 0.5);
     this.cameras.main.setBounds(xMin, yMin, worldWidth(HUB_COLS, HUB_ROWS), worldHeight(HUB_COLS, HUB_ROWS));
 
+    this.buildingInfoPanel = new BuildingInfoPanel(this);
+    this.restorePanel = new RestorePanel(this, () => { this.restoreBuildingId = ''; });
+    this.gatePanel = new GatePanel(this);
+    this.gatePanel.onEmbark = (config) => this.startExpedition(config);
+    this.gatePanel.onCloseCb = () => {};
     this.inventoryPanel = new InventoryPanel(this, gameState.inventory, null, (id) => this.trashItem(id), 'Storage');
     this.craftingPanel = new CraftingPanel(this);
     this.tradePanel = new TradePanel(this);
@@ -303,126 +261,6 @@ export class HomelandScene extends Phaser.Scene {
     this.promptText = this.add.text(0, 0, '', {
       fontSize: '12px', fontFamily: 'monospace', color: '#ffdd88',
     }).setOrigin(0.5).setAlpha(0).setDepth(55);
-
-    this.panelBg = this.add.graphics();
-    this.panelBg.setDepth(90).setScrollFactor(0);
-    this.panelBg.setAlpha(0);
-
-    this.panelText = this.add.text(960 / 2, 640 / 2, '', {
-      fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7',
-      align: 'center', lineSpacing: 8,
-    }).setOrigin(0.5).setDepth(91).setScrollFactor(0).setAlpha(0);
-
-    this.buildGateUI();
-  }
-
-  private buildGateUI(): void {
-    if (this.gateContainer) {
-      this.gateContainer.destroy(true);
-      this.gateContainer = null!;
-    }
-    this.gateEquipMarkers = [];
-    this.gateEquipIcons = [];
-    this.gateEquipLabels = [];
-    this.gateEquipArrowsL = [];
-    this.gateEquipArrowsR = [];
-    this.gateConsumableIcons = [];
-    this.gateConsumableTexts = [];
-    this.gateBottomMarkers = [];
-    this.gateBottomTexts = [];
-
-    const PL = 130, PT = 40, PW = 700, PH = 560;
-    const CX = 395;
-    const TEXT_STYLE = { fontSize: '14px', fontFamily: 'monospace', color: '#e8d5b7' };
-    const ROW_YS = [114, 152, 190, 228, 266];
-    const CONS_YS = [324, 356, 388];
-    const BOTTOM_YS = [440, 470, 500, 530];
-
-    this.gateContainer = this.add.container(0, 0).setDepth(90).setScrollFactor(0);
-    this.gateContainer.setVisible(false);
-
-    this.gateBg = this.add.graphics();
-    this.gateContainer.add(this.gateBg);
-
-    this.gatePortrait = this.add.image(258, 180, 'portrait');
-    this.gateContainer.add(this.gatePortrait);
-
-    this.gateTitle = this.add.text(480, 58, 'Expedition Loadout', {
-      fontSize: '20px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
-    }).setOrigin(0.5);
-    this.gateContainer.add(this.gateTitle);
-
-    for (let i = 0; i < 5; i++) {
-      const ry = ROW_YS[i];
-      const marker = this.add.text(CX, ry + 6, ' ', TEXT_STYLE);
-      this.gateContainer.add(marker);
-      this.gateEquipMarkers.push(marker);
-
-      const icon = this.add.image(CX + 18, ry, 'item_pickaxe_1');
-      this.gateContainer.add(icon);
-      this.gateEquipIcons.push(icon);
-
-      const label = this.add.text(CX + 40, ry + 6, '', TEXT_STYLE);
-      this.gateContainer.add(label);
-      this.gateEquipLabels.push(label);
-
-      const arrL = this.add.image(722, ry, 'item_arrow_left').setInteractive({ useHandCursor: true });
-      arrL.setData('row', i).setData('dir', -1);
-      arrL.on('pointerdown', () => this.handleArrowClick(i, -1));
-      this.gateContainer.add(arrL);
-      this.gateEquipArrowsL.push(arrL);
-
-      const arrR = this.add.image(756, ry, 'item_arrow_right').setInteractive({ useHandCursor: true });
-      arrR.setData('row', i).setData('dir', 1);
-      arrR.on('pointerdown', () => this.handleArrowClick(i, 1));
-      this.gateContainer.add(arrR);
-      this.gateEquipArrowsR.push(arrR);
-    }
-
-    this.gateConsumableHeader = this.add.text(CX, 304, 'Consumables:', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#b8a898',
-    });
-    this.gateContainer.add(this.gateConsumableHeader);
-
-    for (let i = 0; i < 3; i++) {
-      const cy = CONS_YS[i];
-      const icon = this.add.image(CX + 18, cy, 'item_stamina_potion');
-      this.gateContainer.add(icon);
-      this.gateConsumableIcons.push(icon);
-
-      const text = this.add.text(CX + 40, cy + 6, '', TEXT_STYLE);
-      this.gateContainer.add(text);
-      this.gateConsumableTexts.push(text);
-    }
-
-    for (let i = 0; i < 4; i++) {
-      const by = BOTTOM_YS[i];
-      const marker = this.add.text(CX, by + 6, ' ', TEXT_STYLE);
-      this.gateContainer.add(marker);
-      this.gateBottomMarkers.push(marker);
-
-      const text = this.add.text(CX + 18, by + 6, '', TEXT_STYLE);
-      this.gateContainer.add(text);
-      this.gateBottomTexts.push(text);
-    }
-
-    this.gateFooter = this.add.text(480, 564, '', {
-      fontSize: '13px', fontFamily: 'monospace', color: '#8a7a9a', align: 'center',
-    }).setOrigin(0.5);
-    this.gateContainer.add(this.gateFooter);
-
-    this.gateEmbarkBtn = this.add.text(258, 258, '[ EMBARK ]', {
-      fontSize: '15px', fontFamily: 'monospace', color: '#ffcc44',
-      backgroundColor: '#442a1acc', padding: { x: 12, y: 6 },
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(91).setInteractive({ useHandCursor: true }).setData('isUI', true);
-    this.gateEmbarkBtn.on('pointerdown', () => { if (this.gateMode) this.startExpedition(); });
-    this.gateEmbarkBtn.setVisible(false);
-
-    this.gateCloseBtn = this.add.text(810, 50, '[X]', {
-      fontSize: '16px', fontFamily: 'monospace', color: '#aa6666',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(91).setInteractive({ useHandCursor: true }).setData('isUI', true);
-    this.gateCloseBtn.on('pointerdown', () => { if (this.gateMode) this.closePanel(); });
-    this.gateCloseBtn.setVisible(false);
   }
 
   private setupInput(): void {
@@ -446,7 +284,7 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private get isModalActive(): boolean {
-    return this.panelVisible || this.restoreMode || this.gateMode
+    return this.buildingInfoPanel.isVisible() || this.restorePanel.isVisible() || this.gatePanel.isVisible()
       || this.craftingPanel.isVisible() || this.inventoryPanel.isVisible()
       || this.tradePanel.isVisible() || this.researchPanel.isVisible()
       || this.farmPanel.isVisible();
@@ -484,8 +322,7 @@ export class HomelandScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     if (Phaser.Input.Keyboard.JustDown(this.keys.TAB)) {
-      if (this.panelVisible || this.restoreMode ||
-          this.tradePanel.isVisible() || this.researchPanel.isVisible() || this.farmPanel.isVisible()) return;
+      if (this.isModalActive) return;
       this.inventoryPanel.toggle();
       return;
     }
@@ -562,146 +399,41 @@ export class HomelandScene extends Phaser.Scene {
       return;
     }
 
-    if (this.panelVisible) {
-      if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
-        if (this.seedEditing) {
-          this.seedEditing = false;
-          this.renderGatePanel();
-          return;
+    if (this.gatePanel.isVisible()) {
+      if (this.gatePanel.gateTab === 9 && this.gatePanel.seedEditing) {
+        if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
+          this.gatePanel.seedEditing = false;
+          this.gatePanel.render();
         }
-        this.closePanel();
-        return;
-      }
-      if (this.gateMode) {
-        if (this.gateTab === 9 && this.seedEditing) {
-          // block navigation while typing seed
-        } else {
+      } else {
+        if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
+          this.gatePanel.hide();
+        }
         const up = Phaser.Input.Keyboard.JustDown(this.keys.UP) || Phaser.Input.Keyboard.JustDown(this.keys.W);
         const down = Phaser.Input.Keyboard.JustDown(this.keys.DOWN) || Phaser.Input.Keyboard.JustDown(this.keys.S);
         const left = Phaser.Input.Keyboard.JustDown(this.keys.LEFT) || Phaser.Input.Keyboard.JustDown(this.keys.A);
         const right = Phaser.Input.Keyboard.JustDown(this.keys.RIGHT) || Phaser.Input.Keyboard.JustDown(this.keys.D);
-
-        if (this.gateTab === 5) {
-          if (up) {
-            if (this.consumableSelectionIdx > 0) {
-              this.consumableSelectionIdx--;
-            } else {
-              this.gateTab = 4;
-            }
-            this.renderGatePanel();
-          } else if (down) {
-            if (this.consumableSelectionIdx < this.consumableTypes.length - 1) {
-              this.consumableSelectionIdx++;
-            } else {
-              this.gateTab = 6;
-            }
-            this.renderGatePanel();
-          } else if (left) {
-            const ct = this.consumableTypes[this.consumableSelectionIdx];
-            this.consumableLoadout[ct.id] = Math.max(0, this.consumableLoadout[ct.id] - 1);
-            this.renderGatePanel();
-          } else if (right) {
-            const ct = this.consumableTypes[this.consumableSelectionIdx];
-            const available = gameState.inventory.count(ct.id);
-            if (this.consumableLoadout[ct.id] < available) {
-              this.consumableLoadout[ct.id]++;
-              this.renderGatePanel();
-            }
-          }
-        } else {
-          if (up) {
-            this.gateTab = Math.max(0, this.gateTab - 1);
-            if (this.gateTab === 5) this.consumableSelectionIdx = this.consumableTypes.length - 1;
-            this.renderGatePanel();
-          }
-          if (down) {
-            this.gateTab = Math.min(this.maxTab, this.gateTab + 1);
-            if (this.gateTab === 5) this.consumableSelectionIdx = 0;
-            this.renderGatePanel();
-          }
-          if (left) {
-            if (this.gateTab === 0 && this.selectedPickaxeIdx > 0) {
-              this.selectedPickaxeIdx--;
-              this.renderGatePanel();
-            } else if (this.gateTab === 1 && this.selectedRing1Idx > -1) {
-              this.selectedRing1Idx--;
-              this.renderGatePanel();
-            } else if (this.gateTab === 2 && this.selectedRing2Idx > -1) {
-              this.selectedRing2Idx--;
-              this.renderGatePanel();
-            } else if (this.gateTab === 3 && this.selectedBootsIdx > -1) {
-              this.selectedBootsIdx--;
-              this.renderGatePanel();
-            } else if (this.gateTab === 4 && this.selectedLanternIdx > -1) {
-              this.selectedLanternIdx--;
-              this.renderGatePanel();
-            } else if (this.gateTab === 6) {
-              this.debugMode = !this.debugMode;
-              this.renderGatePanel();
-            } else if (this.gateTab === 7 && this.elevatorFloorOptions.length > 0) {
-              const idx = this.elevatorFloorOptions.indexOf(this.selectedElevatorFloor);
-              if (idx > 0) {
-                this.selectedElevatorFloor = this.elevatorFloorOptions[idx - 1];
-                this.renderGatePanel();
-              }
-            }
-          }
-          if (right) {
-            if (this.gateTab === 0 && this.selectedPickaxeIdx < this.pickaxeOptions.length - 1) {
-              this.selectedPickaxeIdx++;
-              this.renderGatePanel();
-            } else if (this.gateTab === 1 && this.selectedRing1Idx < this.ringOptions.length - 1) {
-              this.selectedRing1Idx++;
-              this.renderGatePanel();
-            } else if (this.gateTab === 2 && this.selectedRing2Idx < this.ringOptions.length - 1) {
-              this.selectedRing2Idx++;
-              this.renderGatePanel();
-            } else if (this.gateTab === 3 && this.selectedBootsIdx < this.bootOptions.length - 1) {
-              this.selectedBootsIdx++;
-              this.renderGatePanel();
-            } else if (this.gateTab === 4 && this.selectedLanternIdx < this.lanternOptions.length - 1) {
-              this.selectedLanternIdx++;
-              this.renderGatePanel();
-            } else if (this.gateTab === 6) {
-              this.debugMode = !this.debugMode;
-              this.renderGatePanel();
-            } else if (this.gateTab === 7 && this.elevatorFloorOptions.length > 0) {
-              const idx = this.elevatorFloorOptions.indexOf(this.selectedElevatorFloor);
-              if (idx < this.elevatorFloorOptions.length - 1) {
-                this.selectedElevatorFloor = this.elevatorFloorOptions[idx + 1];
-                this.renderGatePanel();
-              }
-            }
-          }
-        }
-        }
+        if (up) this.gatePanel.handleUp();
+        else if (down) this.gatePanel.handleDown();
+        else if (left) this.gatePanel.handleLeft();
+        else if (right) this.gatePanel.handleRight();
+        else if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) this.gatePanel.handleSpace();
       }
+      return;
+    }
+
+    if (this.restorePanel.isVisible()) {
       if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
-        if (this.restoreMode) {
-          this.tryRestore(this.restoreBuildingId);
-        } else if (this.gateMode) {
-          if (this.gateTab === 8) {
-            if (this.resetConfirm) {
-              gameState.resetProgress();
-              this.closePanel();
-              this.cameras.main.fadeOut(400, 0, 0, 0);
-              this.cameras.main.once('camerafadeoutcomplete', () => {
-                this.scene.start('HomelandScene');
-              });
-            } else {
-              this.resetConfirm = true;
-              this.renderGatePanel();
-            }
-          } else if (this.gateTab === 9) {
-            this.seedEditing = !this.seedEditing;
-            this.renderGatePanel();
-          } else {
-            this.resetConfirm = false;
-            this.startExpedition();
-          }
-        } else {
-          this.closePanel();
-        }
+        this.tryRestore(this.restoreBuildingId);
+      } else if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
+        this.restorePanel.hide();
+      }
+      return;
+    }
+
+    if (this.buildingInfoPanel.isVisible()) {
+      if (Phaser.Input.Keyboard.JustDown(this.keys.ESC) || Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
+        this.buildingInfoPanel.hide();
       }
       return;
     }
@@ -894,85 +626,11 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private showRestorePanel(buildingId: string): void {
-    const building = getBuilding(buildingId);
-    if (!building) return;
-
-    this.restoreMode = true;
-    this.panelVisible = true;
-
-    if (this.restoreContent) { this.restoreContent.destroy(true); this.restoreContent = null; }
-
-    const costEntries = Object.entries(building.cost);
-    const canAfford = canRestore(buildingId);
-
-    this.panelBg.clear();
-    this.panelBg.fillStyle(0x0a0a1a, 0.85);
-    this.panelBg.fillRoundedRect(960 / 2 - 200, 640 / 2 - 110, 400, 220, 10);
-    this.panelBg.lineStyle(2, 0x6a5a8a, 1);
-    this.panelBg.strokeRoundedRect(960 / 2 - 200, 640 / 2 - 110, 400, 220, 10);
-    this.panelBg.setAlpha(1);
-
-    this.panelText.setAlpha(0);
-
-    const lineH = 28;
-    const totalLines = 5 + costEntries.length;
-    const totalTextH = totalLines * lineH;
-    const textTop = 640 / 2 - totalTextH / 2;
-
-    this.restoreContent = this.add.container(0, 0).setDepth(210).setScrollFactor(0);
-
-    this.restoreContent.add(
-      this.add.text(480, textTop + 0 * lineH + lineH / 2, building.name, {
-        fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7',
-      }).setOrigin(0.5)
-    );
-
-    this.restoreContent.add(
-      this.add.text(480, textTop + 2 * lineH + lineH / 2, 'Required Materials:', {
-        fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7',
-      }).setOrigin(0.5)
-    );
-
-    const spriteX = 420;
-    const textX = 435;
-
-    for (let i = 0; i < costEntries.length; i++) {
-      const [id, qty] = costEntries[i];
-      const have = gameState.inventory.count(id);
-      const color = have >= qty ? '#88dd88' : '#dd6666';
-      const y = textTop + (3 + i) * lineH + lineH / 2;
-
-      const iconKey = itemIconKey(id);
-      if (this.textures.exists(iconKey)) {
-        this.restoreContent.add(
-          this.add.image(spriteX, y, iconKey).setScale(0.7)
-        );
-      }
-
-      this.restoreContent.add(
-        this.add.text(textX, y, `${itemDisplayName(id)}: ${have}/${qty}`, {
-          fontSize: '16px', fontFamily: 'monospace', color,
-        }).setOrigin(0, 0.5)
-      );
-    }
-
-    this.restoreContent.add(
-      this.add.text(480, textTop + (4 + costEntries.length) * lineH + lineH / 2,
-        canAfford ? '[SPACE] Restore  |  [ESC] cancel' : '[ESC] close', {
-        fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7',
-      }).setOrigin(0.5)
-    );
-
-    if (this.restoreCloseBtn) { this.restoreCloseBtn.destroy(); this.restoreCloseBtn = null; }
-    this.restoreCloseBtn = this.add.text(665, 216, '[X]', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#886666',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(220).setInteractive({ useHandCursor: true }).setData('isUI', true);
-    this.restoreCloseBtn.on('pointerdown', () => this.closePanel());
+    this.restorePanel.show(buildingId);
   }
 
   private tryRestore(buildingId: string): void {
     const building = getBuilding(buildingId);
-    this.restoreMode = false;
     this.closePanel();
 
     const container = this.add.container(960 / 2, 640 / 2).setScrollFactor(0).setDepth(250);
@@ -1060,336 +718,55 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private showGatePanel(): void {
-    this.gateMode = true;
-    this.panelVisible = true;
-    this.debugMode = false;
-    this.pickaxeOptions = gameState.getAvailablePickaxes();
-    this.ringOptions = gameState.getAvailableRings();
-    this.bootOptions = gameState.getAvailableBoots();
-    this.lanternOptions = gameState.getAvailableLanterns();
-
-    const currentTier = gameState.currentPickaxeTier;
-    this.selectedPickaxeIdx = this.pickaxeOptions.findIndex(o => o.tier === currentTier);
-    if (this.selectedPickaxeIdx < 0) this.selectedPickaxeIdx = 0;
-
-    this.selectedRing1Idx = this.ringOptions.findIndex(r => r.id === gameState.equippedRings.ring1);
-    this.selectedRing2Idx = this.ringOptions.findIndex(r => r.id === gameState.equippedRings.ring2);
-
-    this.selectedBootsIdx = this.bootOptions.findIndex(b => b.id === gameState.equippedBoots);
-    this.selectedLanternIdx = this.lanternOptions.findIndex(l => l.id === gameState.equippedLantern);
-
-    this.consumableLoadout = {};
-    for (const ct of this.consumableTypes) {
-      this.consumableLoadout[ct.id] = 0;
-    }
-    this.consumableSelectionIdx = 0;
-
-    this.elevatorFloorOptions = gameState.getAvailableElevatorFloors();
-    this.selectedElevatorFloor = this.elevatorFloorOptions.includes(0) ? 0 : (this.elevatorFloorOptions[0] ?? 0);
-    this.resetConfirm = false;
-    this.maxTab = 9;
-    this.gateSeed = gameState.currentRunSeed || Math.random().toString(36).substring(2, 10);
-    this.seedEditing = false;
-
-    this.gateTab = 0;
-
-    this.seedKeyHandler = (event: KeyboardEvent) => {
-      if (this.gateTab !== 9 || !this.gateMode || !this.seedEditing) return;
-      if (event.key === 'Backspace') {
-        this.gateSeed = this.gateSeed.slice(0, -1);
-        this.renderGatePanel();
-      } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
-        if (this.gateSeed.length < 24) {
-          this.gateSeed += event.key;
-          this.renderGatePanel();
-        }
-      }
-    };
-    this.input.keyboard!.on('keydown', this.seedKeyHandler);
-
-    this.gateEmbarkBtn.setVisible(true);
-    this.gateCloseBtn.setVisible(true);
-    this.gateContainer.setVisible(true);
-    this.renderGatePanel();
+    this.gatePanel.show();
   }
 
-  private renderGatePanel(): void {
-    const PL = 130, PT = 40, PW = 700, PH = 560;
-    const names: Record<number, string> = {
-      1: 'Common Pickaxe',
-      2: 'Bronze Pickaxe',
-      3: 'Silver Pickaxe',
-      4: 'Gold Pickaxe',
-    };
-    const maxStamina = this.debugMode ? 10000 : 100 + gameState.maxStaminaBonus;
-    const invSlots = 16 + gameState.inventorySlotBonus;
-    const foundRelics = gameState.getFoundRelics();
-
-    this.gateBg.clear();
-    this.gateBg.fillStyle(0x0a0a1a, 0.85);
-    this.gateBg.fillRoundedRect(PL, PT, PW, PH, 12);
-    this.gateBg.lineStyle(2, 0x6a5a8a, 1);
-    this.gateBg.strokeRoundedRect(PL, PT, PW, PH, 12);
-
-    // Equipment rows
-    for (let i = 0; i < 5; i++) {
-      const marker = this.gateEquipMarkers[i];
-      const icon = this.gateEquipIcons[i];
-      const label = this.gateEquipLabels[i];
-
-      let selected = false;
-      let hasOpt = false;
-      let iconKey = '';
-      let text = '(none)';
-
-      switch (i) {
-        case 0: {
-          selected = this.gateTab === 0;
-          const opt = this.pickaxeOptions[this.selectedPickaxeIdx];
-          if (opt) {
-            hasOpt = true;
-            iconKey = `item_pickaxe_${opt.tier}`;
-            const n = names[opt.tier];
-            if (opt.tier === 1) {
-              text = n;
-            } else {
-              const remaining = gameState.remainingPickaxeRuns(opt.tier);
-              const qty = gameState.inventory.count(`pickaxe_${opt.tier}`);
-              text = `${n} (${remaining}/5) [x${qty}]`;
-            }
-          }
-          break;
-        }
-        case 1: {
-          selected = this.gateTab === 1;
-          const opt = this.selectedRing1Idx >= 0 ? this.ringOptions[this.selectedRing1Idx] : null;
-          if (opt) {
-            hasOpt = true;
-            iconKey = `item_${opt.id}`;
-            text = `Ring 1: ${opt.name}`;
-          } else {
-            text = 'Ring 1: (none)';
-          }
-          break;
-        }
-        case 2: {
-          selected = this.gateTab === 2;
-          const opt = this.selectedRing2Idx >= 0 ? this.ringOptions[this.selectedRing2Idx] : null;
-          if (opt) {
-            hasOpt = true;
-            iconKey = `item_${opt.id}`;
-            text = `Ring 2: ${opt.name}`;
-          } else {
-            text = 'Ring 2: (none)';
-          }
-          break;
-        }
-        case 3: {
-          selected = this.gateTab === 3;
-          const opt = this.selectedBootsIdx >= 0 ? this.bootOptions[this.selectedBootsIdx] : null;
-          if (opt) {
-            hasOpt = true;
-            iconKey = `item_${opt.id}`;
-            const runsStr = opt.runs === Infinity ? '' : ` (${opt.runs}/5)`;
-            text = `Boots: ${opt.name}${runsStr}`;
-          } else {
-            text = 'Boots: (none)';
-          }
-          break;
-        }
-        case 4: {
-          selected = this.gateTab === 4;
-          const opt = this.selectedLanternIdx >= 0 ? this.lanternOptions[this.selectedLanternIdx] : null;
-          if (opt) {
-            hasOpt = true;
-            iconKey = `item_${opt.id}`;
-            const runsStr = opt.runs === Infinity ? '' : ` (${opt.runs}/5)`;
-            text = `Lantern: ${opt.name}${runsStr}`;
-          } else {
-            text = 'Lantern: (none)';
-          }
-          break;
-        }
-      }
-
-      marker.setText(selected ? '▶' : ' ');
-      if (hasOpt && iconKey && this.textures.exists(iconKey)) {
-        icon.setTexture(iconKey);
-      }
-      icon.setVisible(hasOpt);
-      label.setText(text);
-    }
-
-    // Consumables
-    for (let i = 0; i < 3; i++) {
-      const ct = this.consumableTypes[i];
-      const icon = this.gateConsumableIcons[i];
-      const text = this.gateConsumableTexts[i];
-      const qty = this.consumableLoadout[ct.id];
-      const available = gameState.inventory.count(ct.id);
-      const selected = this.gateTab === 5 && i === this.consumableSelectionIdx;
-
-      const iconKey = `item_${ct.id}`;
-      if (this.textures.exists(iconKey)) {
-        icon.setTexture(iconKey);
-      }
-      icon.setVisible(true);
-      text.setText(`${selected ? '▶' : ' '} ${ct.name}  ${qty} (have ${available})`);
-    }
-
-    // Bottom rows: 0=debug, 1=floor, 2=seed, 3=reset
-    this.gateBottomMarkers[0].setText(this.gateTab === 6 ? '▶' : ' ');
-    this.gateBottomTexts[0].setText(`Debug Mode: ${this.debugMode ? 'ON' : 'OFF'}`);
-
-    this.gateBottomMarkers[1].setText(this.gateTab === 7 ? '▶' : ' ');
-    const elevStr = this.selectedElevatorFloor === 0 ? '0 (Homeland)' : `${this.selectedElevatorFloor}`;
-    this.gateBottomTexts[1].setText(`Start Floor: ${elevStr}`);
-
-    this.gateBottomMarkers[2].setText(this.gateTab === 9 ? '▶' : ' ');
-    const seedDisplay = this.gateSeed || '(none - random)';
-    const seedStatus = this.seedEditing ? ' [EDITING]' : '';
-    this.gateBottomTexts[2].setText(`Seed: ${seedDisplay}${seedStatus}`);
-
-    this.gateBottomMarkers[3].setText(this.gateTab === 8 ? '▶' : ' ');
-    this.gateBottomTexts[3].setText(`Reset Game${this.resetConfirm ? '  [SPACE] confirm' : ''}`);
-
-    // Footer
-    let footer = `[↑/↓] select  [←/→] change  [SPACE] Enter  [ESC] cancel\n`;
-    footer += `Max Stamina: ${maxStamina}  |  Inventory: ${invSlots} slots`;
-    if (foundRelics.length > 0) {
-      footer += `  |  Relics: ${foundRelics.length}`;
-    }
-    this.gateFooter.setText(footer);
-    this.gateFooter.setAlpha(1);
-  }
-
-  private startExpedition(): void {
-    const selected = this.pickaxeOptions[this.selectedPickaxeIdx];
-    if (selected) {
-      gameState.equipPickaxe(selected.tier);
-    }
-    gameState.equippedRings.ring1 = this.selectedRing1Idx >= 0 ? this.ringOptions[this.selectedRing1Idx]?.id ?? null : null;
-    gameState.equippedRings.ring2 = this.selectedRing2Idx >= 0 ? this.ringOptions[this.selectedRing2Idx]?.id ?? null : null;
-    gameState.equippedBoots = this.selectedBootsIdx >= 0 ? this.bootOptions[this.selectedBootsIdx]?.id ?? null : null;
-    gameState.equippedLantern = this.selectedLanternIdx >= 0 ? this.lanternOptions[this.selectedLanternIdx]?.id ?? null : null;
-
-    const consumables: Record<string, number> = {};
-    for (const ct of this.consumableTypes) {
-      const qty = this.consumableLoadout[ct.id];
-      if (qty > 0) {
-        consumables[ct.id] = qty;
-        gameState.inventory.removeItem(ct.id, qty);
-      }
-    }
-    gameState.save();
-
-    gameState.currentRunSeed = this.gateSeed || Math.random().toString(36).substring(2, 10);
+  private startExpedition(config: {
+    pickaxeTier: number; ring1: string | null; ring2: string | null;
+    boots: string | null; lantern: string | null;
+    consumables: Record<string, number>; seed: string; debug: boolean; startFloor: number;
+  }): void {
+    gameState.equipPickaxe(config.pickaxeTier);
+    gameState.equippedRings.ring1 = config.ring1;
+    gameState.equippedRings.ring2 = config.ring2;
+    gameState.equippedBoots = config.boots;
+    gameState.equippedLantern = config.lantern;
     gameState.save();
 
     this.closePanel();
     this.cameras.main.fadeOut(500, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.start('ExpeditionScene', {
-        debug: this.debugMode,
-        consumables,
-        startFloor: this.selectedElevatorFloor,
-        seed: gameState.currentRunSeed,
+        debug: config.debug,
+        consumables: config.consumables,
+        startFloor: config.startFloor,
+        seed: config.seed,
       });
     });
   }
 
-  private handleArrowClick(row: number, dir: number): void {
-    const tabMap = [0, 1, 2, 3, 4];
-    this.gateTab = tabMap[row];
-    switch (row) {
-      case 0: {
-        const idx = this.selectedPickaxeIdx + dir;
-        if (idx >= 0 && idx < this.pickaxeOptions.length) this.selectedPickaxeIdx = idx;
-        break;
-      }
-      case 1: {
-        const idx = this.selectedRing1Idx + dir;
-        if (idx >= -1 && idx < this.ringOptions.length) this.selectedRing1Idx = idx;
-        break;
-      }
-      case 2: {
-        const idx = this.selectedRing2Idx + dir;
-        if (idx >= -1 && idx < this.ringOptions.length) this.selectedRing2Idx = idx;
-        break;
-      }
-      case 3: {
-        const idx = this.selectedBootsIdx + dir;
-        if (idx >= -1 && idx < this.bootOptions.length) this.selectedBootsIdx = idx;
-        break;
-      }
-      case 4: {
-        const idx = this.selectedLanternIdx + dir;
-        if (idx >= -1 && idx < this.lanternOptions.length) this.selectedLanternIdx = idx;
-        break;
-      }
-    }
-    this.renderGatePanel();
-  }
-
   private showBuildingPanel(building: HubBuildingDef): void {
-    this.panelVisible = true;
-    this.restoreMode = false;
-
-    this.panelBg.clear();
-    this.panelBg.fillStyle(0x0a0a1a, 0.85);
-    this.panelBg.fillRoundedRect(960 / 2 - 200, 640 / 2 - 90, 400, 180, 10);
-    this.panelBg.lineStyle(2, 0x6a5a8a, 1);
-    this.panelBg.strokeRoundedRect(960 / 2 - 200, 640 / 2 - 90, 400, 180, 10);
-    this.panelBg.setAlpha(1);
-
-    this.panelText.setText(
-      `${building.label}\n\n${building.description}\n\n[SPACE/ESC] close`
-    );
-    this.panelText.setAlpha(1);
-
-    if (this.panelCloseBtn) { this.panelCloseBtn.destroy(); this.panelCloseBtn = null; }
-    this.panelCloseBtn = this.add.text(665, 236, '[X]', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#886666',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(220).setInteractive({ useHandCursor: true }).setData('isUI', true);
-    this.panelCloseBtn.on('pointerdown', () => this.closePanel());
+    this.buildingInfoPanel.show(building.label, building.description);
   }
 
   private closePanel(): void {
-    this.panelVisible = false;
-    this.restoreMode = false;
-    this.gateMode = false;
-    this.gateTab = 0;
-    this.seedEditing = false;
-    if (this.restoreContent) { this.restoreContent.destroy(true); this.restoreContent = null; }
-    if (this.seedKeyHandler) {
-      this.input.keyboard!.off('keydown', this.seedKeyHandler);
-      this.seedKeyHandler = null;
-    }
-    this.consumableLoadout = {};
+    this.buildingInfoPanel.hide();
+    this.restorePanel.hide();
+    this.gatePanel.hide();
     this.tradePanel.hide();
     this.researchPanel.hide();
     this.farmPanel.hide();
-    this.panelBg.setAlpha(0);
-    this.panelText.setAlpha(0);
-    this.gateEmbarkBtn.setVisible(false);
-    this.gateCloseBtn.setVisible(false);
-    if (this.panelCloseBtn) { this.panelCloseBtn.destroy(); this.panelCloseBtn = null; }
-    if (this.restoreCloseBtn) { this.restoreCloseBtn.destroy(); this.restoreCloseBtn = null; }
-    this.gateContainer.setVisible(false);
   }
 
   private showTradePanel(): void {
-    this.panelVisible = true;
     this.tradePanel.show();
   }
 
   private showResearchPanel(): void {
-    this.panelVisible = true;
     this.researchPanel.show();
   }
 
   private showFarmPanel(): void {
-    this.panelVisible = true;
     this.farmPanel.show();
   }
 
