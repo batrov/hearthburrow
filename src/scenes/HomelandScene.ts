@@ -8,6 +8,7 @@ import { FarmPanel } from '../ui/FarmPanel';
 import { canRestore, restoreBuilding, isRestored } from '../systems/BuildingSystem';
 import { getBuilding } from '../systems/DataRegistry';
 import { audio } from '../systems/AudioSystem';
+import { AnalogStickInput } from '../ui/AnalogStickInput';
 import { getSpriteConfig } from '../systems/SpriteConfig';
 import {
   gridToIso, isoToGrid, findPath,
@@ -87,6 +88,8 @@ export class HomelandScene extends Phaser.Scene {
   private maxTab: number = 8;
   private gateSeed: string = '';
   private seedEditing: boolean = false;
+  private panelCloseBtn: Phaser.GameObjects.Text | null = null;
+  private restoreCloseBtn: Phaser.GameObjects.Text | null = null;
   private restoreContent: Phaser.GameObjects.Container | null = null;
   private moveTimer: number = 0;
   private moveDelay: number = 150;
@@ -97,10 +100,9 @@ export class HomelandScene extends Phaser.Scene {
   private researchPanel!: ResearchPanel;
   private farmPanel!: FarmPanel;
   private buildingsContainer!: Phaser.GameObjects.Container;
+  private buildingZones: Phaser.GameObjects.Rectangle[] = [];
   private movePath: { x: number; y: number }[] = [];
-  private analogDx: number = 0;
-  private analogDy: number = 0;
-  private analogActive: boolean = false;
+  private analog!: AnalogStickInput;
   private animFrame: number = 0;
   private animTimer: number = 0;
   private readonly ANIM_INTERVAL: number = 60;
@@ -121,6 +123,8 @@ export class HomelandScene extends Phaser.Scene {
   private gateBottomMarkers: Phaser.GameObjects.Text[] = [];
   private gateBottomTexts: Phaser.GameObjects.Text[] = [];
   private gateFooter!: Phaser.GameObjects.Text;
+  private gateEmbarkBtn!: Phaser.GameObjects.Text;
+  private gateCloseBtn!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: 'HomelandScene' });
@@ -175,6 +179,8 @@ export class HomelandScene extends Phaser.Scene {
 
   private drawHubBuildings(): void {
     this.buildingsContainer.removeAll(true);
+    this.buildingZones?.forEach(z => z.destroy());
+    this.buildingZones = [];
     const buildingTextureKeys: Record<string, string> = {
       trading_post: 'building_trading_post',
       crafting: 'building_crafting',
@@ -205,6 +211,15 @@ export class HomelandScene extends Phaser.Scene {
         fontSize: '11px', fontFamily: 'monospace', color: ul ? '#e8d5b7' : '#6a5a4a',
       }).setOrigin(0.5).setAlpha(alpha);
       this.buildingsContainer.add(label);
+
+      const bRef = b;
+      const zone = this.add.rectangle(c.x, c.y, 120, 72, ul ? 0xffffff : 0x000000, ul ? 0.08 : 0)
+        .setInteractive({ useHandCursor: true }).setData('isUI', true)
+        .setDepth(6);
+      zone.on('pointerdown', () => this.activateBuilding(bRef));
+      zone.on('pointerover', () => { if (ul) zone.setFillStyle(0xffffff, 0.15); });
+      zone.on('pointerout', () => { if (ul) zone.setFillStyle(0xffffff, 0.08); });
+      this.buildingZones.push(zone);
     }
 
 
@@ -234,9 +249,17 @@ export class HomelandScene extends Phaser.Scene {
       fontSize: '10px', fontFamily: 'monospace', color: '#7a6a9a',
     }).setOrigin(0.5);
 
-    this.add.text(c.x, c.y + 24, '[SPACE] Descend', {
+    const descendText = this.add.text(c.x, c.y + 24, '[SPACE] Descend', {
       fontSize: '11px', fontFamily: 'monospace', color: '#8a7aba',
     }).setOrigin(0.5);
+    descendText.setInteractive({ useHandCursor: true }).setData('isUI', true);
+    descendText.on('pointerdown', () => this.showGatePanel());
+
+    const gateZone = this.add.rectangle(c.x, c.y, 140, 84, 0xffffff, 0.06)
+      .setInteractive({ useHandCursor: true }).setData('isUI', true).setDepth(6);
+    gateZone.on('pointerdown', () => this.showGatePanel());
+    gateZone.on('pointerover', () => gateZone.setFillStyle(0xffffff, 0.12));
+    gateZone.on('pointerout', () => gateZone.setFillStyle(0xffffff, 0.06));
   }
 
   private drawPlayer(): void {
@@ -387,6 +410,19 @@ export class HomelandScene extends Phaser.Scene {
       fontSize: '13px', fontFamily: 'monospace', color: '#8a7a9a', align: 'center',
     }).setOrigin(0.5);
     this.gateContainer.add(this.gateFooter);
+
+    this.gateEmbarkBtn = this.add.text(258, 258, '[ EMBARK ]', {
+      fontSize: '15px', fontFamily: 'monospace', color: '#ffcc44',
+      backgroundColor: '#442a1acc', padding: { x: 12, y: 6 },
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(91).setInteractive({ useHandCursor: true }).setData('isUI', true);
+    this.gateEmbarkBtn.on('pointerdown', () => { if (this.gateMode) this.startExpedition(); });
+    this.gateEmbarkBtn.setVisible(false);
+
+    this.gateCloseBtn = this.add.text(810, 50, '[X]', {
+      fontSize: '16px', fontFamily: 'monospace', color: '#aa6666',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(91).setInteractive({ useHandCursor: true }).setData('isUI', true);
+    this.gateCloseBtn.on('pointerdown', () => { if (this.gateMode) this.closePanel(); });
+    this.gateCloseBtn.setVisible(false);
   }
 
   private setupInput(): void {
@@ -409,99 +445,19 @@ export class HomelandScene extends Phaser.Scene {
     };
   }
 
+  private get isModalActive(): boolean {
+    return this.panelVisible || this.restoreMode || this.gateMode
+      || this.craftingPanel.isVisible() || this.inventoryPanel.isVisible()
+      || this.tradePanel.isVisible() || this.researchPanel.isVisible()
+      || this.farmPanel.isVisible();
+  }
+
   private setupPointerInput(): void {
-    let stickCenterX = 0;
-    let stickCenterY = 0;
-    let pointerDragged = false;
-    const stickRadius = 40;
-    const deadZone = 12;
-    let analogGfx: Phaser.GameObjects.Graphics | null = null;
-
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (this.panelVisible || this.restoreMode) return;
-      if (this.craftingPanel.isVisible() || this.inventoryPanel.isVisible()) return;
-      if (this.tradePanel.isVisible() || this.researchPanel.isVisible() || this.farmPanel.isVisible()) return;
-
-      stickCenterX = pointer.x;
-      stickCenterY = pointer.y;
-      pointerDragged = false;
-      this.analogActive = false;
-      this.analogDx = 0;
-      this.analogDy = 0;
-    });
-
-    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (!pointer.isDown) return;
-      if (this.panelVisible || this.restoreMode) return;
-      if (this.craftingPanel.isVisible() || this.inventoryPanel.isVisible()) return;
-      if (this.tradePanel.isVisible() || this.researchPanel.isVisible() || this.farmPanel.isVisible()) return;
-
-      const dx = pointer.x - stickCenterX;
-      const dy = pointer.y - stickCenterY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < deadZone) {
-        if (this.analogActive) {
-          this.analogActive = false;
-          this.analogDx = 0;
-          this.analogDy = 0;
-        }
-        return;
-      }
-
-      pointerDragged = true;
-
-      let adx = 0;
-      let ady = 0;
-      if (dx > 0 && dy < 0) {
-        ady = -1;
-      } else if (dx < 0 && dy < 0) {
-        adx = -1;
-      } else if (dx > 0 && dy > 0) {
-        adx = 1;
-      } else if (dx < 0 && dy > 0) {
-        ady = 1;
-      } else if (dx !== 0) {
-        adx = dx > 0 ? 1 : -1;
-      } else if (dy !== 0) {
-        ady = dy > 0 ? 1 : -1;
-      }
-
-      if (adx !== this.analogDx || ady !== this.analogDy) {
-        this.analogDx = adx;
-        this.analogDy = ady;
-      }
-      this.analogActive = true;
-      this.movePath = [];
-
-      if (!analogGfx) {
-        analogGfx = this.add.graphics().setScrollFactor(0).setDepth(250);
-      }
-      analogGfx.clear();
-      analogGfx.lineStyle(2, 0xffffff, 0.25);
-      analogGfx.strokeCircle(stickCenterX, stickCenterY, stickRadius);
-      analogGfx.fillStyle(0x000000, 0.2);
-      analogGfx.fillCircle(stickCenterX, stickCenterY, stickRadius);
-
-      const clamp = Math.min(dist, stickRadius);
-      const angle = Math.atan2(dy, dx);
-      const thumbX = stickCenterX + Math.cos(angle) * clamp;
-      const thumbY = stickCenterY + Math.sin(angle) * clamp;
-      analogGfx.fillStyle(0xffffff, 0.5);
-      analogGfx.fillCircle(thumbX, thumbY, 12);
-    });
-
-    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-      if (!pointerDragged) {
-        this.doClickToMove(pointer.worldX, pointer.worldY);
-      }
-
-      this.analogActive = false;
-      this.analogDx = 0;
-      this.analogDy = 0;
-      if (analogGfx) {
-        analogGfx.destroy();
-        analogGfx = null;
-      }
+    this.analog = new AnalogStickInput(this, {
+      depth: 250,
+      isModal: () => this.isModalActive,
+      onDragStart: () => { this.movePath = []; },
+      onClick: (worldX, worldY) => { this.doClickToMove(worldX, worldY); },
     });
   }
 
@@ -834,14 +790,14 @@ export class HomelandScene extends Phaser.Scene {
 
     if (kbA || kbD || kbW || kbS) {
       this.movePath = [];
-      this.analogActive = false;
+      this.analog.reset();
       if (kbA) dx = -1;
       else if (kbD) dx = 1;
       if (kbW) dy = -1;
       else if (kbS) dy = 1;
-    } else if (this.analogActive && (this.analogDx !== 0 || this.analogDy !== 0)) {
-      dx = this.analogDx;
-      dy = this.analogDy;
+    } else if (this.analog.active && (this.analog.dx !== 0 || this.analog.dy !== 0)) {
+      dx = this.analog.dx;
+      dy = this.analog.dy;
     } else if (this.movePath.length > 0) {
       const next = this.movePath.shift()!;
       dx = next.x - this.playerGx;
@@ -898,13 +854,10 @@ export class HomelandScene extends Phaser.Scene {
     }
   }
 
-  private handleInteraction(): void {
-    if (!Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) return;
-    if (!this.currentBuilding) return;
+  private activateBuilding(b: HubBuildingDef): void {
+    if (this.isModalActive) return;
     this.movePath = [];
-    this.analogActive = false;
-
-    const b = this.currentBuilding;
+    this.analog.reset();
 
     if (b.id === 'gate') {
       this.showGatePanel();
@@ -932,6 +885,12 @@ export class HomelandScene extends Phaser.Scene {
     }
 
     this.showBuildingPanel(b);
+  }
+
+  private handleInteraction(): void {
+    if (!Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) return;
+    if (!this.currentBuilding) return;
+    this.activateBuilding(this.currentBuilding);
   }
 
   private showRestorePanel(buildingId: string): void {
@@ -1003,6 +962,12 @@ export class HomelandScene extends Phaser.Scene {
         fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7',
       }).setOrigin(0.5)
     );
+
+    if (this.restoreCloseBtn) { this.restoreCloseBtn.destroy(); this.restoreCloseBtn = null; }
+    this.restoreCloseBtn = this.add.text(665, 216, '[X]', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#886666',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(220).setInteractive({ useHandCursor: true }).setData('isUI', true);
+    this.restoreCloseBtn.on('pointerdown', () => this.closePanel());
   }
 
   private tryRestore(buildingId: string): void {
@@ -1142,6 +1107,8 @@ export class HomelandScene extends Phaser.Scene {
     };
     this.input.keyboard!.on('keydown', this.seedKeyHandler);
 
+    this.gateEmbarkBtn.setVisible(true);
+    this.gateCloseBtn.setVisible(true);
     this.gateContainer.setVisible(true);
     this.renderGatePanel();
   }
@@ -1379,6 +1346,12 @@ export class HomelandScene extends Phaser.Scene {
       `${building.label}\n\n${building.description}\n\n[SPACE/ESC] close`
     );
     this.panelText.setAlpha(1);
+
+    if (this.panelCloseBtn) { this.panelCloseBtn.destroy(); this.panelCloseBtn = null; }
+    this.panelCloseBtn = this.add.text(665, 236, '[X]', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#886666',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(220).setInteractive({ useHandCursor: true }).setData('isUI', true);
+    this.panelCloseBtn.on('pointerdown', () => this.closePanel());
   }
 
   private closePanel(): void {
@@ -1398,6 +1371,10 @@ export class HomelandScene extends Phaser.Scene {
     this.farmPanel.hide();
     this.panelBg.setAlpha(0);
     this.panelText.setAlpha(0);
+    this.gateEmbarkBtn.setVisible(false);
+    this.gateCloseBtn.setVisible(false);
+    if (this.panelCloseBtn) { this.panelCloseBtn.destroy(); this.panelCloseBtn = null; }
+    if (this.restoreCloseBtn) { this.restoreCloseBtn.destroy(); this.restoreCloseBtn = null; }
     this.gateContainer.setVisible(false);
   }
 

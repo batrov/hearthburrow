@@ -8,6 +8,7 @@ import {
   HALF_W, HALF_H,
 } from '../systems/IsoUtils';
 import { NPCPhotobookPanel } from '../ui/NPCPhotobookPanel';
+import { AnalogStickInput } from '../ui/AnalogStickInput';
 
 const TAVERN_COLS = 10;
 const TAVERN_ROWS = 8;
@@ -60,10 +61,7 @@ export class TavernScene extends Phaser.Scene {
   private greetingActive = false;
   private moveTimer: number = 0;
   private moveDelay: number = 150;
-  private analogDx: number = 0;
-  private analogDy: number = 0;
-  private analogActive: boolean = false;
-  private analogGfx: Phaser.GameObjects.Graphics | null = null;
+  private analog!: AnalogStickInput;
   private photobook!: NPCPhotobookPanel;
   private animFrame: number = 0;
   private animTimer: number = 0;
@@ -80,10 +78,6 @@ export class TavernScene extends Phaser.Scene {
     this.greetingActive = false;
     this.isMoving = false;
     this.movePath = [];
-    this.analogActive = false;
-    this.analogDx = 0;
-    this.analogDy = 0;
-    this.analogGfx = null;
     this.animFrame = 0;
     this.animTimer = 0;
     this.playerGx = 8;
@@ -307,94 +301,16 @@ export class TavernScene extends Phaser.Scene {
     return null;
   }
 
+  private get isModalActive(): boolean {
+    return this.greetingActive || this.photobook.isVisible();
+  }
+
   private setupPointerInput(): void {
-    let stickCenterX = 0;
-    let stickCenterY = 0;
-    let pointerDragged = false;
-    const stickRadius = 40;
-    const deadZone = 12;
-
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (this.greetingActive) return;
-
-      stickCenterX = pointer.x;
-      stickCenterY = pointer.y;
-      pointerDragged = false;
-      this.analogActive = false;
-      this.analogDx = 0;
-      this.analogDy = 0;
-    });
-
-    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (!pointer.isDown) return;
-      if (this.greetingActive) return;
-
-      const dx = pointer.x - stickCenterX;
-      const dy = pointer.y - stickCenterY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < deadZone) {
-        if (this.analogActive) {
-          this.analogActive = false;
-          this.analogDx = 0;
-          this.analogDy = 0;
-        }
-        return;
-      }
-
-      pointerDragged = true;
-
-      let adx = 0;
-      let ady = 0;
-      if (dx > 0 && dy < 0) {
-        ady = -1;
-      } else if (dx < 0 && dy < 0) {
-        adx = -1;
-      } else if (dx > 0 && dy > 0) {
-        adx = 1;
-      } else if (dx < 0 && dy > 0) {
-        ady = 1;
-      } else if (dx !== 0) {
-        adx = dx > 0 ? 1 : -1;
-      } else if (dy !== 0) {
-        ady = dy > 0 ? 1 : -1;
-      }
-
-      if (adx !== this.analogDx || ady !== this.analogDy) {
-        this.analogDx = adx;
-        this.analogDy = ady;
-      }
-      this.analogActive = true;
-      this.movePath = [];
-
-      if (!this.analogGfx) {
-        this.analogGfx = this.add.graphics().setScrollFactor(0).setDepth(250);
-      }
-      this.analogGfx.clear();
-      this.analogGfx.lineStyle(2, 0xffffff, 0.25);
-      this.analogGfx.strokeCircle(stickCenterX, stickCenterY, stickRadius);
-      this.analogGfx.fillStyle(0x000000, 0.2);
-      this.analogGfx.fillCircle(stickCenterX, stickCenterY, stickRadius);
-
-      const clamp = Math.min(dist, stickRadius);
-      const angle = Math.atan2(dy, dx);
-      const thumbX = stickCenterX + Math.cos(angle) * clamp;
-      const thumbY = stickCenterY + Math.sin(angle) * clamp;
-      this.analogGfx.fillStyle(0xffffff, 0.5);
-      this.analogGfx.fillCircle(thumbX, thumbY, 12);
-    });
-
-    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-      if (!pointerDragged) {
-        this.doClickToMove(pointer.worldX, pointer.worldY);
-      }
-
-      this.analogActive = false;
-      this.analogDx = 0;
-      this.analogDy = 0;
-      if (this.analogGfx) {
-        this.analogGfx.destroy();
-        this.analogGfx = null;
-      }
+    this.analog = new AnalogStickInput(this, {
+      depth: 250,
+      isModal: () => this.isModalActive,
+      onDragStart: () => { this.movePath = []; },
+      onClick: (worldX, worldY) => { this.doClickToMove(worldX, worldY); },
     });
   }
 
@@ -522,14 +438,14 @@ export class TavernScene extends Phaser.Scene {
 
     if (kbA || kbD || kbW || kbS) {
       this.movePath = [];
-      this.analogActive = false;
+      this.analog.reset();
       if (kbA) dx = -1;
       else if (kbD) dx = 1;
       if (kbW) dy = -1;
       else if (kbS) dy = 1;
-    } else if (this.analogActive && (this.analogDx !== 0 || this.analogDy !== 0)) {
-      dx = this.analogDx;
-      dy = this.analogDy;
+    } else if (this.analog.active && (this.analog.dx !== 0 || this.analog.dy !== 0)) {
+      dx = this.analog.dx;
+      dy = this.analog.dy;
     } else if (this.movePath.length > 0) {
       const next = this.movePath.shift()!;
       dx = next.x - this.playerGx;
