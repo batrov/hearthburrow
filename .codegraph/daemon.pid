@@ -1,6 +1,6 @@
 {
-  "pid": 1456,
-  "version": "0.9.9",
+  "pid": 11783,
+  "version": "1.0.1",
   "socketPath": "/mnt/d/Projects/agentic/hearthburrow/.codegraph/daemon.sock",
-  "startedAt": 1781536642718
+  "startedAt": 1781799830928
 }

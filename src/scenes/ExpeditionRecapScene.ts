@@ -55,11 +55,7 @@ export class ExpeditionRecapScene extends Phaser.Scene {
     bg.lineStyle(1, 0x2a2a3a, 0.6);
     bg.strokeRoundedRect(panelX, panelY, panelW, panelH, 8);
 
-    this.contentContainer = this.add.container(0, 0);
-
-    const maskShape = this.make.graphics();
-    maskShape.fillRect(viewportX, viewportY, viewportW, viewportH);
-    this.contentContainer.enableFilters().filters!.internal.addMask(maskShape);
+    this.contentContainer = this.add.container(0, 0).setVisible(false);
 
     this.scrollbar = this.add.graphics();
 
@@ -68,16 +64,15 @@ export class ExpeditionRecapScene extends Phaser.Scene {
     const netItems = this.computeNetItems(result.itemsObtained, result.itemsLost);
 
     const noItems = netItems.length === 0 && result.itemsLost.length === 0;
+
     if (!noItems) {
-      const titleCollected = this.add.text(leftX, contentY, 'Items Collected', {
+      this.add.text(leftX, contentY, 'Items Collected', {
         fontSize: '15px', fontFamily: 'monospace', color: '#88dd88', fontStyle: 'bold',
       });
-      this.contentContainer.add(titleCollected);
 
-      const titleLost = this.add.text(rightX, contentY, 'Items Lost', {
+      this.add.text(rightX, contentY, 'Items Lost', {
         fontSize: '15px', fontFamily: 'monospace', color: '#dd6666', fontStyle: 'bold',
       });
-      this.contentContainer.add(titleLost);
 
       contentY += 24;
 
@@ -102,12 +97,10 @@ export class ExpeditionRecapScene extends Phaser.Scene {
         if (rx + entryW > maxRX) { rx = leftX; contentY += 18; }
         if (this.textures.exists(iconKey)) {
           const img = this.add.image(rx, contentY + 6, iconKey).setScale(0.5);
-          this.contentContainer.add(img);
         }
         const t = this.add.text(rx + 12, contentY, v.name, {
           fontSize: '13px', fontFamily: 'monospace', color: '#c8b898',
         });
-        this.contentContainer.add(t);
         rx += entryW;
       }
       contentY += 22;
@@ -118,7 +111,6 @@ export class ExpeditionRecapScene extends Phaser.Scene {
       const recipeLabel = this.add.text(leftX, contentY, 'Discovered', {
         fontSize: '13px', fontFamily: 'monospace', color: '#88ddff', fontStyle: 'bold',
       });
-      this.contentContainer.add(recipeLabel);
       contentY += 18;
 
       let rx = leftX;
@@ -129,12 +121,10 @@ export class ExpeditionRecapScene extends Phaser.Scene {
         if (rx + entryW > maxRX) { rx = leftX; contentY += 18; }
         if (itemId && this.textures.exists(itemIconKey(itemId))) {
           const img = this.add.image(rx, contentY + 6, itemIconKey(itemId)).setScale(0.5);
-          this.contentContainer.add(img);
         }
         const t = this.add.text(rx + (itemId ? 12 : 0), contentY, name, {
           fontSize: '13px', fontFamily: 'monospace', color: '#b8b8c8',
         });
-        this.contentContainer.add(t);
         rx += entryW;
       }
       contentY += 22;
@@ -228,20 +218,15 @@ export class ExpeditionRecapScene extends Phaser.Scene {
       const y = startY + i * lineH;
 
       const iconKey = itemIconKey(item.id);
-      if (this.textures.exists(iconKey)) {
-        const img = this.add.image(x, y + 7, iconKey).setScale(0.7);
-        this.contentContainer.add(img);
-      }
+      const img = this.add.image(x, y + 7, iconKey).setScale(0.7);
 
       const nameText = this.add.text(x + 18, y, itemDisplayName(item.id), {
         fontSize: '13px', fontFamily: 'monospace', color: nameColor,
       });
-      this.contentContainer.add(nameText);
 
       const qtyText = this.add.text(x + 18 + labelW, y, 'x0', {
         fontSize: '13px', fontFamily: 'monospace', color: qtyColor,
       });
-      this.contentContainer.add(qtyText);
 
       const data = { count: 0 };
       this.tweens.add({

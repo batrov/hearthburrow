@@ -108,6 +108,7 @@ Resolved Bugs:
 - Pressure plate puzzle stairs not spawning — `completePuzzle` only searched for `type === 'floor'`, but stepped-on plates are `type === 'pressure_plate'`. Fixed by including `pressure_plate` in the candidate search. Also updated `stairsDownX/Y` after placement for correct ascending landing.
 - Building shake animation not playing — `setData('bid', b.id)` used `HUB_BUILDINGS.id` (e.g. `'tavern'`) but `tryRestore` looked up by `buildingId` (e.g. `'housing'`). Fixed by using `b.buildingId || b.id` so filter matches.
 - Player walk animation stuck on frame 0↔1 — was `(animFrame+1)%6` (included frame 0 in cycle) with instant frame-0 reset on each step end. Fixed: `(animFrame%5)+1` cycles frames 1-5 while moving; 250ms linger before idle reset for Pokemon-style pose hold.
+- **ExpeditionRecapScene empty lists** — `enableFilters().addMask()` on a `Phaser.Container` prevents child objects from rendering. Fixed by adding items/assets directly to the scene via `this.add.text()/image()` instead of the masked container. See Critical Warnings in AGENTS.md.
 
 ## ✅ Item Sprite Polish (June 2026)
 - **ExpeditionRecapScene** — item sprites now shown next to each item name in the collected/lost lists

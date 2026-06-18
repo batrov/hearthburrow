@@ -90,6 +90,7 @@ export class BootScene extends Phaser.Scene {
     }
 
     this.load.image('portrait', 'player/portrait.png');
+    this.load.image('item_inventory_bag', 'items/inventory_bag.png');
   }
 
   create(): void {

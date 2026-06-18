@@ -54,11 +54,26 @@ export class ExpeditionScene extends Phaser.Scene {
   private tileObjects: Phaser.GameObjects.Image[] = [];
   private selectedObject!: Phaser.GameObjects.Graphics;
   private facingHighlight!: Phaser.GameObjects.Graphics;
-  private staminaBar!: Phaser.GameObjects.Graphics;
-  private inventoryGauge!: Phaser.GameObjects.Graphics;
-  private staminaText!: Phaser.GameObjects.Text;
-  private inventoryText!: Phaser.GameObjects.Text;
-  private depthText!: Phaser.GameObjects.Text;
+  private portraitSprite!: Phaser.GameObjects.Image;
+  private staminaBarGfx!: Phaser.GameObjects.Graphics;
+  private staminaValueText!: Phaser.GameObjects.Text;
+  private depthTextCentered!: Phaser.GameObjects.Text;
+  private pickaxeSprite!: Phaser.GameObjects.Image;
+  private pickaxeRing!: Phaser.GameObjects.Graphics;
+  private pickaxeUsesText!: Phaser.GameObjects.Text;
+  private invBtnSprite!: Phaser.GameObjects.Image;
+  private invBtnRing!: Phaser.GameObjects.Graphics;
+  private invSlotText!: Phaser.GameObjects.Text;
+  private minimapX: number = 0;
+  private minimapY: number = 0;
+  private minimapW: number = 0;
+  private minimapH: number = 0;
+  private potionImg!: Phaser.GameObjects.Image;
+  private bombImg!: Phaser.GameObjects.Image;
+  private potionCountText!: Phaser.GameObjects.Text;
+  private bombCountText!: Phaser.GameObjects.Text;
+  private escapeSprite!: Phaser.GameObjects.Image;
+  private escapeLabel!: Phaser.GameObjects.Text;
   private keys!: {
     W: Phaser.Input.Keyboard.Key;
     A: Phaser.Input.Keyboard.Key;
@@ -221,7 +236,6 @@ export class ExpeditionScene extends Phaser.Scene {
     this.createHUD();
     this.setupInput();
     this.setupPointerInput();
-    this.createActionButtons();
 
     const xMin = -floor.rows * HALF_W;
     const yMin = -HALF_H;
@@ -489,80 +503,117 @@ export class ExpeditionScene extends Phaser.Scene {
     this.drawMinimap();
   }
 
-  private actionButtons: Phaser.GameObjects.Text[] = [];
-  private fightButton!: Phaser.GameObjects.Text;
-
-  private createActionButtons(): void {
-    const y = 605;
-    const btnData = [
-      { x: 120, label: '⚡ Potion', action: () => this.tryUseConsumable('stamina_potion') },
-      { x: 320, label: '📜 Scroll', action: () => this.tryUseConsumable('teleport_scroll') },
-      { x: 520, label: '💣 Bomb', action: () => this.tryUseConsumable('mining_bomb') },
-      { x: 840, label: '❌ Exit', action: () => this.emergencyExtract() },
-    ];
-    for (const btn of btnData) {
-      const t = this.add.text(btn.x, y, btn.label, {
-        fontSize: '11px', fontFamily: 'monospace', color: '#d8d8d8',
-        backgroundColor: '#1a1a2acc', padding: { x: 8, y: 4 },
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
-      t.setInteractive({ useHandCursor: true }).setData('isUI', true);
-      t.on('pointerdown', () => {
-        if (this.inventoryPanel.isVisible() || this.eventActive || this.combatActive) return;
-        btn.action();
-      });
-      this.actionButtons.push(t);
-    }
-    this.fightButton = this.add.text(720, y, '⚔️ Fight', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#ffcc44',
-      backgroundColor: '#442a1acc', padding: { x: 10, y: 5 },
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD).setVisible(false);
-    this.fightButton.setInteractive({ useHandCursor: true }).setData('isUI', true);
-    this.fightButton.on('pointerdown', () => {
-      if (!this.interactTarget || this.combatActive || this.eventActive) return;
-      this.movePath = [];
-      this.analog.reset();
-      const tile = this.currentFloor?.tiles[this.interactTarget.y]?.[this.interactTarget.x];
-      if (tile && (tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken) {
-        if (this.stamina.remaining > 10) {
-          this.startCombat(this.interactTarget.x, this.interactTarget.y, tile);
-        }
-      }
-    });
-  }
-
   private createHUD(): void {
     const camW = this.cameras.main.width;
+    const camH = this.cameras.main.height;
 
-    const hudBg = this.add.graphics();
-    hudBg.fillStyle(0x0a0a1a, 0.75);
-    hudBg.fillRoundedRect(8, 8, 280, 100, 6);
-    hudBg.setScrollFactor(0);
-    hudBg.setDepth(DEPTH.HUD_BG);
+    // === TOP-LEFT: Stamina Block (portrait + bar + value) ===
+    const staminaBg = this.add.graphics();
+    staminaBg.fillStyle(0x0a0a1a, 0.75);
+    staminaBg.fillRoundedRect(8, 8, 260, 72, 6);
+    staminaBg.setScrollFactor(0).setDepth(DEPTH.HUD_BG);
 
-    this.staminaBar = this.add.graphics();
-    this.staminaBar.setScrollFactor(0);
-    this.staminaBar.setDepth(DEPTH.HUD);
+    this.portraitSprite = this.add.image(40, 44, 'portrait')
+      .setScale(0.25).setScrollFactor(0).setDepth(DEPTH.HUD);
 
-    this.inventoryGauge = this.add.graphics();
-    this.inventoryGauge.setScrollFactor(0);
-    this.inventoryGauge.setDepth(DEPTH.HUD);
+    this.staminaBarGfx = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD);
 
-    this.staminaText = this.add.text(20, 14, 'Stamina', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#8a7a6a',
+    this.staminaValueText = this.add.text(82, 44, '', {
+      fontSize: '13px', fontFamily: 'monospace', color: '#ffffff',
     }).setScrollFactor(0).setDepth(DEPTH.HUD);
 
     this.drawStaminaBar();
 
-    this.depthText = this.add.text(20, 76, `Depth: ${this.expeditionState.depth}`, {
-      fontSize: '12px', fontFamily: 'monospace', color: '#7a8a9a',
-    }).setScrollFactor(0).setDepth(DEPTH.HUD);
+    // === CENTER-TOP: Depth ===
+    this.depthTextCentered = this.add.text(camW / 2, 12, `Depth: ${this.expeditionState.depth}`, {
+      fontSize: '16px', fontFamily: 'monospace', color: '#ffffff', fontStyle: 'bold',
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(DEPTH.HUD);
 
-    this.inventoryText = this.add.text(20, 60, '', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#8a7a6a',
-    }).setScrollFactor(0).setDepth(DEPTH.HUD);
+    // === TOP-RIGHT: Pickaxe Block ===
+    const pickBg = this.add.graphics();
+    pickBg.fillStyle(0x0a0a1a, 0.75);
+    pickBg.fillRoundedRect(camW - 100, 8, 92, 72, 6);
+    pickBg.setScrollFactor(0).setDepth(DEPTH.HUD_BG);
 
-    this.drawInventoryGauge();
+    const pickCx = camW - 54;
+    const tier = gameState.currentPickaxeTier;
+    this.pickaxeSprite = this.add.image(pickCx, 34, `item_pickaxe_${tier}`)
+      .setScrollFactor(0).setDepth(DEPTH.HUD);
+    this.pickaxeRing = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD + 1);
+    this.pickaxeUsesText = this.add.text(pickCx, 56, '', {
+      fontSize: '10px', fontFamily: 'monospace', color: '#cccccc', align: 'center',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
 
+    this.drawPickaxeRing();
+
+    // === BOTTOM-LEFT: Inventory Button ===
+    const invBg = this.add.graphics();
+    invBg.fillStyle(0x0a0a1a, 0.75);
+    invBg.fillRoundedRect(8, camH - 80, 80, 72, 6);
+    invBg.setScrollFactor(0).setDepth(DEPTH.HUD_BG);
+
+    const invCx = 48;
+    const invCy = camH - 44;
+    this.invBtnSprite = this.add.image(invCx, invCy - 4, 'item_inventory_bag')
+      .setScrollFactor(0).setDepth(DEPTH.HUD);
+    this.invBtnRing = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD + 1);
+    this.invSlotText = this.add.text(invCx, invCy + 16, '', {
+      fontSize: '10px', fontFamily: 'monospace', color: '#cccccc', align: 'center',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
+
+    const invZone = this.add.rectangle(invCx, camH - 44, 68, 56, 0x000000, 0)
+      .setScrollFactor(0).setDepth(DEPTH.CLICK_ZONES).setInteractive({ useHandCursor: true }).setData('isUI', true);
+    invZone.on('pointerdown', () => {
+      if (this.isModalActive) return;
+      this.inventoryPanel.refresh();
+      this.inventoryPanel.toggle();
+    });
+
+    this.drawInventoryButton();
+
+    // === BOTTOM-RIGHT: Action Buttons ===
+
+    // Escape (above minimap)
+    this.escapeSprite = this.add.image(0, 0, 'item_teleport_scroll')
+      .setScrollFactor(0).setDepth(DEPTH.HUD).setInteractive({ useHandCursor: true }).setData('isUI', true);
+    this.escapeSprite.on('pointerdown', () => {
+      if (this.isModalActive) return;
+      if (this.inventory.count('teleport_scroll') > 0) {
+        this.tryUseConsumable('teleport_scroll');
+      } else {
+        this.emergencyExtract();
+      }
+    });
+    this.escapeLabel = this.add.text(0, 0, '', {
+      fontSize: '9px', fontFamily: 'monospace', color: '#cccccc',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
+
+    // Potion (bottom row)
+    this.potionImg = this.add.image(0, 0, 'item_stamina_potion')
+      .setScrollFactor(0).setDepth(DEPTH.HUD).setInteractive({ useHandCursor: true }).setData('isUI', true);
+    this.potionImg.on('pointerdown', () => {
+      if (this.isModalActive) return;
+      this.tryUseConsumable('stamina_potion');
+    });
+    this.potionCountText = this.add.text(0, 0, '', {
+      fontSize: '10px', fontFamily: 'monospace', color: '#ffdd88',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(DEPTH.HUD);
+
+    // Bomb (bottom row, left of potion)
+    this.bombImg = this.add.image(0, 0, 'item_mining_bomb')
+      .setScrollFactor(0).setDepth(DEPTH.HUD).setInteractive({ useHandCursor: true }).setData('isUI', true);
+    this.bombImg.on('pointerdown', () => {
+      if (this.isModalActive) return;
+      this.tryUseConsumable('mining_bomb');
+    });
+    this.bombCountText = this.add.text(0, 0, '', {
+      fontSize: '10px', fontFamily: 'monospace', color: '#ffdd88',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(DEPTH.HUD);
+
+    // Loadout consumables
     for (const [id, qty] of Object.entries(this.loadoutConsumables)) {
       if (qty > 0) this.giveItem(id, qty);
     }
@@ -571,57 +622,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.giveItem('mining_bomb', 5);
     }
 
-    this.add.text(20, 92, '[TAB] Inventory', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#4a5a4a',
-    }).setScrollFactor(0).setDepth(DEPTH.HUD);
-
-    const infoBg = this.add.graphics();
-    infoBg.fillStyle(0x0a0a1a, 0.75);
-    infoBg.fillRoundedRect(camW - 228, 8, 220, 84, 6);
-    infoBg.setScrollFactor(0);
-    infoBg.setDepth(DEPTH.HUD_BG);
-
-    const pickaxeNames: Record<number, string> = {
-      1: 'Common Pickaxe',
-      2: 'Bronze Pickaxe',
-      3: 'Silver Pickaxe',
-      4: 'Gold Pickaxe',
-    };
-    const pName = pickaxeNames[gameState.currentPickaxeTier] ?? `Tier ${gameState.currentPickaxeTier}`;
-
-    this.add.text(camW - 218, 14, `Pickaxe: ${pName}`, {
-      fontSize: '11px', fontFamily: 'monospace', color: '#6a8a6a',
-    }).setScrollFactor(0).setDepth(DEPTH.HUD);
-
-    const tier = gameState.currentPickaxeTier;
-    const runsLeft = gameState.remainingPickaxeRuns(tier);
-    if (tier > 1 && runsLeft >= 0) {
-      const barW = 120;
-      const barH = 6;
-      const barX = camW - 218;
-      const barY = 30;
-      const maxRuns = 5;
-      const ratio = runsLeft / maxRuns;
-
-      this.add.graphics()
-        .fillStyle(0x2a1a1a, 1)
-        .fillRoundedRect(barX, barY, barW, barH, 2)
-        .fillStyle(runsLeft > 2 ? 0x44cc66 : runsLeft > 1 ? 0xccaa44 : 0xcc4444, 1)
-        .fillRoundedRect(barX + 1, barY + 1, (barW - 2) * ratio, barH - 2, 1)
-        .setScrollFactor(0).setDepth(DEPTH.HUD);
-
-      this.add.text(barX + barW + 6, barY - 2, `${runsLeft}/${maxRuns}`, {
-        fontSize: '10px', fontFamily: 'monospace', color: '#6a8a6a',
-      }).setScrollFactor(0).setDepth(DEPTH.HUD);
-    }
-
-    this.add.text(camW - 218, 40, '[ESC] Give Up  [SPACE] Mine', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#5a4a6a',
-    }).setScrollFactor(0).setDepth(DEPTH.HUD);
-
-    this.add.text(camW - 218, 56, '[Q] Potion  [E] Scroll  [F] Bomb', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#4a6a5a',
-    }).setScrollFactor(0).setDepth(DEPTH.HUD);
+    this.updateActionButtons();
   }
 
   private drawMinimap(): void {
@@ -682,6 +683,12 @@ export class ExpeditionScene extends Phaser.Scene {
     }
 
     this.minimapDot.setPosition(mapX + this.playerX * cell + cell / 2, mapY + this.playerY * cell + cell / 2);
+
+    this.minimapX = mapX;
+    this.minimapY = mapY;
+    this.minimapW = mapW;
+    this.minimapH = mapH;
+    this.repositionActionButtons();
   }
 
   private updateMinimapDot(): void {
@@ -696,46 +703,112 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private drawStaminaBar(): void {
-    this.staminaBar.clear();
+    this.staminaBarGfx.clear();
 
-    const x = 20;
-    const y = 30;
-    const w = 200;
+    const x = 76;
+    const y = 18;
+    const w = 180;
     const h = 14;
     const ratio = this.stamina.ratio;
 
-    this.staminaBar.fillStyle(0x2a1a1a, 1);
-    this.staminaBar.fillRoundedRect(x, y, w, h, 3);
+    this.staminaBarGfx.fillStyle(0x2a1a1a, 1);
+    this.staminaBarGfx.fillRoundedRect(x, y, w, h, 3);
 
     const color = ratio > 0.5 ? 0x44cc66 : ratio > 0.25 ? 0xccaa44 : 0xcc4444;
-    this.staminaBar.fillStyle(color, 1);
-    this.staminaBar.fillRoundedRect(x + 1, y + 1, (w - 2) * ratio, h - 2, 2);
+    this.staminaBarGfx.fillStyle(color, 1);
+    this.staminaBarGfx.fillRoundedRect(x + 1, y + 1, (w - 2) * ratio, h - 2, 2);
 
-    this.staminaText.setText(`Stamina: ${this.stamina.remaining}/${this.stamina.maxStamina}`);
+    this.staminaValueText.setText(`${this.stamina.remaining}/${this.stamina.maxStamina}`);
   }
 
-  private drawInventoryGauge(): void {
-    this.inventoryGauge.clear();
-
-    const x = 20;
-    const y = 48;
-    const w = 200;
-    const h = 8;
+  private drawInventoryButton(): void {
+    this.invBtnRing.clear();
 
     const used = this.inventory.capacityUsed();
     const max = this.inventory.capacityMax();
     const ratio = max > 0 ? used / max : 0;
 
-    this.inventoryGauge.fillStyle(0x1a1a2a, 1);
-    this.inventoryGauge.fillRoundedRect(x, y, w, h, 2);
+    const cx = 48;
+    const cy = this.cameras.main.height - 48;
+    const radius = 18;
+    const color = ratio <= 0.75 ? 0x44cc66 : ratio <= 0.9 ? 0xccaa44 : 0xcc4444;
 
-    const color = ratio <= 0.5 ? 0x44cc66 : ratio <= 0.75 ? 0xccaa44 : 0xcc4444;
-    this.inventoryGauge.fillStyle(color, 1);
-    if (used > 0) {
-      this.inventoryGauge.fillRoundedRect(x + 1, y + 1, (w - 2) * Math.min(ratio, 1), h - 2, 1);
+    this.invBtnRing.lineStyle(2, color, 1);
+    this.invBtnRing.beginPath();
+    this.invBtnRing.arc(cx, cy, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(ratio, 1), false);
+    this.invBtnRing.strokePath();
+
+    this.invSlotText.setText(`${used}/${max}`);
+  }
+
+  private drawPickaxeRing(): void {
+    this.pickaxeRing.clear();
+
+    const pickCx = this.cameras.main.width - 54;
+    const pickCy = 34;
+    const radius = 18;
+    const tier = gameState.currentPickaxeTier;
+    const runsLeft = gameState.remainingPickaxeRuns(tier);
+    const maxRuns = 5;
+    const ratio = tier > 1 && runsLeft >= 0 ? runsLeft / maxRuns : 1;
+    const color = ratio > 0.4 ? 0x44cc66 : ratio > 0.2 ? 0xccaa44 : 0xcc4444;
+
+    this.pickaxeRing.lineStyle(2, color, 1);
+    this.pickaxeRing.beginPath();
+    this.pickaxeRing.arc(pickCx, pickCy, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(ratio, 1), false);
+    this.pickaxeRing.strokePath();
+
+    this.pickaxeUsesText.setText(tier > 1 && runsLeft >= 0 ? `${runsLeft}/${maxRuns}` : '∞');
+  }
+
+  private updateActionButtons(): void {
+    const potionCount = this.inventory.count('stamina_potion');
+    const bombCount = this.inventory.count('mining_bomb');
+    const hasScroll = this.inventory.count('teleport_scroll') > 0;
+
+    this.potionCountText.setText(potionCount > 0 ? `${potionCount}` : '');
+    this.bombCountText.setText(bombCount > 0 ? `${bombCount}` : '');
+
+    if (hasScroll) {
+      this.escapeSprite.setTexture('item_teleport_scroll');
+      this.escapeSprite.setTint(0xffffff);
+      this.escapeLabel.setText('Teleport');
+      this.escapeLabel.setColor('#88ccff');
+    } else {
+      this.escapeSprite.setTexture('item_teleport_scroll');
+      this.escapeSprite.setTint(0xff4444);
+      this.escapeLabel.setText('Give Up');
+      this.escapeLabel.setColor('#cc6666');
     }
+  }
 
-    this.inventoryText.setText(`Inventory: ${used}/${max}`);
+  private repositionActionButtons(): void {
+    const gap = 4;
+    const half = 16;
+
+    // Potion: left of minimap, bottom-aligned (closest to minimap)
+    this.potionImg.setPosition(
+      this.minimapX - gap - half,
+      this.minimapY + this.minimapH - half,
+    );
+    this.potionCountText.setPosition(this.potionImg.x + 16, this.potionImg.y - 16);
+
+    // Bomb: left of potion
+    this.bombImg.setPosition(
+      this.minimapX - gap - half - 44,
+      this.minimapY + this.minimapH - half,
+    );
+    this.bombCountText.setPosition(this.bombImg.x + 16, this.bombImg.y - 16);
+
+    // Escape: centered above minimap
+    this.escapeSprite.setPosition(
+      this.minimapX + this.minimapW / 2,
+      this.minimapY - 26,
+    );
+    this.escapeLabel.setPosition(
+      this.escapeSprite.x,
+      this.escapeSprite.y + 18,
+    );
   }
 
   private setupInput(): void {
@@ -1074,15 +1147,10 @@ export class ExpeditionScene extends Phaser.Scene {
       }
     }
 
-    const panelsOpen = this.inventoryPanel.isVisible() || this.eventActive || this.combatActive;
-    for (const btn of this.actionButtons) btn.setVisible(!panelsOpen);
-    const isFacingEnemy = this.interactTarget && (() => {
-      const tile = this.currentFloor?.tiles[this.interactTarget!.y]?.[this.interactTarget!.x];
-      return tile && (tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken;
-    })();
-    this.fightButton.setVisible(!panelsOpen && !!isFacingEnemy && this.stamina.remaining > 10);
     this.drawStaminaBar();
-    this.drawInventoryGauge();
+    this.drawInventoryButton();
+    this.drawPickaxeRing();
+    this.updateActionButtons();
     this.updateDarkness();
   }
 
@@ -1541,7 +1609,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, true, 0.5, 0.5);
     this.cameras.main.setBounds(xMin, yMin, worldWidth(floor.cols, floor.rows), worldHeight(floor.cols, floor.rows));
 
-    this.depthText.setText(`Floor: ${this.expeditionState.depth}`);
+    this.depthTextCentered.setText(`Depth: ${this.expeditionState.depth}`);
 
     this.drawMinimap();
     this.rocksBrokenThisRun = 0;
@@ -1858,6 +1926,8 @@ export class ExpeditionScene extends Phaser.Scene {
         itemList.push({ id: slot.itemId });
       }
     }
+
+
 
     let toLose = extractType === 'emergency' && lossRate > 0 ? Math.round(itemList.length * lossRate) : 0;
     const lostMap = new Map<string, number>();
@@ -2273,21 +2343,24 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private showConsumableFeedback(text: string): void {
-    const cx = this.cameras.main.width / 2;
-    this.createPopup(text, cx, 180, '#44ff88', { duration: 1200, moveY: -30, scaleTo: 0.9 });
+    if (text === '+30 Stamina') {
+      this.queueObtainPopup('stamina_potion', 1);
+    }
   }
 
   private giveItem(id: string, qty: number): void {
     this.inventory.addItem(id, qty);
-    this.drawInventoryGauge();
+    this.drawInventoryButton();
     this.queueObtainPopup(id, qty);
   }
 
   private queueObtainPopup(id: string, qty: number): void {
-    if (this.activeObtainPopups.length >= 8) return;
+    if (this.activeObtainPopups.length >= 3) return;
 
-    const y = 116 + this.activeObtainPopups.length * 36;
-    const container = this.add.container(20, y).setScrollFactor(0).setDepth(DEPTH.HUD + 2);
+    const anchorX = 18;
+    const anchorY = this.cameras.main.height - 90;
+    const popY = anchorY - this.activeObtainPopups.length * 36;
+    const container = this.add.container(anchorX, popY).setScrollFactor(0).setDepth(DEPTH.HUD + 2);
 
     const bg = this.add.graphics();
     bg.fillStyle(0x0a0a1a, 0.8);

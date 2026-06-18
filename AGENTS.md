@@ -91,6 +91,7 @@ When modifying `DungeonGenerator.ts`, follow this sequence to maintain floor con
 - **Memory Leaks**: Any `Image` or `Graphics` object added to the scene during `drawInteractiveTiles` **MUST** be tracked in a cleanup array (e.g., `floorObjects` or `enemySprites`) and explicitly `destroy()`-ed before the next redraw.
 - **Edit Safety**: When editing large functions in `ExpeditionScene.ts`, ensure the entire function block is replaced to avoid duplicating the function body, which causes catastrophic syntax errors.
 - **Type Safety**: Always run `npm run build` to catch TypeScript errors that may not be apparent in the editor.
+- **Phaser 4 Masking**: The custom `enableFilters().filters!.internal.addMask()` system is **broken for `Phaser.Container`** — child objects added to a masked container will not render. Always add UI text/images directly to the scene (`this.add.text(...)`) instead of to a container with a mask. The mask/clip behavior for scrollable content is non-functional; skip it and render directly.
 
 ---
 
