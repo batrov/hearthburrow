@@ -192,6 +192,12 @@ Resolved Bugs:
 
 ---
 
+## ✅ Phaser 4.1.0 Upgrade (June 2026)
+- **Version bump** — `phaser` upgraded from `^3.80.1` to `^4.1.0` ("Salusa")
+- **GeometryMask → Filter mask** — darkness overlay (ExpeditionScene) and content clipping (ExpeditionRecapScene) migrated from Canvas-only `GeometryMask` to WebGL-native `addMask()` via `enableFilters()`
+- **setTintFill → setTint + setTintMode** — replaced the removed `setTintFill()` with `setTint().setTintMode(FILL)`
+- **Clean build** — `tsc` + `vite build` pass with zero errors
+
 ## ✅ Mobile Build (June 2026)
 - **PWA foundation** — VitePWA plugin, manifest (standalone/portrait), workbox caching, 192+512 icons
 - **Mobile HTML tags** — theme-color, viewport-fit=cover, touch-action: manipulation, safe-area padding, canvas touch-action: none

@@ -59,8 +59,7 @@ export class ExpeditionRecapScene extends Phaser.Scene {
 
     const maskShape = this.make.graphics();
     maskShape.fillRect(viewportX, viewportY, viewportW, viewportH);
-    const mask = maskShape.createGeometryMask();
-    this.contentContainer.setMask(mask);
+    this.contentContainer.enableFilters().filters!.internal.addMask(maskShape);
 
     this.scrollbar = this.add.graphics();
 

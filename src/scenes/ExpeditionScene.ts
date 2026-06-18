@@ -186,9 +186,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.selectedObject = this.add.graphics().setDepth(DEPTH.SELECTED_BACKDROP);
     this.darknessOverlay = this.add.graphics().setDepth(DEPTH.DARKNESS);
     this.darknessMaskGfx = this.add.graphics().setVisible(false);
-    const darknessMask = new Phaser.Display.Masks.GeometryMask(this, this.darknessMaskGfx);
-    darknessMask.invertAlpha = true;
-    this.darknessOverlay.setMask(darknessMask);
+    this.darknessOverlay.enableFilters().filters!.internal.addMask(this.darknessMaskGfx, true);
 
     this.inventoryPanel = new InventoryPanel(
       this, this.inventory,
@@ -432,7 +430,7 @@ export class ExpeditionScene extends Phaser.Scene {
         for (const [dx, dy] of dirs) {
           const img = this.add.image(previewX + dx * t, previewY + dy * t, texKey)
             .setDepth(DEPTH.PREVIEW_TILE - 0.05)
-            .setTintFill(0xffffff)
+            .setTint(0xffffff).setTintMode(Phaser.TintModes.FILL)
             .setAlpha(alpha);
           if (s !== 1) img.setScale(s);
           this.facingOutlineImages.push(img);
@@ -555,7 +553,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.drawStaminaBar();
 
-    this.depthText = this.add.text(20, 76, `Floor: ${this.expeditionState.depth}`, {
+    this.depthText = this.add.text(20, 76, `Depth: ${this.expeditionState.depth}`, {
       fontSize: '12px', fontFamily: 'monospace', color: '#7a8a9a',
     }).setScrollFactor(0).setDepth(DEPTH.HUD);
 
@@ -713,7 +711,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.staminaBar.fillStyle(color, 1);
     this.staminaBar.fillRoundedRect(x + 1, y + 1, (w - 2) * ratio, h - 2, 2);
 
-    this.staminaText.setText(`${this.stamina.remaining}/${this.stamina.maxStamina}`);
+    this.staminaText.setText(`Stamina: ${this.stamina.remaining}/${this.stamina.maxStamina}`);
   }
 
   private drawInventoryGauge(): void {
@@ -737,7 +735,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.inventoryGauge.fillRoundedRect(x + 1, y + 1, (w - 2) * Math.min(ratio, 1), h - 2, 1);
     }
 
-    this.inventoryText.setText(`${used}/${max}`);
+    this.inventoryText.setText(`Inventory: ${used}/${max}`);
   }
 
   private setupInput(): void {
