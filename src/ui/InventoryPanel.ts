@@ -189,6 +189,7 @@ export class InventoryPanel extends BasePanel {
     for (let i = 0; i < this.items.length; i++) {
       const zone = this.scene.add.zone(480, 80 + i * 20, 860, 20)
         .setDepth(210)
+        .setScrollFactor(0)
         .setInteractive();
       zone.on('pointerdown', () => {
         this.selectionIndex = i;

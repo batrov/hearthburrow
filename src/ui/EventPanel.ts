@@ -122,6 +122,8 @@ export class EventPanel extends BasePanel {
       duration: 200,
       ease: 'Quad.easeOut',
     });
+    if (this._closeBtn) this._closeBtn.setVisible(true);
+    this.choiceZones.forEach(z => z.setScrollFactor(0));
   }
 
   private currentChoices: EventChoice[] = [];
@@ -155,6 +157,7 @@ export class EventPanel extends BasePanel {
   hide(): void {
     this._visible = false;
     this.container.setVisible(false);
+    if (this._closeBtn) this._closeBtn.setVisible(false);
     this.currentChoices = [];
   }
 }

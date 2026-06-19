@@ -24,14 +24,14 @@ export class FarmPanel extends BasePanel {
     this.plantBtn = scene.add.text(960 / 2 - 80, 570, '[PLANT]', {
       fontSize: '14px', fontFamily: 'monospace', color: '#44cc66',
       backgroundColor: '#1a2a1a', padding: { x: 16, y: 8 },
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(210);
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(210).setScrollFactor(0);
     this.plantBtn.on('pointerdown', () => this.plant());
     this.container.add(this.plantBtn);
 
     this.harvestBtn = scene.add.text(960 / 2 + 80, 570, '[HARVEST]', {
       fontSize: '14px', fontFamily: 'monospace', color: '#ccaa44',
       backgroundColor: '#2a1a0a', padding: { x: 16, y: 8 },
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(210);
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(210).setScrollFactor(0);
     this.harvestBtn.on('pointerdown', () => this.harvest());
     this.container.add(this.harvestBtn);
 

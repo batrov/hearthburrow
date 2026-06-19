@@ -1487,15 +1487,44 @@ export class ExpeditionScene extends Phaser.Scene {
     bg.fillStyle(0x0a0a1a, 0.9);
     bg.fillRect(0, 0, 960, 640);
     bg.lineStyle(2, 0x5a4a7a, 0.6);
-    bg.strokeRoundedRect(cx - 140, cy - 40, 280, 100, 10);
+    bg.strokeRoundedRect(cx - 180, cy - 55, 360, 145, 10);
 
-    const text = this.add.text(cx, cy - 5, 'Use stairs?', {
+    const text = this.add.text(cx, cy - 20, 'Use stairs?', {
       fontSize: '20px', fontFamily: 'monospace', color: '#ffffff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
-    const hint = this.add.text(cx, cy + 25, `[SPACE] ${action}  [ESC] Cancel`, {
+
+    const hint = this.add.text(cx, cy + 10, `[SPACE] ${action}  [ESC] Cancel`, {
       fontSize: '12px', fontFamily: 'monospace', color: '#aaaaaa',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
-    this.stairPrompt = this.add.container(0, 0, [bg, text, hint]).setDepth(DEPTH.OVERLAY).setScrollFactor(0);
+
+    const proceedBtn = this.add.text(cx - 70, cy + 48, `[ ${action} ]`, {
+      fontSize: '14px', fontFamily: 'monospace', color: '#66dd66',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT)
+      .setInteractive({ useHandCursor: true });
+    proceedBtn.on('pointerdown', () => {
+      this.hideStairPrompt();
+      const a = this.stairAction;
+      this.stairAction = null;
+      this.playerX = this.stairTargetX;
+      this.playerY = this.stairTargetY;
+      if (a === 'ascend') this.handleAscend();
+      else this.handleDescend();
+    });
+
+    const cancelBtn = this.add.text(cx + 70, cy + 48, '[ Cancel ]', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#cc6666',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT)
+      .setInteractive({ useHandCursor: true });
+    cancelBtn.on('pointerdown', () => {
+      this.hideStairPrompt();
+      this.stairAction = null;
+      this.interactTarget = null;
+      this.interactPrompt.setAlpha(0);
+      this.stairDismissCell = { x: this.playerX, y: this.playerY };
+    });
+
+    this.stairPrompt = this.add.container(0, 0, [bg, text, hint, proceedBtn, cancelBtn])
+      .setDepth(DEPTH.OVERLAY).setScrollFactor(0);
   }
 
   private hideStairPrompt(): void {

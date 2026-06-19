@@ -104,12 +104,14 @@ export class GatePanel extends BasePanel {
       const arrL = this.scene.add.image(CX + 22, ry, 'item_arrow_left').setInteractive({ useHandCursor: true });
       arrL.setData('row', i).setData('dir', -1);
       arrL.on('pointerdown', () => this.handleArrowClick(i, -1));
+      arrL.setScrollFactor(0);
       this.container.add(arrL);
       this.gateEquipArrowsL.push(arrL);
 
       const arrR = this.scene.add.image(CX + 40, ry, 'item_arrow_right').setInteractive({ useHandCursor: true });
       arrR.setData('row', i).setData('dir', 1);
       arrR.on('pointerdown', () => this.handleArrowClick(i, 1));
+      arrR.setScrollFactor(0);
       this.container.add(arrR);
       this.gateEquipArrowsR.push(arrR);
 

@@ -52,19 +52,6 @@ export class CombatPanel extends BasePanel {
     super(scene);
 
     this.overlay = scene.add.graphics();
-    this.overlay.setInteractive(new Phaser.Geom.Rectangle(0, 0, 960, 640), Phaser.Geom.Rectangle.Contains).setData('isUI', true);
-    this.overlay.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (!this._visible) return;
-      if (this.result === 'victory') {
-        this.handleCollect();
-        return;
-      }
-      if (pointer.y > 400) {
-        this.handleRetreat();
-      } else {
-        this.handleStrike();
-      }
-    });
     this.container.add(this.overlay);
 
     this.enemyNameText = scene.add.text(960 / 2, 150, '', {
@@ -111,7 +98,7 @@ export class CombatPanel extends BasePanel {
     this.hintText = scene.add.text(960 / 2, 520, '[SPACE] Strike  |  [ESC] Retreat', {
       fontSize: '12px', fontFamily: 'monospace', color: '#5a4a6a',
     }).setOrigin(0.5);
-    this.hintText.setInteractive().setData('isUI', true);
+    this.hintText.setInteractive().setData('isUI', true).setScrollFactor(0);
     this.hintText.on('pointerdown', () => {
       if (!this._visible) return;
       this.result === 'victory' ? this.handleCollect() : this.handleStrike();

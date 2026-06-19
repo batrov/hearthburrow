@@ -168,6 +168,7 @@ export class ResearchPanel extends BasePanel {
 
       const zone = this.scene.add.zone(480, 50 + 6 * 20 + i * 80, 860, 80)
         .setDepth(210)
+        .setScrollFactor(0)
         .setInteractive();
       zone.on('pointerdown', () => {
         this.selectionIndex = i;

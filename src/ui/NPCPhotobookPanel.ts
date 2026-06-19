@@ -34,13 +34,13 @@ export class NPCPhotobookPanel extends BasePanel {
 
     const upBtn = scene.add.text(960 / 2, 68, '▲', {
       fontSize: '16px', fontFamily: 'monospace', color: '#886644',
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(210);
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(210).setScrollFactor(0);
     upBtn.on('pointerdown', () => { this.handleInput('W'); this.dirty = true; });
     this.container.add(upBtn);
 
     const downBtn = scene.add.text(960 / 2, 580, '▼', {
       fontSize: '16px', fontFamily: 'monospace', color: '#886644',
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(210);
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(210).setScrollFactor(0);
     downBtn.on('pointerdown', () => { this.handleInput('S'); this.dirty = true; });
     this.container.add(downBtn);
 

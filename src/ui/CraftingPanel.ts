@@ -167,6 +167,7 @@ export class CraftingPanel extends BasePanel {
 
       const zone = this.scene.add.zone(960 / 2, startY + i * lineSpacing + 10, 860, 20)
         .setDepth(210)
+        .setScrollFactor(0)
         .setInteractive();
       zone.on('pointerdown', () => {
         this.selectedIndex = i;

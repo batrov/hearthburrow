@@ -37,7 +37,6 @@ export class GamblePanel extends BasePanel {
     super(scene);
 
     this.createOverlay();
-    this.overlay!.on('pointerdown', () => this.onPress());
 
     this.wheelGfx = scene.add.graphics();
     this.wheelContainer = scene.add.container(this.CX, this.CY, [this.wheelGfx]);
@@ -66,6 +65,15 @@ export class GamblePanel extends BasePanel {
     this.container.add(this.resultText);
 
     this.addCloseButton();
+
+    this.scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (!this.isVisible()) return;
+      if (this._closeBtn) {
+        const b = this._closeBtn.getBounds();
+        if (b.contains(pointer.x, pointer.y)) return;
+      }
+      this.onPress();
+    });
   }
 
   show(
