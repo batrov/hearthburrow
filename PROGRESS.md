@@ -44,7 +44,7 @@
 - **`getDepthPalette()` / `Palette` removed** — dead code after the sprite conversion
 
 ## ✅ Mobile Controls
-- **Click-to-move** with BFS pathfinding (expedition + homeland)
+- **Click-to-move** with BFS pathfinding (expedition + homeland) — clicking interactive objects (stair, ore, enemy, event) now pathfinds to the nearest walkable tile
 - **Virtual analog stick** — tap-anywhere joystick, 4-cardinal, continuous hold
 
 ## ✅ Bug Fixes
@@ -150,6 +150,7 @@ Resolved Bugs:
   - `stairDismissCell` prevents prompt re-trigger after ESC dismiss; auto-clears when player leaves the tile
   - Only triggers on intentional re-entry (walk off and back onto stairs)
 - **Stair prompt style** — popup now has dark overlay background + rounded rect box + dynamic action button text
+- **Clickable stair buttons** — [Proceed]/[Cancel] buttons use scene-level pointerdown handler (same BasePanel pattern) to bypass Phaser 4 scrollFactor input bug
 
 ## ✅ Bug Fixes (June 2026)
 - **Stairs_down broken flag** — mining sets `tile.broken = true`, then `spawnStairsOnBreak` changes type to `stairs_down` without resetting `broken`, so `!curTile.broken` guard rejects the tile. Fixed: `broken = false` in all three `stairs_down` placement paths (random spawn, puzzle, boss kill). Added `drawFloor()` after spawn for visual texture.
@@ -174,6 +175,9 @@ Resolved Bugs:
 - **Diamond glow → sprite outline** — replaced the 3-layer white diamond glow with offset-copy white outline that traces each interactive object's visible sprite shape (ores, NPCs, enemies, stairs, plates)
 - **Offset-copy technique** — 24 white `setTintFill(0xffffff)` copies per facing tile (8 directions × 3 radii): 1px at 0.85 alpha, 2px at 0.40, 3px at 0.12; placed at depth 7.05, behind the preview sprite but above the dark backdrop
 - **Persist fix** — outline array cleaned up at the top of `updateFacingHighlight()` before all early returns, preventing stale white sprites accumulating on floor tiles
+
+## ✅ Item Pickup Animation (June 2026)
+- **Fly-to-inventory** — mined item sprites now fly to the bottom-left inventory bag icon `(48, camH - 44)` instead of the top-left corner `(100, 50)`, matching where items are stored
 
 ## ✅ NPC Rescue → Tavern Reward System (June 2026)
 - **Stamina bonus removed from rescue** — `gameState.maxStaminaBonus += 2` eliminated from `trapped_villager` handler; rescuing no longer gives direct stamina

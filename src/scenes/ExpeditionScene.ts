@@ -98,6 +98,10 @@ export class ExpeditionScene extends Phaser.Scene {
   private stairTargetY: number = -1;
   private stairAction: 'ascend' | 'descend' | null = null;
   private stairPrompt: Phaser.GameObjects.Container | null = null;
+  private _stairProceedBtn?: Phaser.GameObjects.Text;
+  private _stairCancelBtn?: Phaser.GameObjects.Text;
+  private _stairPointerHandler?: (pointer: Phaser.Input.Pointer) => void;
+  private _stairMoveHandler?: (pointer: Phaser.Input.Pointer) => void;
   private floorEntry: boolean = false;
   private stairDismissCell: { x: number; y: number } | null = null;
   private exhausted: boolean = false;
@@ -923,6 +927,27 @@ export class ExpeditionScene extends Phaser.Scene {
     this.updateFacingHighlight();
 
     if (interactive) {
+      const walkable = (x: number, y: number) => {
+        if (x === this.playerX && y === this.playerY) return true;
+        const t = floor.tiles[y][x];
+        if (t.type === 'wall' || t.type === 'blocked' || t.type === 'boss_body') return false;
+        if (t.type === 'mineable' && !t.broken) return false;
+        if ((t.type === 'enemy' || t.type === 'event_boss') && !t.broken) return false;
+        if (t.type.startsWith('event_') && !t.broken) return false;
+        return true;
+      };
+      let bestPath = findPath(this.playerX, this.playerY, g.x, g.y, floor.cols, floor.rows, walkable);
+      if (!bestPath) {
+        const dirs: [number, number][] = [[-1,0],[1,0],[0,-1],[0,1]];
+        for (const [dx, dy] of dirs) {
+          const ax = g.x + dx, ay = g.y + dy;
+          if (ax < 0 || ax >= floor.cols || ay < 0 || ay >= floor.rows) continue;
+          if (!walkable(ax, ay)) continue;
+          const p = findPath(this.playerX, this.playerY, ax, ay, floor.cols, floor.rows, walkable);
+          if (p && (!bestPath || p.length < bestPath.length)) bestPath = p;
+        }
+      }
+      if (bestPath && bestPath.length > 0) this.movePath = bestPath;
       return;
     }
 
@@ -1499,35 +1524,66 @@ export class ExpeditionScene extends Phaser.Scene {
 
     const proceedBtn = this.add.text(cx - 70, cy + 48, `[ ${action} ]`, {
       fontSize: '14px', fontFamily: 'monospace', color: '#66dd66',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT)
-      .setInteractive({ useHandCursor: true });
-    proceedBtn.on('pointerdown', () => {
-      this.hideStairPrompt();
-      const a = this.stairAction;
-      this.stairAction = null;
-      this.playerX = this.stairTargetX;
-      this.playerY = this.stairTargetY;
-      if (a === 'ascend') this.handleAscend();
-      else this.handleDescend();
-    });
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
 
     const cancelBtn = this.add.text(cx + 70, cy + 48, '[ Cancel ]', {
       fontSize: '14px', fontFamily: 'monospace', color: '#cc6666',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT)
-      .setInteractive({ useHandCursor: true });
-    cancelBtn.on('pointerdown', () => {
-      this.hideStairPrompt();
-      this.stairAction = null;
-      this.interactTarget = null;
-      this.interactPrompt.setAlpha(0);
-      this.stairDismissCell = { x: this.playerX, y: this.playerY };
-    });
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
+
+    this._stairProceedBtn = proceedBtn;
+    this._stairCancelBtn = cancelBtn;
+
+    const handler = (p: Phaser.Input.Pointer) => {
+      if (!proceedBtn.active || !cancelBtn.active) return;
+      if (proceedBtn.getBounds().contains(p.x, p.y)) {
+        this.hideStairPrompt();
+        const a = this.stairAction;
+        this.stairAction = null;
+        this.playerX = this.stairTargetX;
+        this.playerY = this.stairTargetY;
+        if (a === 'ascend') this.handleAscend();
+        else this.handleDescend();
+      } else if (cancelBtn.getBounds().contains(p.x, p.y)) {
+        this.hideStairPrompt();
+        this.stairAction = null;
+        this.interactTarget = null;
+        this.interactPrompt.setAlpha(0);
+        this.stairDismissCell = { x: this.playerX, y: this.playerY };
+      }
+    };
+    this._stairPointerHandler = handler;
+    this.input.on('pointerdown', handler);
+
+    const moveHandler = (p: Phaser.Input.Pointer) => {
+      if (!proceedBtn.active || !cancelBtn.active) {
+        this.input.setDefaultCursor('default');
+        return;
+      }
+      if (proceedBtn.getBounds().contains(p.x, p.y) || cancelBtn.getBounds().contains(p.x, p.y)) {
+        this.input.setDefaultCursor('pointer');
+      } else {
+        this.input.setDefaultCursor('default');
+      }
+    };
+    this._stairMoveHandler = moveHandler;
+    this.input.on('pointermove', moveHandler);
 
     this.stairPrompt = this.add.container(0, 0, [bg, text, hint, proceedBtn, cancelBtn])
       .setDepth(DEPTH.OVERLAY).setScrollFactor(0);
   }
 
   private hideStairPrompt(): void {
+    if (this._stairPointerHandler) {
+      this.input.off('pointerdown', this._stairPointerHandler);
+      this._stairPointerHandler = undefined;
+    }
+    if (this._stairMoveHandler) {
+      this.input.off('pointermove', this._stairMoveHandler);
+      this._stairMoveHandler = undefined;
+    }
+    this.input.setDefaultCursor('default');
+    this._stairProceedBtn = undefined;
+    this._stairCancelBtn = undefined;
     if (this.stairPrompt) {
       this.stairPrompt.destroy();
       this.stairPrompt = null;
@@ -2491,8 +2547,8 @@ export class ExpeditionScene extends Phaser.Scene {
     const screenX = sprite.x - cam.scrollX;
     const screenY = sprite.y - cam.scrollY;
     sprite.setScrollFactor(0).setPosition(screenX, screenY);
-    const targetX = 100;
-    const targetY = 50;
+    const targetX = 48;
+    const targetY = this.cameras.main.height - 44;
     this.tweens.add({
       targets: sprite,
       x: targetX,
