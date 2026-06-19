@@ -5,6 +5,9 @@ export class BasePanel {
   container: Phaser.GameObjects.Container;
   protected _visible: boolean = false;
   protected overlay!: Phaser.GameObjects.Graphics;
+  protected _closeBtn: Phaser.GameObjects.Text | null = null;
+  private _closePointerDown: ((pointer: Phaser.Input.Pointer) => void) | null = null;
+  private _closePointerMove: ((pointer: Phaser.Input.Pointer) => void) | null = null;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -30,6 +33,7 @@ export class BasePanel {
       duration,
       ease: 'Quad.easeOut',
     });
+    if (this._closeBtn) this._closeBtn.setVisible(true);
   }
 
   protected fadeOut(duration = 150): void {
@@ -41,6 +45,7 @@ export class BasePanel {
       onComplete: () => {
         this._visible = false;
         this.container.setVisible(false);
+        if (this._closeBtn) this._closeBtn.setVisible(false);
       },
     });
   }
@@ -51,10 +56,6 @@ export class BasePanel {
     this.overlay.fillRect(0, 0, 960, 640);
     this.overlay.lineStyle(1, 0x3a3a4a, 0.5);
     this.overlay.strokeRect(40, 40, 880, 560);
-    this.overlay.setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, 960, 640),
-      Phaser.Geom.Rectangle.Contains,
-    );
     this.container.add(this.overlay);
     return this.overlay;
   }
@@ -62,9 +63,36 @@ export class BasePanel {
   protected addCloseButton(x = 920, y = 44): Phaser.GameObjects.Text {
     const btn = this.scene.add.text(x, y, '[X]', {
       fontSize: '16px', fontFamily: 'monospace', color: '#886666',
-    }).setOrigin(0.5).setDepth(220).setInteractive({ useHandCursor: true }).setData('isUI', true);
-    btn.on('pointerdown', () => this.fadeOut());
-    this.container.add(btn);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(220).setData('isUI', true);
+    btn.setVisible(false);
+
+    this._closePointerDown = (pointer: Phaser.Input.Pointer) => {
+      if (!this.isVisible()) return;
+      const b = btn.getBounds();
+      if (b.contains(pointer.x, pointer.y)) {
+        this.fadeOut();
+      }
+    };
+    this.scene.input.on('pointerdown', this._closePointerDown);
+
+    const canvas = this.scene.input.manager.canvas as HTMLCanvasElement;
+    this._closePointerMove = (pointer: Phaser.Input.Pointer) => {
+      if (!this.isVisible()) {
+        if (canvas.style.cursor === 'pointer') {
+          canvas.style.cursor = 'default';
+        }
+        return;
+      }
+      const b = btn.getBounds();
+      if (b.contains(pointer.x, pointer.y)) {
+        canvas.style.cursor = 'pointer';
+      } else if (canvas.style.cursor === 'pointer') {
+        canvas.style.cursor = 'default';
+      }
+    };
+    this.scene.input.on('pointermove', this._closePointerMove);
+
+    this._closeBtn = btn;
     return btn;
   }
 
@@ -74,6 +102,9 @@ export class BasePanel {
   }
 
   destroy(): void {
+    if (this._closePointerDown) this.scene.input.off('pointerdown', this._closePointerDown);
+    if (this._closePointerMove) this.scene.input.off('pointermove', this._closePointerMove);
+    if (this._closeBtn) this._closeBtn.destroy();
     this.container.destroy(true);
   }
 }

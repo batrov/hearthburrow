@@ -6,7 +6,6 @@ import { getBuilding } from '../systems/DataRegistry';
 
 export class RestorePanel extends BasePanel {
   private contentContainer: Phaser.GameObjects.Container;
-  private closeBtn: Phaser.GameObjects.Text;
   private onCloseCb: () => void;
 
   constructor(scene: Phaser.Scene, onClose: () => void) {
@@ -19,11 +18,7 @@ export class RestorePanel extends BasePanel {
     this.contentContainer = scene.add.container(0, 0);
     this.container.add(this.contentContainer);
 
-    this.closeBtn = scene.add.text(665, 216, '[X]', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#886666',
-    }).setOrigin(0.5).setDepth(220).setInteractive({ useHandCursor: true }).setData('isUI', true);
-    this.closeBtn.on('pointerdown', () => this.hide());
-    this.container.add(this.closeBtn);
+    this.addCloseButton(665, 216);
   }
 
   show(buildingId: string): void {

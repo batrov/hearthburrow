@@ -26,16 +26,21 @@ export class GatePanel extends BasePanel {
 
   private gateBg!: Phaser.GameObjects.Graphics;
   private gateTitle!: Phaser.GameObjects.Text;
-  private gateEquipMarkers: Phaser.GameObjects.Text[] = [];
   private gateEquipIcons: Phaser.GameObjects.Image[] = [];
   private gateEquipLabels: Phaser.GameObjects.Text[] = [];
   private gateEquipArrowsL: Phaser.GameObjects.Image[] = [];
   private gateEquipArrowsR: Phaser.GameObjects.Image[] = [];
+  private gateEquipZonesL: Phaser.GameObjects.Rectangle[] = [];
+  private gateEquipZonesR: Phaser.GameObjects.Rectangle[] = [];
   private gateConsumableIcons: Phaser.GameObjects.Image[] = [];
   private gateConsumableTexts: Phaser.GameObjects.Text[] = [];
+  private gateConsumableBtnsMinus: Phaser.GameObjects.Text[] = [];
+  private gateConsumableBtnsPlus: Phaser.GameObjects.Text[] = [];
+  private gateConsumableZonesL: Phaser.GameObjects.Rectangle[] = [];
+  private gateConsumableZonesR: Phaser.GameObjects.Rectangle[] = [];
   private gateConsumableHeader!: Phaser.GameObjects.Text;
-  private gateBottomMarkers: Phaser.GameObjects.Text[] = [];
   private gateBottomTexts: Phaser.GameObjects.Text[] = [];
+  private gateBottomZones: Phaser.GameObjects.Rectangle[] = [];
   private gateFooter!: Phaser.GameObjects.Text;
 
   private pickaxeOptions: PickaxeOption[] = [];
@@ -87,9 +92,6 @@ export class GatePanel extends BasePanel {
 
     for (let i = 0; i < 5; i++) {
       const ry = ROW_YS[i];
-      const marker = this.scene.add.text(CX, ry + 6, ' ', TEXT_STYLE);
-      this.container.add(marker);
-      this.gateEquipMarkers.push(marker);
 
       const icon = this.scene.add.image(CX + 18, ry, 'item_pickaxe_1');
       this.container.add(icon);
@@ -99,17 +101,35 @@ export class GatePanel extends BasePanel {
       this.container.add(label);
       this.gateEquipLabels.push(label);
 
-      const arrL = this.scene.add.image(722, ry, 'item_arrow_left').setInteractive({ useHandCursor: true });
+      const arrL = this.scene.add.image(CX + 22, ry, 'item_arrow_left').setInteractive({ useHandCursor: true });
       arrL.setData('row', i).setData('dir', -1);
       arrL.on('pointerdown', () => this.handleArrowClick(i, -1));
       this.container.add(arrL);
       this.gateEquipArrowsL.push(arrL);
 
-      const arrR = this.scene.add.image(756, ry, 'item_arrow_right').setInteractive({ useHandCursor: true });
+      const arrR = this.scene.add.image(CX + 40, ry, 'item_arrow_right').setInteractive({ useHandCursor: true });
       arrR.setData('row', i).setData('dir', 1);
       arrR.on('pointerdown', () => this.handleArrowClick(i, 1));
       this.container.add(arrR);
       this.gateEquipArrowsR.push(arrR);
+
+      const zoneL = this.scene.add.rectangle(CX + 90, ry + 12, 200, 28, 0xffffff, 0)
+        .setScrollFactor(0).setDepth(220).setInteractive({ useHandCursor: true }).setData('isUI', true);
+      zoneL.setVisible(false);
+      zoneL.on('pointerdown', () => {
+        if (!this.isVisible()) return;
+        this.handleArrowClick(i, -1);
+      });
+      this.gateEquipZonesL.push(zoneL);
+
+      const zoneR = this.scene.add.rectangle(CX + 270, ry + 12, 200, 28, 0xffffff, 0)
+        .setScrollFactor(0).setDepth(220).setInteractive({ useHandCursor: true }).setData('isUI', true);
+      zoneR.setVisible(false);
+      zoneR.on('pointerdown', () => {
+        if (!this.isVisible()) return;
+        this.handleArrowClick(i, 1);
+      });
+      this.gateEquipZonesR.push(zoneR);
     }
 
     this.gateConsumableHeader = this.scene.add.text(CX, 304, 'Consumables:', {
@@ -126,17 +146,63 @@ export class GatePanel extends BasePanel {
       const text = this.scene.add.text(CX + 40, cy + 6, '', TEXT_STYLE);
       this.container.add(text);
       this.gateConsumableTexts.push(text);
+
+      const minusBtn = this.scene.add.text(CX - 6, cy, '(-)', {
+        fontSize: '14px', fontFamily: 'monospace', color: '#cc8888',
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(220);
+      minusBtn.setVisible(false);
+      this.gateConsumableBtnsMinus.push(minusBtn);
+
+      const plusBtn = this.scene.add.text(760, cy, '(+)', {
+        fontSize: '14px', fontFamily: 'monospace', color: '#88cc88',
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(220);
+      plusBtn.setVisible(false);
+      this.gateConsumableBtnsPlus.push(plusBtn);
+
+      const zoneL = this.scene.add.rectangle(CX + 90, cy + 12, 200, 28, 0xffffff, 0)
+        .setScrollFactor(0).setDepth(220).setInteractive({ useHandCursor: true }).setData('isUI', true);
+      zoneL.setVisible(false);
+      zoneL.on('pointerdown', () => {
+        if (!this.isVisible()) return;
+        this.gateTab = 5;
+        this.consumableSelectionIdx = i;
+        const ct = this.consumableTypes[i];
+        this.consumableLoadout[ct.id] = Math.max(0, this.consumableLoadout[ct.id] - 1);
+        this.render();
+      });
+      this.gateConsumableZonesL.push(zoneL);
+
+      const zoneR = this.scene.add.rectangle(CX + 270, cy + 12, 200, 28, 0xffffff, 0)
+        .setScrollFactor(0).setDepth(220).setInteractive({ useHandCursor: true }).setData('isUI', true);
+      zoneR.setVisible(false);
+      zoneR.on('pointerdown', () => {
+        if (!this.isVisible()) return;
+        this.gateTab = 5;
+        this.consumableSelectionIdx = i;
+        const ct = this.consumableTypes[i];
+        const available = gameState.inventory.count(ct.id);
+        if (this.consumableLoadout[ct.id] < available) this.consumableLoadout[ct.id]++;
+        this.render();
+      });
+      this.gateConsumableZonesR.push(zoneR);
     }
 
     for (let i = 0; i < 4; i++) {
       const by = BOTTOM_YS[i];
-      const marker = this.scene.add.text(CX, by + 6, ' ', TEXT_STYLE);
-      this.container.add(marker);
-      this.gateBottomMarkers.push(marker);
 
       const text = this.scene.add.text(CX + 18, by + 6, '', TEXT_STYLE);
       this.container.add(text);
       this.gateBottomTexts.push(text);
+
+      const zone = this.scene.add.rectangle(CX + 180, by + 12, 320, 28, 0xffffff, 0)
+        .setScrollFactor(0).setDepth(220).setInteractive({ useHandCursor: true }).setData('isUI', true);
+      zone.setVisible(false);
+      const idx = i;
+      zone.on('pointerdown', () => {
+        if (!this.isVisible()) return;
+        this.handleBottomClick(idx);
+      });
+      this.gateBottomZones.push(zone);
     }
 
     this.gateFooter = this.scene.add.text(480, 564, '', {
@@ -211,6 +277,11 @@ export class GatePanel extends BasePanel {
     this.render();
     this.embarkBtn.setVisible(true);
     this.closeBtn.setVisible(true);
+    this.gateEquipZonesL.forEach(z => z.setVisible(true));
+    this.gateEquipZonesR.forEach(z => z.setVisible(true));
+    this.gateConsumableZonesL.forEach(z => z.setVisible(true));
+    this.gateConsumableZonesR.forEach(z => z.setVisible(true));
+    this.gateBottomZones.forEach(z => z.setVisible(true));
     this.fadeIn();
   }
 
@@ -223,6 +294,13 @@ export class GatePanel extends BasePanel {
     this.consumableLoadout = {};
     this.embarkBtn.setVisible(false);
     this.closeBtn.setVisible(false);
+    this.gateEquipZonesL.forEach(z => z.setVisible(false));
+    this.gateEquipZonesR.forEach(z => z.setVisible(false));
+    this.gateConsumableBtnsMinus.forEach(t => t.setVisible(false));
+    this.gateConsumableBtnsPlus.forEach(t => t.setVisible(false));
+    this.gateConsumableZonesL.forEach(z => z.setVisible(false));
+    this.gateConsumableZonesR.forEach(z => z.setVisible(false));
+    this.gateBottomZones.forEach(z => z.setVisible(false));
     this.onCloseCb();
     super.hide();
   }
@@ -256,6 +334,33 @@ export class GatePanel extends BasePanel {
         if (idx >= -1 && idx < this.lanternOptions.length) this.selectedLanternIdx = idx;
         break;
       }
+    }
+    this.render();
+  }
+
+  private handleBottomClick(index: number): void {
+    this.gateTab = 6 + index;
+    switch (index) {
+      case 0: this.debugMode = !this.debugMode; break;
+      case 1:
+        if (this.elevatorFloorOptions.length > 0) {
+          const ci = this.elevatorFloorOptions.indexOf(this.selectedElevatorFloor);
+          this.selectedElevatorFloor = this.elevatorFloorOptions[(ci + 1) % this.elevatorFloorOptions.length];
+        }
+        break;
+      case 2: this.seedEditing = !this.seedEditing; break;
+      case 3:
+        if (this.resetConfirm) {
+          gameState.resetProgress();
+          this.hide();
+          this.scene.cameras.main.fadeOut(400, 0, 0, 0);
+          this.scene.cameras.main.once('camerafadeoutcomplete', () => {
+            this.scene.scene.start('HomelandScene');
+          });
+        } else {
+          this.resetConfirm = true;
+        }
+        break;
     }
     this.render();
   }
@@ -404,7 +509,7 @@ export class GatePanel extends BasePanel {
   }
 
   render(): void {
-    const PL = 130, PT = 40, PW = 700, PH = 560;
+    const PL = 130, PT = 40, PW = 700, PH = 560, CX = 395;
     const maxStamina = this.debugMode ? 10000 : 100 + gameState.maxStaminaBonus;
     const invSlots = 16 + gameState.inventorySlotBonus;
     const foundRelics = gameState.getFoundRelics();
@@ -416,9 +521,10 @@ export class GatePanel extends BasePanel {
     this.gateBg.strokeRoundedRect(PL, PT, PW, PH, 12);
 
     for (let i = 0; i < 5; i++) {
-      const marker = this.gateEquipMarkers[i];
       const icon = this.gateEquipIcons[i];
       const label = this.gateEquipLabels[i];
+      const arrL = this.gateEquipArrowsL[i];
+      const arrR = this.gateEquipArrowsR[i];
       let selected = false;
       let hasOpt = false;
       let iconKey = '';
@@ -494,18 +600,28 @@ export class GatePanel extends BasePanel {
         }
       }
 
-      marker.setText(selected ? '▶' : ' ');
       if (hasOpt && iconKey && this.scene.textures.exists(iconKey)) {
         icon.setTexture(iconKey);
       }
       icon.setVisible(hasOpt);
       label.setText(text);
+
+      if (selected) {
+        const iy = icon.y;
+        arrL.setPosition(CX + 20, iy).setVisible(true);
+        arrR.setPosition(CX + 40 + label.width + 8, iy).setVisible(true);
+      } else {
+        arrL.setVisible(false);
+        arrR.setVisible(false);
+      }
     }
 
     for (let i = 0; i < 3; i++) {
       const ct = this.consumableTypes[i];
       const icon = this.gateConsumableIcons[i];
       const text = this.gateConsumableTexts[i];
+      const minusBtn = this.gateConsumableBtnsMinus[i];
+      const plusBtn = this.gateConsumableBtnsPlus[i];
       const qty = this.consumableLoadout[ct.id];
       const available = gameState.inventory.count(ct.id);
       const selected = this.gateTab === 5 && i === this.consumableSelectionIdx;
@@ -515,22 +631,23 @@ export class GatePanel extends BasePanel {
         icon.setTexture(iconKey);
       }
       icon.setVisible(true);
-      text.setText(`${selected ? '▶' : ' '} ${ct.name}  ${qty} (have ${available})`);
+      text.setText(`${ct.name}  ${qty} (have ${available})`);
+
+      const atMin = qty <= 0;
+      const atMax = qty >= available;
+      minusBtn.setVisible(selected).setAlpha(selected && atMin ? 0.3 : 1);
+      plusBtn.setVisible(selected).setAlpha(selected && atMax ? 0.3 : 1);
     }
 
-    this.gateBottomMarkers[0].setText(this.gateTab === 6 ? '▶' : ' ');
     this.gateBottomTexts[0].setText(`Debug Mode: ${this.debugMode ? 'ON' : 'OFF'}`);
 
-    this.gateBottomMarkers[1].setText(this.gateTab === 7 ? '▶' : ' ');
     const elevStr = this.selectedElevatorFloor === 0 ? '0 (Homeland)' : `${this.selectedElevatorFloor}`;
     this.gateBottomTexts[1].setText(`Start Floor: ${elevStr}`);
 
-    this.gateBottomMarkers[2].setText(this.gateTab === 8 ? '▶' : ' ');
     const seedDisplay = this.gateSeed || '(none - random)';
     const seedStatus = this.seedEditing ? ' [EDITING]' : '';
     this.gateBottomTexts[2].setText(`Seed: ${seedDisplay}${seedStatus}`);
 
-    this.gateBottomMarkers[3].setText(this.gateTab === 9 ? '▶' : ' ');
     this.gateBottomTexts[3].setText(`Reset Game${this.resetConfirm ? '  [SPACE] confirm' : ''}`);
 
     let footer = `[↑/↓] select  [←/→] change  [SPACE] Enter  [ESC] cancel\n`;
@@ -551,6 +668,13 @@ export class GatePanel extends BasePanel {
     }
     if (this.embarkBtn) { this.embarkBtn.destroy(); }
     if (this.closeBtn) { this.closeBtn.destroy(); }
+    this.gateEquipZonesL.forEach(z => z.destroy());
+    this.gateEquipZonesR.forEach(z => z.destroy());
+    this.gateConsumableBtnsMinus.forEach(t => t.destroy());
+    this.gateConsumableBtnsPlus.forEach(t => t.destroy());
+    this.gateConsumableZonesL.forEach(z => z.destroy());
+    this.gateConsumableZonesR.forEach(z => z.destroy());
+    this.gateBottomZones.forEach(z => z.destroy());
     super.destroy();
   }
 }

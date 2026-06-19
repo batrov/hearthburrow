@@ -8,7 +8,6 @@ export class FarmPanel extends BasePanel {
   private text: Phaser.GameObjects.Text;
   private plantBtn: Phaser.GameObjects.Text;
   private harvestBtn: Phaser.GameObjects.Text;
-  private closeBtn: Phaser.GameObjects.Text;
 
   constructor(scene: Phaser.Scene) {
     super(scene);
@@ -36,20 +35,18 @@ export class FarmPanel extends BasePanel {
     this.harvestBtn.on('pointerdown', () => this.harvest());
     this.container.add(this.harvestBtn);
 
-    this.closeBtn = scene.add.text(960 - 40, 40, '[X]', {
-      fontSize: '16px', fontFamily: 'monospace', color: '#886666',
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(210);
-    this.closeBtn.on('pointerdown', () => this.hide());
-    this.container.add(this.closeBtn);
+    this.addCloseButton(920, 40);
   }
 
   show(): void {
     this.setVisible(true);
+    if (this._closeBtn) this._closeBtn.setVisible(true);
     this.render();
   }
 
   hide(): void {
     this.setVisible(false);
+    if (this._closeBtn) this._closeBtn.setVisible(false);
   }
 
   plant(): void {
