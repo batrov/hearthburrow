@@ -230,3 +230,9 @@ Resolved Bugs:
 - **Fix: queueObtainPopup stale references** — `activeObtainPopups` now resets on every `create()` so destroyed containers from prior runs don't block new popups
 - **Portrait cropped to head** — `setCrop(50, 15, 156, 60)` on stamina HUD portrait, scale adjusted from 0.25 to 0.5
 - **Ring arcs start at 6 o'clock** — inventory and pickaxe rings now sweep from `Math.PI/2` (bottom) instead of `-Math.PI/2` (top)
+
+## ✅ Mining Animation (June 2026)
+- **3-frame pickaxe swing** — 6 new sprites (3 per direction) with procedural pickaxe poses; plays at 80ms/frame (240ms total) on SPACE
+- **One-shot animation** — frames 0→1→2 play once per press, then snap back to idle; movement locked and SPACE ignored during swing
+- **Delayed damage** — mining damage/stamina/particles execute after the 240ms animation completes via `pendingMineTx/Ty` + `executeMine()`
+- **Empty swings** — pressing SPACE with no mineable target still plays the full swing animation

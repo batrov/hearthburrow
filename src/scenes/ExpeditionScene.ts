@@ -95,6 +95,9 @@ export class ExpeditionScene extends Phaser.Scene {
   private moveTimer: number = 0;
   private moveDelay: number = 150;
   private isMoving: boolean = false;
+  private isMining: boolean = false;
+  private pendingMineTx: number = -1;
+  private pendingMineTy: number = -1;
   private stairTargetX: number = -1;
   private stairTargetY: number = -1;
   private stairAction: 'ascend' | 'descend' | null = null;
@@ -479,7 +482,14 @@ export class ExpeditionScene extends Phaser.Scene {
   private updatePlayerSprite(): void {
     if (!this.playerSprite) return;
     const isUpFacing = this.facingY < 0 || (this.facingY === 0 && this.facingX < 0);
-    const baseKey = isUpFacing ? 'player_top_right' : 'player_bottom_left';
+
+    let baseKey: string;
+    if (this.isMining) {
+      baseKey = isUpFacing ? 'player_top_right_mining' : 'player_bottom_left_mining';
+    } else {
+      baseKey = isUpFacing ? 'player_top_right' : 'player_bottom_left';
+    }
+
     const key = `${baseKey}_${this.animFrame}`;
     const flipX = this.facingX !== 0 && this.facingY === 0;
     if (this.textures.exists(key)) {
@@ -1125,6 +1135,7 @@ export class ExpeditionScene extends Phaser.Scene {
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
+      if (this.isMining) return;
       this.movePath = [];
       this.analog.reset();
       this.tryMine();
@@ -1168,7 +1179,23 @@ export class ExpeditionScene extends Phaser.Scene {
       }
     }
 
-    if (this.isMoving) {
+    if (this.isMining) {
+      this.animTimer += delta;
+      if (this.animTimer >= 80) {
+        this.animTimer = 0;
+        this.animFrame++;
+        if (this.animFrame > 2) {
+          this.animFrame = 0;
+          this.isMining = false;
+          if (this.pendingMineTx >= 0) {
+            this.executeMine(this.pendingMineTx, this.pendingMineTy);
+            this.pendingMineTx = -1;
+            this.pendingMineTy = -1;
+          }
+        }
+        this.updatePlayerSprite();
+      }
+    } else if (this.isMoving) {
       this.animTimer += delta;
       if (this.animTimer >= this.ANIM_INTERVAL) {
         this.animTimer = 0;
@@ -1718,6 +1745,7 @@ export class ExpeditionScene extends Phaser.Scene {
     if (this.eventActive) return;
     if (this.stairAction) return;
     if (this.isMoving) return;
+    if (this.isMining) return;
 
     const floor = this.currentFloor;
     if (!floor) return;
@@ -1799,12 +1827,35 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private tryMine(): void {
+    if (this.isMining) return;
+
     const floor = this.currentFloor;
     if (!floor) return;
 
     const tx = this.playerX + this.facingX;
     const ty = this.playerY + this.facingY;
-    if (tx < 0 || tx >= floor.cols || ty < 0 || ty >= floor.rows) return;
+
+    // Always play the swing animation (even empty swings)
+    this.isMining = true;
+    this.animFrame = 0;
+    this.animTimer = 0;
+    this.updatePlayerSprite();
+
+    // Store target for delayed execution on animation completion
+    this.pendingMineTx = -1;
+    this.pendingMineTy = -1;
+    if (tx >= 0 && tx < floor.cols && ty >= 0 && ty < floor.rows) {
+      const tile = floor.tiles[ty][tx];
+      if (tile.type === 'mineable' && !tile.broken) {
+        this.pendingMineTx = tx;
+        this.pendingMineTy = ty;
+      }
+    }
+  }
+
+  private executeMine(tx: number, ty: number): void {
+    const floor = this.currentFloor;
+    if (!floor) return;
 
     const tile = floor.tiles[ty][tx];
     if (tile.type !== 'mineable' || tile.broken) return;

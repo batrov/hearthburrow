@@ -19,6 +19,11 @@ export class BootScene extends Phaser.Scene {
       this.load.image(`player_top_right_${f}`, `player/player_top_right_${f}.png`);
     }
 
+    for (let f = 0; f < 3; f++) {
+      this.load.image(`player_bottom_left_mining_${f}`, `player/player_bottom_left_mining_${f}.png`);
+      this.load.image(`player_top_right_mining_${f}`, `player/player_top_right_mining_${f}.png`);
+    }
+
     this.load.image('wall_FOREST', 'tiles/wall_FOREST.png');
     this.load.image('wall_CAVE', 'tiles/wall_CAVE.png');
     this.load.image('wall_ICE', 'tiles/wall_ICE.png');
