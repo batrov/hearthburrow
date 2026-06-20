@@ -69,6 +69,7 @@ export class ResearchPanel extends BasePanel {
   private descCost!: Phaser.GameObjects.Text;
   private hintText!: Phaser.GameObjects.Text;
   private promptContainer!: Phaser.GameObjects.Container;
+  private promptPointerHandler: ((pointer: Phaser.Input.Pointer) => void) | null = null;
   private scrollbar!: Phaser.GameObjects.Graphics;
 
   constructor(scene: Phaser.Scene) {
@@ -247,7 +248,6 @@ export class ResearchPanel extends BasePanel {
     const confirmText = this.scene.add.text(px - 70, py + 39, 'Confirm', {
       fontSize: '12px', fontFamily: 'monospace', color: '#88ff88',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-    confirmText.on('pointerdown', () => this.executeResearch(node));
     this.promptContainer.add(confirmText);
 
     const cancelBg = this.scene.add.graphics();
@@ -260,12 +260,18 @@ export class ResearchPanel extends BasePanel {
     const cancelText = this.scene.add.text(px + 70, py + 39, 'Cancel', {
       fontSize: '12px', fontFamily: 'monospace', color: '#b8a8d8',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-    cancelText.on('pointerdown', () => {
-      this.state = 'idle';
-      this.pendingNode = null;
-      this.render();
-    });
     this.promptContainer.add(cancelText);
+
+    this.promptPointerHandler = (pointer: Phaser.Input.Pointer) => {
+      if (confirmText.getBounds().contains(pointer.x, pointer.y)) {
+        this.executeResearch(node);
+      } else if (cancelText.getBounds().contains(pointer.x, pointer.y)) {
+        this.state = 'idle';
+        this.pendingNode = null;
+        this.render();
+      }
+    };
+    this.scene.input.on('pointerdown', this.promptPointerHandler);
   }
 
   private executeResearch(node: ResearchNode): void {
@@ -312,6 +318,10 @@ export class ResearchPanel extends BasePanel {
   }
 
   private render(): void {
+    if (this.promptPointerHandler) {
+      this.scene.input.off('pointerdown', this.promptPointerHandler);
+      this.promptPointerHandler = null;
+    }
     this.promptContainer.setVisible(false);
     this.promptContainer.removeAll(true);
     this.cleanupDynamic();
@@ -382,15 +392,15 @@ export class ResearchPanel extends BasePanel {
         const prereqDone = !node.prereqId || gameState.getResearchLevel(node.prereqId) >= 1;
 
         const img = this.scene.add.image(x, y, node.spriteKey).setScale(2).setOrigin(0.5);
-        if (level >= 1) {
-          img.setTint(0x88ff88);
-        } else if (!prereqDone) {
+        if (!prereqDone) {
+          img.setTint(0x000000);
+        } else if (level < 1) {
           img.setTint(0x444444);
         }
         this.scrollContainer.add(img);
         this.sprites.push(img);
 
-        const labelColor = level >= 1 ? '#88ff88' : (!prereqDone ? '#555555' : '#c8b898');
+        const labelColor = !prereqDone ? '#333333' : (level >= 1 ? '#c8b898' : '#888888');
         const label = this.scene.add.text(x, y + 28, node.name, {
           fontSize: '9px', fontFamily: 'monospace', color: labelColor, align: 'center',
         }).setOrigin(0.5, 0);
@@ -424,7 +434,12 @@ export class ResearchPanel extends BasePanel {
     this.descBg.lineStyle(1, 0x2a2a3a, 0.5);
     this.descBg.strokeRoundedRect(bx, by, bw, bh, 6);
 
-    this.descSprite.setTexture(node.spriteKey).setVisible(true);
+    this.descSprite.setTexture(node.spriteKey).setVisible(true).clearTint();
+    if (!prereqDone) {
+      this.descSprite.setTint(0x000000);
+    } else if (level < 1) {
+      this.descSprite.setTint(0x444444);
+    }
 
     this.descName.setText(node.name);
     this.descDetail.setVisible(true);
@@ -434,7 +449,7 @@ export class ResearchPanel extends BasePanel {
       this.descName.setColor('#88ff88');
       this.descDetail.setColor('#669966');
       this.descCost.setVisible(false);
-      this.descStatus.setText('MAXED');
+      this.descStatus.setText('UNLOCKED');
       this.descStatus.setColor('#88ff88');
     } else if (!prereqDone) {
       this.descName.setColor('#666666');
@@ -503,12 +518,20 @@ export class ResearchPanel extends BasePanel {
   }
 
   hide(): void {
+    if (this.promptPointerHandler) {
+      this.scene.input.off('pointerdown', this.promptPointerHandler);
+      this.promptPointerHandler = null;
+    }
     this.state = 'idle';
     this.pendingNode = null;
     super.hide();
   }
 
   destroy(): void {
+    if (this.promptPointerHandler) {
+      this.scene.input.off('pointerdown', this.promptPointerHandler);
+      this.promptPointerHandler = null;
+    }
     this.cleanupDynamic();
     super.destroy();
   }
