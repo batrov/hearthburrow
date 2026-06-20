@@ -30,23 +30,23 @@ interface HubBuildingDef {
   solid: boolean;
 }
 
-const HUB_COLS = 16;
-const HUB_ROWS = 12;
+const HUB_COLS = 20;
+const HUB_ROWS = 18;
 
 const HUB_BUILDINGS: HubBuildingDef[] = [
-  { id: 'trading_post', label: 'Trading Post', gx: 1, gy: 1, gw: 3, gh: 2, buildingId: 'trading_post',
+  { id: 'trading_post', label: 'Trading Post', gx: 5, gy: 2, gw: 3, gh: 3, buildingId: 'trading_post',
     description: 'Trade resources with wandering merchants.', solid: true },
-  { id: 'crafting', label: 'Crafting Station', gx: 1, gy: 4, gw: 3, gh: 2, buildingId: 'crafting_station',
+  { id: 'crafting', label: 'Crafting Station', gx: 3, gy: 7, gw: 3, gh: 3, buildingId: 'crafting_station',
     description: 'Craft tools and equipment from mined materials.', solid: true },
-  { id: 'farm', label: 'Farm', gx: 1, gy: 7, gw: 3, gh: 2, buildingId: 'farm',
+  { id: 'farm', label: 'Farm', gx: 4, gy: 12, gw: 3, gh: 3, buildingId: 'farm',
     description: 'Plant carrots and harvest more carrots.', solid: true },
-  { id: 'tavern', label: 'Tavern', gx: 12, gy: 1, gw: 3, gh: 2, buildingId: 'housing',
+  { id: 'tavern', label: 'Tavern', gx: 13, gy: 2, gw: 3, gh: 3, buildingId: 'housing',
     description: 'A warm gathering place for rescued villagers.', solid: true },
-  { id: 'storage', label: 'Storage', gx: 12, gy: 4, gw: 3, gh: 2, buildingId: 'storage',
+  { id: 'storage', label: 'Storage', gx: 14, gy: 7, gw: 3, gh: 3, buildingId: 'storage',
     description: 'Store and manage your collected resources.', solid: true },
-  { id: 'laboratory', label: 'Laboratory', gx: 12, gy: 7, gw: 3, gh: 2, buildingId: 'laboratory',
+  { id: 'laboratory', label: 'Laboratory', gx: 12, gy: 12, gw: 3, gh: 3, buildingId: 'laboratory',
     description: 'Research advanced upgrades and recipes.', solid: true },
-  { id: 'gate', label: 'Expedition Gate', gx: 7, gy: 9, gw: 2, gh: 1, buildingId: '',
+  { id: 'gate', label: 'Expedition Gate', gx: 9, gy: 16, gw: 2, gh: 1, buildingId: '',
     description: 'Descend into the procedural dungeon to mine resources.', solid: false },
 ];
 
@@ -55,8 +55,8 @@ export class HomelandScene extends Phaser.Scene {
   private playerLabel!: Phaser.GameObjects.Text;
   private facingX: number = 0;
   private facingY: number = 1;
-  private playerGx: number = 7;
-  private playerGy: number = 8;
+  private playerGx: number = 9;
+  private playerGy: number = 15;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private promptText!: Phaser.GameObjects.Text;
   private restoreBuildingId: string = '';
@@ -72,7 +72,8 @@ export class HomelandScene extends Phaser.Scene {
   private tradePanel!: TradePanel;
   private researchPanel!: ResearchPanel;
   private farmPanel!: FarmPanel;
-  private buildingsContainer!: Phaser.GameObjects.Container;
+  private buildingImages: Map<string, Phaser.GameObjects.Image> = new Map();
+  private buildingLabels: Phaser.GameObjects.Text[] = [];
   private buildingZones: Phaser.GameObjects.Rectangle[] = [];
   private movePath: { x: number; y: number }[] = [];
   private analog!: AnalogStickInput;
@@ -93,7 +94,6 @@ export class HomelandScene extends Phaser.Scene {
     this.animTimer = 0;
     this.isMoving = false;
 
-    this.buildingsContainer = this.add.container(0, 0).setDepth(5);
     this.drawHubTerrain();
     this.drawHubBuildings();
     this.drawHubGate();
@@ -120,7 +120,7 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private drawHubTerrain(): void {
-    const isPath = (x: number) => x === 7 || x === 8;
+    const isPath = (x: number) => x === 9 || x === 10;
 
     for (let y = 0; y < HUB_ROWS; y++) {
       for (let x = 0; x < HUB_COLS; x++) {
@@ -137,7 +137,10 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private drawHubBuildings(): void {
-    this.buildingsContainer.removeAll(true);
+    this.buildingImages.forEach(img => img.destroy());
+    this.buildingImages.clear();
+    this.buildingLabels.forEach(l => l.destroy());
+    this.buildingLabels = [];
     this.buildingZones?.forEach(z => z.destroy());
     this.buildingZones = [];
     const buildingTextureKeys: Record<string, string> = {
@@ -154,7 +157,7 @@ export class HomelandScene extends Phaser.Scene {
       if (b.id === 'gate') continue;
       const ul = unlocked(b);
       const texKey = buildingTextureKeys[b.id] ?? 'building_trading_post';
-      const alpha = ul ? 1 : 0.4;
+      const alpha = ul ? 1 : 0.2;
 
       const c = gridToIso(b.gx + b.gw / 2, b.gy + b.gh / 2);
       const cfg = getSpriteConfig(texKey);
@@ -165,11 +168,12 @@ export class HomelandScene extends Phaser.Scene {
       ).setAlpha(alpha);
       img.setData('bid', b.buildingId || b.id);
       img.setDepth(6 + (b.gy + b.gh / 2) * 0.002 + (b.gx + b.gw / 2) * 0.001);
+      this.buildingImages.set(b.buildingId || b.id, img);
 
       const label = this.add.text(c.x, c.y - 48, b.label, {
         fontSize: '11px', fontFamily: 'monospace', color: ul ? '#e8d5b7' : '#6a5a4a',
-      }).setOrigin(0.5).setAlpha(alpha);
-      this.buildingsContainer.add(label);
+      }).setOrigin(0.5).setAlpha(alpha).setDepth(7);
+      this.buildingLabels.push(label);
 
       const bRef = b;
       const zone = this.add.rectangle(c.x, c.y, 120, 72, ul ? 0xffffff : 0x000000, ul ? 0.08 : 0)
@@ -185,15 +189,15 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private drawHubGate(): void {
-    const c = gridToIso(8, 9);
+    const c = gridToIso(10, 16.5);
     const cfg = getSpriteConfig('building_gate');
     this.add.image(
       c.x + (cfg.offsetX ?? 0),
       c.y + (cfg.offsetY ?? 0),
       'building_gate',
-    ).setDepth(6 + 9 * 0.002 + 8 * 0.001);
+    ).setDepth(6 + 16.5 * 0.002 + 10 * 0.001);
 
-    const glow = this.add.image(c.x, c.y - 36, 'gate_glow').setDepth(6 + 9 * 0.002 + 8 * 0.001 + 0.001);
+    const glow = this.add.image(c.x, c.y - 36, 'gate_glow').setDepth(6 + 16.5 * 0.002 + 10 * 0.001 + 0.001);
 
     this.tweens.add({
       targets: glow,
@@ -636,6 +640,7 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private tryRestore(buildingId: string): void {
+    if (!canRestore(buildingId)) return;
     const building = getBuilding(buildingId);
     this.closePanel();
 
@@ -668,14 +673,12 @@ export class HomelandScene extends Phaser.Scene {
     }).setOrigin(0.5);
     container.add(statusText);
 
-    const buildingTiles = this.buildingsContainer.getAll().filter(
-      obj => (obj as Phaser.GameObjects.Image).getData?.('bid') === buildingId
-    ) as Phaser.GameObjects.Image[];
+    const buildingImg = this.buildingImages.get(buildingId);
 
-    for (const img of buildingTiles) {
+    if (buildingImg) {
       this.tweens.add({
-        targets: img,
-        x: img.x + 3,
+        targets: buildingImg,
+        x: buildingImg.x + 3,
         duration: 60,
         yoyo: true,
         repeat: Math.floor(5000 / 120),

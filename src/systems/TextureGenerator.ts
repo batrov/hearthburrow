@@ -461,9 +461,9 @@ export function generateAll(scene: Phaser.Scene): void {
 
   for (const [id, colors] of Object.entries(buildingConfigs)) {
     const gw = id === 'gate' ? 2 : 3;
-    const gh = id === 'gate' ? 1 : 2;
+    const gh = id === 'gate' ? 1 : 3;
     const cw = id === 'gate' ? 120 : 160;
-    const ch = id === 'gate' ? 80 : 100;
+    const ch = id === 'gate' ? 80 : 120;
     make(scene, g, `building_${id}`, cw, ch, () => {
       drawBuildingShape(g, cw, ch, gw, gh, colors[0], colors[1], colors[2], WALL_HEIGHT);
     });

@@ -53,9 +53,9 @@ def draw_building_shape(draw: ID.Draw, w: int, h: int, gw: int, gh: int,
 def main() -> None:
     for bid, (top, left, right) in BUILDING_COLORS.items():
         gw = 2 if bid == 'gate' else 3
-        gh = 1 if bid == 'gate' else 2
+        gh = 1 if bid == 'gate' else 3
         cw = 120 if bid == 'gate' else 160
-        ch = 80 if bid == 'gate' else 100
+        ch = 80 if bid == 'gate' else 120
 
         img = Image.new('RGBA', (cw, ch), (0, 0, 0, 0))
         drw = ID.Draw(img)

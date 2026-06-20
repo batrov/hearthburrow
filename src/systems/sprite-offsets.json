@@ -15,11 +15,11 @@
   "event_goblin":          { "offsetY": -13 , "scale": 1.2},
   "event_*":               { "offsetY": -2 },
   "stairs_*":              { "offsetY": -2 },
-  "building_trading_post": { "offsetY": -6 },
-  "building_crafting":     { "offsetY": -40, "scale": 0.3 },
+  "building_trading_post": { "offsetY": -80, "scale": 0.3 },
+  "building_crafting":     { "offsetY": -80, "scale": 0.3 },
   "building_farm":         { "offsetY": -6 },
-  "building_tavern":       { "offsetY": -6 },
+  "building_tavern":       { "offsetY": -80, "scale": 0.3 },
   "building_storage":      { "offsetY": -6 },
-  "building_laboratory":   { "offsetY": -40, "scale": 0.3 },
+  "building_laboratory":   { "offsetY": -80, "scale": 0.3 },
   "building_gate":         { "offsetY": -6 }
 }
