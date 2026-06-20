@@ -224,3 +224,7 @@ Resolved Bugs:
 - **Sprite fixed to 128×128** — `setDisplaySize` moved after `setTexture` in `show()`, ensuring boss and all enemies render at uniform size regardless of source texture resolution
 - **Hit-stop on hit** — marker pauses for 250ms on successful strike, enemy sprite shakes (±5px × 4 cycles) during the pause
 - **Stamina shake on miss** — miss now shakes all 4 stamina HUD elements (bg, portrait, bar, text) matching the enemy hit feedback pattern
+- **Click-to-attack on sprite + timing bar** — enemy sprite and timing bar are interactive click targets for strike/collect; replaced full-screen touch zone
+- **Retreat button** — `[ ESC ] Retreat` text button below timing bar at y:395, replacing touch zone bottom-half tap
+- **Miss feedback timing fixed** — miss SFX/text fire immediately before marker pause (was inside the delayed callback)
+- **Fix: queueObtainPopup stale references** — `activeObtainPopups` now resets on every `create()` so destroyed containers from prior runs don't block new popups

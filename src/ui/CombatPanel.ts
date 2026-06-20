@@ -26,7 +26,8 @@ export class CombatPanel extends BasePanel {
   private hintText: Phaser.GameObjects.Text;
   private instructionText: Phaser.GameObjects.Text;
   private enemySprite: Phaser.GameObjects.Image;
-  private touchZone: Phaser.GameObjects.Rectangle;
+  private retreatBtn: Phaser.GameObjects.Text;
+  private timingZone: Phaser.GameObjects.Rectangle;
   private result: CombatResult = null;
   private enemyHP: number = 0;
   private enemyMaxHP: number = 0;
@@ -38,6 +39,7 @@ export class CombatPanel extends BasePanel {
   private currentHitZoneWidth: number = 0;
   private currentEnemy: EnemyConfig | null = null;
   private onComplete: ((result: CombatResult, rewards: { id: string; quantity: number }[]) => void) | null = null;
+  private onMiss: (() => void) | null = null;
   private markerTween: Phaser.Tweens.Tween | null = null;
   private hitPauseTimer?: Phaser.Time.TimerEvent;
 
@@ -93,36 +95,37 @@ export class CombatPanel extends BasePanel {
     }).setOrigin(0.5);
     this.container.add(this.feedbackText);
 
-    this.hintText = scene.add.text(960 / 2, 520, '[SPACE] Strike  |  [ESC] Retreat', {
+    this.hintText = scene.add.text(960 / 2, 520, '[SPACE] Strike  |  Click enemy to attack', {
       fontSize: '12px', fontFamily: 'monospace', color: '#5a4a6a',
     }).setOrigin(0.5);
-    this.hintText.setInteractive().setData('isUI', true).setScrollFactor(0);
-    this.hintText.on('pointerdown', () => {
-      if (!this._visible) return;
-      this.result === 'victory' ? this.handleCollect() : this.handleStrike();
-    });
     this.container.add(this.hintText);
 
-    this.touchZone = scene.add.rectangle(480, 320, 960, 640, 0x000000, 0)
-      .setInteractive({ useHandCursor: true }).setData('isUI', true)
-      .setDepth(199).setScrollFactor(0).setVisible(false);
-    this.touchZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+    this.retreatBtn = scene.add.text(960 / 2, 395, '[ ESC ] Retreat', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#cc6644',
+    }).setOrigin(0.5).setScrollFactor(0).setInteractive({ useHandCursor: true }).setData('isUI', true);
+    this.retreatBtn.on('pointerdown', () => {
+      if (!this._visible) return;
+      this.handleRetreat();
+    });
+    this.container.add(this.retreatBtn);
+
+    this.timingZone = scene.add.rectangle(960 / 2, this.BAR_Y, this.BAR_WIDTH + 20, this.BAR_HEIGHT + 12, 0x000000, 0)
+      .setScrollFactor(0).setInteractive({ useHandCursor: true }).setData('isUI', true).setVisible(false);
+    this.timingZone.on('pointerdown', () => {
       if (!this._visible) return;
       if (this.result === 'victory') {
         this.handleCollect();
-        return;
-      }
-      if (pointer.y > 400) {
-        this.handleRetreat();
-      } else {
-        this.handleStrike();
+      } else if (this.handleStrike() === 'miss') {
+        this.onMiss?.();
       }
     });
+    this.container.add(this.timingZone);
   }
 
   show(
     config: EnemyConfig,
     onComplete: (result: CombatResult, rewards: { id: string; quantity: number }[]) => void,
+    onMiss?: () => void,
   ): void {
     this.result = null;
     this._visible = true;
@@ -130,6 +133,7 @@ export class CombatPanel extends BasePanel {
     this.enemyMaxHP = config.hp;
     this.currentEnemy = config;
     this.onComplete = onComplete;
+    this.onMiss = onMiss ?? null;
 
     this.overlay.clear();
     this.overlay.fillStyle(0x0a0a1a, 0.92);
@@ -144,6 +148,16 @@ export class CombatPanel extends BasePanel {
     if (config.spriteKey && this.scene.textures.exists(config.spriteKey)) {
       this.enemySprite.setTexture(config.spriteKey);
       this.enemySprite.setDisplaySize(128, 128);
+      this.enemySprite.setScrollFactor(0);
+      this.enemySprite.setInteractive({ useHandCursor: true }).setData('isUI', true);
+      this.enemySprite.on('pointerdown', () => {
+        if (!this._visible) return;
+        if (this.result === 'victory') {
+          this.handleCollect();
+        } else if (this.handleStrike() === 'miss') {
+          this.onMiss?.();
+        }
+      });
       this.enemySprite.setVisible(true);
     } else {
       this.enemySprite.setVisible(false);
@@ -154,7 +168,7 @@ export class CombatPanel extends BasePanel {
     this.drawTimingBar(config.hitZoneWidth);
     this.startMarker(config.timingSpeed);
 
-    this.touchZone.setVisible(true);
+    this.timingZone.setVisible(true);
     this.container.setVisible(true);
     this.container.setAlpha(0);
     this.scene.tweens.add({
@@ -172,12 +186,13 @@ export class CombatPanel extends BasePanel {
     }
     if (this.markerTween) {
       this.markerTween.stop();
-      this.markerTween = null;
+      // this.markerTween = null;
     }
     this._visible = false;
     this.currentEnemy = null;
+    if (this.enemySprite.input) this.enemySprite.disableInteractive();
+    this.timingZone.setVisible(false);
     this.enemySprite.setVisible(false);
-    this.touchZone.setVisible(false);
     this.container.setVisible(false);
     this.result = null;
   }
@@ -218,10 +233,9 @@ export class CombatPanel extends BasePanel {
       if (this.enemyHP <= 0) {
         this.result = 'victory';
         this.stopMarker();
-        this.marker.setVisible(false);
         this.showFeedback('VICTORY!', '#44cc66');
         audio.playVictory();
-        this.hintText.setText('[SPACE/TAP] Collect rewards');
+        this.hintText.setText('[SPACE] Collect rewards');
         return 'kill';
       }
 
@@ -233,10 +247,10 @@ export class CombatPanel extends BasePanel {
       });
       return 'hit';
     } else {
+      this.showFeedback('MISS!', '#cc4444');
+      audio.playCombatMiss();
       this.markerTween?.pause();
       this.hitPauseTimer = this.scene.time.delayedCall(250, () => {
-        this.showFeedback('MISS!', '#cc4444');
-        audio.playCombatMiss();
         this.hitPauseTimer = undefined;
         this.markerTween?.resume();
       });

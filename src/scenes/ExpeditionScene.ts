@@ -186,6 +186,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.exhausted = false;
     this.hasFinished = false;
+    this.activeObtainPopups = [];
     const bootStaminaBonus = gameState.getBootEffects().maxStaminaBonus;
     const staminaMax = this.debugMode ? 10000 : 100 + gameState.maxStaminaBonus + bootStaminaBonus;
     this.rocksBrokenThisRun = 0;
@@ -1984,7 +1985,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const p = gridToIso(tx, ty);
     const popup = this.add.text(
       p.x,
-      p.y - 10,
+      p.y - 24,
       `+1 ${label}`,
       { fontSize: '13px', fontFamily: 'monospace', color: '#ffcc44', fontStyle: 'bold' }
     ).setOrigin(0.5).setDepth(DEPTH.ITEM_POPUP);
@@ -2288,6 +2289,17 @@ export class ExpeditionScene extends Phaser.Scene {
           this.drawMinimap();
         }
       }
+    },
+    () => {
+      this.stamina.consume(10);
+      this.tweens.add({
+        targets: [this.staminaBg, this.portraitSprite, this.staminaBarGfx, this.staminaValueText],
+        x: { value: '+=' + 5 },
+        duration: 25,
+        yoyo: true,
+        repeat: 3,
+        ease: 'Sine.easeInOut',
+      });
     },
   );
   }

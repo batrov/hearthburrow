@@ -91,6 +91,7 @@ export class HomelandScene extends Phaser.Scene {
     this.moveTimer = 0;
     this.animFrame = 0;
     this.animTimer = 0;
+    this.isMoving = false;
 
     this.buildingsContainer = this.add.container(0, 0).setDepth(5);
     this.drawHubTerrain();
