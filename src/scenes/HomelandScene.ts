@@ -375,10 +375,15 @@ export class HomelandScene extends Phaser.Scene {
     }
 
     if (this.researchPanel.isVisible()) {
+      if (this.researchPanel.isPromptActive()) return;
       if (Phaser.Input.Keyboard.JustDown(this.keys.W) || Phaser.Input.Keyboard.JustDown(this.keys.UP)) {
         this.researchPanel.navigateUp();
       } else if (Phaser.Input.Keyboard.JustDown(this.keys.S) || Phaser.Input.Keyboard.JustDown(this.keys.DOWN)) {
         this.researchPanel.navigateDown();
+      } else if (Phaser.Input.Keyboard.JustDown(this.keys.A) || Phaser.Input.Keyboard.JustDown(this.keys.LEFT)) {
+        this.researchPanel.navigateLeft();
+      } else if (Phaser.Input.Keyboard.JustDown(this.keys.D) || Phaser.Input.Keyboard.JustDown(this.keys.RIGHT)) {
+        this.researchPanel.navigateRight();
       } else if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
         this.researchPanel.confirm();
       } else if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {

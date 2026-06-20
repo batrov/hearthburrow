@@ -318,6 +318,7 @@ class GameState {
   restoredBuildings: Set<string>;
   currentPickaxeTier: number;
   maxStaminaBonus: number;
+  staminaPercentBonus: number;
   inventorySlotBonus: number;
   pickaxeRuns: Record<number, number>;
   equippedRings: { ring1: string | null; ring2: string | null };
@@ -348,6 +349,7 @@ class GameState {
     this.restoredBuildings = new Set();
     this.currentPickaxeTier = 1;
     this.maxStaminaBonus = 0;
+    this.staminaPercentBonus = 0;
     this.inventorySlotBonus = 0;
     this.pickaxeRuns = {};
     this.equippedRings = { ring1: null, ring2: null };
@@ -588,6 +590,7 @@ class GameState {
     this.restoredBuildings = new Set();
     this.currentPickaxeTier = 1;
     this.maxStaminaBonus = 0;
+    this.staminaPercentBonus = 0;
     this.inventorySlotBonus = 0;
     this.pickaxeRuns = {};
     this.equippedRings = { ring1: null, ring2: null };
@@ -618,6 +621,7 @@ class GameState {
       restoredBuildings: Array.from(this.restoredBuildings),
       currentPickaxeTier: this.currentPickaxeTier,
       maxStaminaBonus: this.maxStaminaBonus,
+      staminaPercentBonus: this.staminaPercentBonus,
       inventorySlotBonus: this.inventorySlotBonus,
       pickaxeRuns: { ...this.pickaxeRuns },
       equippedRings: { ...this.equippedRings },
@@ -665,6 +669,7 @@ class GameState {
       this.restoredBuildings = new Set(data.restoredBuildings ?? []);
       this.currentPickaxeTier = data.currentPickaxeTier ?? 1;
       this.maxStaminaBonus = data.maxStaminaBonus ?? 0;
+      this.staminaPercentBonus = data.staminaPercentBonus ?? 0;
       this.inventorySlotBonus = data.inventorySlotBonus ?? 0;
       this.pickaxeRuns = data.pickaxeRuns ?? {};
       this.equippedRings = data.equippedRings ?? { ring1: null, ring2: null };

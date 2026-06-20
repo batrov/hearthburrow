@@ -236,3 +236,11 @@ Resolved Bugs:
 - **One-shot animation** — frames 0→1→2 play once per press, then snap back to idle; movement locked and SPACE ignored during swing
 - **Delayed damage** — mining damage/stamina/particles execute after the 240ms animation completes via `pendingMineTx/Ty` + `executeMine()`
 - **Empty swings** — pressing SPACE with no mineable target still plays the full swing animation
+
+## ✅ Laboratory Progression Tree (June 2026)
+- **3 branches × 4 tiers** — Mining, Combat, and Survival trees with 12 research nodes, each requiring the previous tier as prerequisite
+- **Crystal-first costs** — T1=1c+50s, T2=3c+10bronze, T3=5c+10silver, T4=10c+5gold
+- **Node-link tree UI** — scrollable container with sprite icons, connector lines, WASD grid navigation, selection highlight
+- **Click-focused interaction** — click to focus, re-click to research; confirmation prompt overlay with SPACE/Confirm/Cancel
+- **Description bar** — fixed bottom panel showing node name, description, cost, and status (LOCKED/AVAILABLE/MAXED) for the focused node
+- **Vitality Surge percent bonus** — +20% max stamina scales with all flat stamina sources; stored as `gameState.staminaPercentBonus`

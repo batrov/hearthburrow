@@ -191,7 +191,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.hasFinished = false;
     this.activeObtainPopups = [];
     const bootStaminaBonus = gameState.getBootEffects().maxStaminaBonus;
-    const staminaMax = this.debugMode ? 10000 : 100 + gameState.maxStaminaBonus + bootStaminaBonus;
+    const staminaMax = this.debugMode ? 10000 : Math.floor((100 + gameState.maxStaminaBonus + bootStaminaBonus) * (1 + gameState.staminaPercentBonus / 100));
     this.rocksBrokenThisRun = 0;
     this.stairsSpawned = false;
     this.floorEntry = true;

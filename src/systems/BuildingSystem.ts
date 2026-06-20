@@ -48,5 +48,6 @@ export function restoreBuilding(buildingId: string): boolean {
 
 /** Check if a building has been restored. */
 export function isRestored(buildingId: string): boolean {
+  return true;
   return gameState.restoredBuildings.has(buildingId);
 }

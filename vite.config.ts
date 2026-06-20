@@ -6,6 +6,7 @@ export default defineConfig(({ mode }) => {
   const isItch = mode === 'itch';
 
   return {
+    base: isItch ? './' : '/',
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),

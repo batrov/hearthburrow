@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "build:itch": "vite build --mode itch"
+    "build:itch": "vite build --mode itch",
+    "package:itch": "npm run build:itch && python3 -c \"import zipfile,os;z=zipfile.ZipFile('hearthburrow-itch.zip','w',zipfile.ZIP_DEFLATED);[z.write(os.path.join(r,f),os.path.relpath(os.path.join(r,f),'dist')) for r,_,fs in os.walk('dist') for f in fs];z.close()\""
   },
   "dependencies": {
     "phaser": "^4.1.0"
