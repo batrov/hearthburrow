@@ -39,10 +39,11 @@ export class CombatPanel extends BasePanel {
   private currentEnemy: EnemyConfig | null = null;
   private onComplete: ((result: CombatResult, rewards: { id: string; quantity: number }[]) => void) | null = null;
   private markerTween: Phaser.Tweens.Tween | null = null;
+  private hitPauseTimer?: Phaser.Time.TimerEvent;
 
   private readonly BAR_WIDTH = 300;
   private readonly BAR_HEIGHT = 20;
-  private readonly BAR_Y = 320;
+  private readonly BAR_Y = 360;
   private readonly MARKER_SIZE = 6;
 
   constructor(scene: Phaser.Scene) {
@@ -51,24 +52,25 @@ export class CombatPanel extends BasePanel {
     this.overlay = scene.add.graphics();
     this.container.add(this.overlay);
 
-    this.enemyNameText = scene.add.text(960 / 2, 120, '', {
+    this.enemyNameText = scene.add.text(960 / 2, 150, '', {
       fontSize: '20px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.enemyNameText);
 
-    this.enemySprite = scene.add.image(960 / 2, 150, '__DEFAULT');
+    this.enemySprite = scene.add.image(960 / 2, 240, '__DEFAULT');
     this.enemySprite.setOrigin(0.5);
+    this.enemySprite.setDisplaySize(128, 128);
     this.container.add(this.enemySprite);
 
     this.hpBar = scene.add.graphics();
     this.container.add(this.hpBar);
 
-    this.hpText = scene.add.text(960 / 2, 190, '', {
+    this.hpText = scene.add.text(960 / 2, 330, '', {
       fontSize: '12px', fontFamily: 'monospace', color: '#cc6666',
     }).setOrigin(0.5);
     this.container.add(this.hpText);
 
-    this.instructionText = scene.add.text(960 / 2, 230, '', {
+    this.instructionText = scene.add.text(960 / 2, 490, '', {
       fontSize: '13px', fontFamily: 'monospace', color: '#b8a898',
     }).setOrigin(0.5);
     this.container.add(this.instructionText);
@@ -164,6 +166,10 @@ export class CombatPanel extends BasePanel {
   }
 
   hide(): void {
+    if (this.hitPauseTimer) {
+      this.hitPauseTimer.remove();
+      this.hitPauseTimer = undefined;
+    }
     if (this.markerTween) {
       this.markerTween.stop();
       this.markerTween = null;
@@ -200,6 +206,15 @@ export class CombatPanel extends BasePanel {
       this.showFeedback(isCrit ? 'CRIT! +' + damage : 'HIT!', '#44cc66');
       audio.playCombatHit();
 
+      this.scene.tweens.add({
+        targets: this.enemySprite,
+        x: this.enemySprite.x + 5,
+        duration: 25,
+        yoyo: true,
+        repeat: 3,
+        ease: 'Sine.easeInOut',
+      });
+
       if (this.enemyHP <= 0) {
         this.result = 'victory';
         this.stopMarker();
@@ -210,11 +225,22 @@ export class CombatPanel extends BasePanel {
         return 'kill';
       }
 
-      this.randomizeHitZone();
+      this.markerTween?.pause();
+      this.hitPauseTimer = this.scene.time.delayedCall(250, () => {
+        this.hitPauseTimer = undefined;
+        this.markerTween?.resume();
+        this.randomizeHitZone();
+      });
       return 'hit';
     } else {
-      this.showFeedback('MISS!', '#cc4444');
-      audio.playCombatMiss();
+      this.markerTween?.pause();
+      this.hitPauseTimer = this.scene.time.delayedCall(250, () => {
+        this.showFeedback('MISS!', '#cc4444');
+        audio.playCombatMiss();
+        this.hitPauseTimer = undefined;
+        this.markerTween?.resume();
+      });
+
       return 'miss';
     }
   }
@@ -239,7 +265,7 @@ export class CombatPanel extends BasePanel {
     const barW = 200;
     const barH = 12;
     const x = 960 / 2 - barW / 2;
-    const y = 180;
+    const y = 310;
 
     this.hpBar.fillStyle(0x2a1a1a, 1);
     this.hpBar.fillRoundedRect(x, y, barW, barH, 3);

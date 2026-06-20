@@ -55,6 +55,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private selectedObject!: Phaser.GameObjects.Graphics;
   private facingHighlight!: Phaser.GameObjects.Graphics;
   private portraitSprite!: Phaser.GameObjects.Image;
+  private staminaBg!: Phaser.GameObjects.Graphics;
   private staminaBarGfx!: Phaser.GameObjects.Graphics;
   private staminaValueText!: Phaser.GameObjects.Text;
   private depthTextCentered!: Phaser.GameObjects.Text;
@@ -512,10 +513,10 @@ export class ExpeditionScene extends Phaser.Scene {
     const camH = this.cameras.main.height;
 
     // === TOP-LEFT: Stamina Block (portrait + bar + value) ===
-    const staminaBg = this.add.graphics();
-    staminaBg.fillStyle(0x0a0a1a, 0.75);
-    staminaBg.fillRoundedRect(8, 8, 260, 72, 6);
-    staminaBg.setScrollFactor(0).setDepth(201);
+    this.staminaBg = this.add.graphics();
+    this.staminaBg.fillStyle(0x0a0a1a, 0.75);
+    this.staminaBg.fillRoundedRect(8, 8, 260, 72, 6);
+    this.staminaBg.setScrollFactor(0).setDepth(201);
 
     this.portraitSprite = this.add.image(40, 44, 'portrait')
       .setScale(0.25).setScrollFactor(0).setDepth(201);
@@ -1021,6 +1022,14 @@ export class ExpeditionScene extends Phaser.Scene {
           const result = this.combatPanel.handleStrike();
           if (result === 'miss') {
             this.stamina.consume(10);
+            this.tweens.add({
+              targets: [this.staminaBg, this.portraitSprite, this.staminaBarGfx, this.staminaValueText],
+              x: { value: '+=' + 5 },
+              duration: 25,
+              yoyo: true,
+              repeat: 3,
+              ease: 'Sine.easeInOut',
+            });
           }
         }
       }
