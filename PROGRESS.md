@@ -283,3 +283,17 @@ Resolved Bugs:
 ## ✅ Bug Fix: Restoration Affordability Check (June 2026)
 - **SPACE keyboard shortcut** was calling `tryRestore()` without checking `canRestore()`, bypassing the RESTORE button's affordability gate
 - **Fix**: added `if (!canRestore(buildingId)) return;` at the top of `tryRestore()` so insufficient materials is a silent no-op before any animation starts
+
+## ✅ Painter's Algorithm Consistency (June 2026)
+- **Buildings use NE corner** — depth reference changed from center `(gx+gw/2, gy+gh/2)` to NE corner `(gx+gw-1, gy)`, so any player east of the building always gets higher depth (right-most wins)
+- **Gate depth fixed** — NE corner `(10, 16)` instead of center `(10, 16.5)`
+- **Expedition interactive tiles** — depth changed from `(x+y)*0.001` (equal weight) to `y*0.002 + x*0.001` (Y×2, matching player formula)
+- **Expedition boss** — same consistency fix with `+0.003` offset
+- All objects across both scenes now use the same Y-double-weight depth formula
+
+## ✅ Tavern Scene Improvements (June 2026)
+- **[EXIT] button** — bottom-right of screen, clicks call `leave()` 
+- **[PHOTOBOOK] button** — bottom-left of screen, clicks toggle photobook panel
+- **Dialog click-to-dismiss** — clicking anywhere closes NPC greeting (same as SPACE/ESC), deferred register to avoid same-click auto-close
+- **NPC click fix** — expanded hit area (70×60) covers full tile, explicit Phaser.Geom.Rectangle hit area ensures reliable interactivity
+- **Photobook entry selection** — clicking on any NPC entry line sets focus; uses localY calculation (22px line height) with scroll offset to determine the clicked entry

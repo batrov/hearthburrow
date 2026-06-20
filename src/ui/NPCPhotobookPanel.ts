@@ -25,6 +25,17 @@ export class NPCPhotobookPanel extends BasePanel {
       fontSize: '14px', fontFamily: 'monospace', color: '#c8b898',
       align: 'center', lineSpacing: 8,
     }).setOrigin(0.5, 0);
+    this.contentText.setInteractive();
+    this.contentText.on('pointerdown', (_p: any, localX: number, localY: number) => {
+      const lineHeight = 22;
+      const lineIdx = Math.floor(localY / lineHeight);
+      const startIdx = Math.max(0, this.selectionIndex - 8);
+      const visibleCount = Math.min(14, Math.max(0, this.entries.length - startIdx));
+      if (lineIdx >= 0 && lineIdx < visibleCount) {
+        this.selectionIndex = startIdx + lineIdx;
+        this.dirty = true;
+      }
+    });
     this.container.add(this.contentText);
 
     this.hintText = scene.add.text(960 / 2, 610, '', {

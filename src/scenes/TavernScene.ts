@@ -204,7 +204,10 @@ export class TavernScene extends Phaser.Scene {
       container.add(label);
 
       container.setSize(30, 40);
-      container.setInteractive({ cursor: 'pointer' });
+      container.setInteractive(
+        new Phaser.Geom.Rectangle(-35, -30, 70, 60),
+        Phaser.Geom.Rectangle.Contains,
+      );
 
       const npcRef = npc;
       container.on('pointerover', () => {
@@ -230,6 +233,16 @@ export class TavernScene extends Phaser.Scene {
     this.add.text(cx, 620, `${rescued.length} / 20 villagers resting here    [P] Photobook`, {
       fontSize: '11px', fontFamily: 'monospace', color: '#7a6a5a',
     }).setOrigin(0.5).setDepth(50);
+
+    this.add.text(940, 620, '[EXIT]', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#ff8844',
+    }).setOrigin(1, 1).setDepth(50).setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => this.leave());
+
+    this.add.text(20, 620, '[PHOTOBOOK]', {
+      fontSize: '12px', fontFamily: 'monospace', color: '#7a6a5a',
+    }).setOrigin(0, 1).setDepth(50).setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => this.photobook.toggle());
 
     this.promptText = this.add.text(0, 0, '', {
       fontSize: '11px', fontFamily: 'monospace', color: '#ffdd88',
@@ -523,10 +536,14 @@ export class TavernScene extends Phaser.Scene {
       speechText.destroy();
       closeHint.destroy();
       this.greetingActive = false;
+      this.input.off('pointerdown', close);
       this.input.keyboard!.off('keydown-SPACE', close);
       this.input.keyboard!.off('keydown-ESC', close);
     };
 
+    this.time.delayedCall(0, () => {
+      this.input.on('pointerdown', close);
+    });
     this.input.keyboard!.on('keydown-SPACE', close);
     this.input.keyboard!.on('keydown-ESC', close);
   }
