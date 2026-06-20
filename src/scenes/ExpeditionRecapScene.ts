@@ -145,6 +145,20 @@ export class ExpeditionRecapScene extends Phaser.Scene {
       fontSize: '13px', fontFamily: 'monospace', color: '#6a5a8a',
     }).setOrigin(0.5);
 
+    const btnX = 730, btnY = 590, btnW = 200, btnH = 32;
+    const btnBg = this.add.graphics();
+    btnBg.fillStyle(0x1a1a2e, 0.9);
+    btnBg.fillRoundedRect(btnX, btnY, btnW, btnH, 6);
+    btnBg.lineStyle(1, 0x5a4a7a, 0.6);
+    btnBg.strokeRoundedRect(btnX, btnY, btnW, btnH, 6);
+
+    const btnText = this.add.text(btnX + btnW / 2, btnY + btnH / 2, 'Return to Homeland', {
+      fontSize: '13px', fontFamily: 'monospace', color: '#b8a8d8',
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    btnText.on('pointerover', () => btnText.setColor('#e8d8ff'));
+    btnText.on('pointerout', () => btnText.setColor('#b8a8d8'));
+    btnText.on('pointerdown', () => this.returnToHomeland());
+
     this.updateScrollbar(viewportX, viewportY, viewportH);
 
     const doScroll = (dy: number) => {
@@ -162,16 +176,19 @@ export class ExpeditionRecapScene extends Phaser.Scene {
       doScroll(dz > 0 ? this.SCROLL_SPEED : -this.SCROLL_SPEED);
     });
 
-    this.input.keyboard!.once('keydown-SPACE', () => {
-      if (gameState.restoredBuildings.has('farm') && gameState.farmPlanted > 0) {
-        const yieldPer = Math.max(1, Math.floor(gameState.farmPlanted / 2));
-        gameState.farmHarvest += yieldPer;
-        gameState.save();
-      }
-      this.cameras.main.fadeOut(300, 0, 0, 0);
-      this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start('HomelandScene');
-      });
+    this.input.keyboard!.once('keydown-SPACE', () => this.returnToHomeland());
+  }
+
+  private returnToHomeland(): void {
+    const result = gameState.lastRunResult;
+    if (result && gameState.restoredBuildings.has('farm') && gameState.farmPlanted > 0) {
+      const yieldPer = Math.max(1, Math.floor(gameState.farmPlanted / 2));
+      gameState.farmHarvest += yieldPer;
+      gameState.save();
+    }
+    this.cameras.main.fadeOut(300, 0, 0, 0);
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      this.scene.start('HomelandScene');
     });
   }
 
