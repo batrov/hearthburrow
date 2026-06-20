@@ -86,7 +86,6 @@ export class ExpeditionRecapScene extends Phaser.Scene {
       const rescuedLabel = this.add.text(leftX, contentY, 'Rescued', {
         fontSize: '13px', fontFamily: 'monospace', color: '#44cc66', fontStyle: 'bold',
       });
-      this.contentContainer.add(rescuedLabel);
       contentY += 18;
 
       let rx = leftX;
