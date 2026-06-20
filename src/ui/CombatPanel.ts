@@ -59,7 +59,6 @@ export class CombatPanel extends BasePanel {
 
     this.enemySprite = scene.add.image(960 / 2, 240, '__DEFAULT');
     this.enemySprite.setOrigin(0.5);
-    this.enemySprite.setDisplaySize(128, 128);
     this.container.add(this.enemySprite);
 
     this.hpBar = scene.add.graphics();
@@ -144,6 +143,7 @@ export class CombatPanel extends BasePanel {
 
     if (config.spriteKey && this.scene.textures.exists(config.spriteKey)) {
       this.enemySprite.setTexture(config.spriteKey);
+      this.enemySprite.setDisplaySize(128, 128);
       this.enemySprite.setVisible(true);
     } else {
       this.enemySprite.setVisible(false);

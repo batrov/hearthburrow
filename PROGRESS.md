@@ -221,3 +221,6 @@ Resolved Bugs:
 - **HUD stamina visible during combat** — stamina bar, portrait, and text depth bumped from 50–51 to 201, rendering above the combat overlay
 - **HUD stamina updates live** — `drawStaminaBar()` called each combat frame so stamina consumed on miss reflects immediately
 - **Enemy name/sprite swapped** — name now at y:120 (centered), sprite at y:150, creating a natural top-down reading order
+- **Sprite fixed to 128×128** — `setDisplaySize` moved after `setTexture` in `show()`, ensuring boss and all enemies render at uniform size regardless of source texture resolution
+- **Hit-stop on hit** — marker pauses for 250ms on successful strike, enemy sprite shakes (±5px × 4 cycles) during the pause
+- **Stamina shake on miss** — miss now shakes all 4 stamina HUD elements (bg, portrait, bar, text) matching the enemy hit feedback pattern
