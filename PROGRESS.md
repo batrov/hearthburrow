@@ -245,3 +245,10 @@ Resolved Bugs:
 - **Description bar** — fixed bottom panel showing node name, description, cost, and status (LOCKED/AVAILABLE/MAXED) for the focused node
 - **Vitality Surge percent bonus** — +20% max stamina scales with all flat stamina sources; stored as `gameState.staminaPercentBonus`
 - **All 10 effects wired** — mining stamina cost, double ore, mine tier offset, animation speed, combat damage, crit chance, boss multiplier, consumable boost, lantern range, and floor stamina recovery all read research levels at their respective hook sites
+
+## ✅ Clickable Restore Buttons (June 2026)
+- **RESTORE/CANCEL buttons** — RestorePanel now shows clickable side-by-side buttons instead of text hints; RESTORE (green) when sufficient materials, CANCEL (gray) always visible; solo CANCEL when cannot afford
+- **Scene-level pointerdown handler** — follows same pattern as research confirm prompt and close button, avoiding Phaser 4 nested-container input issues
+- **SPACE/ESC keyboard kept** — both keyboard shortcuts and mouse buttons work in parallel
+- **Building descriptions fixed** — buildings.json descriptions now explain gameplay effects (e.g. "+20 max stamina", "+8 inventory capacity")
+- **isRestored() bug fixed** — removed stale `return true` stub that caused all buildings to appear permanently restored
