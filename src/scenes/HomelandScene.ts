@@ -108,7 +108,7 @@ export class HomelandScene extends Phaser.Scene {
     this.cameras.main.setBounds(xMin, yMin, worldWidth(HUB_COLS, HUB_ROWS), worldHeight(HUB_COLS, HUB_ROWS));
 
     this.buildingInfoPanel = new BuildingInfoPanel(this);
-    this.restorePanel = new RestorePanel(this, () => { this.restoreBuildingId = ''; });
+    this.restorePanel = new RestorePanel(this, () => { this.restoreBuildingId = ''; }, (id) => this.tryRestore(id));
     this.gatePanel = new GatePanel(this);
     this.gatePanel.onEmbark = (config) => this.startExpedition(config);
     this.gatePanel.onCloseCb = () => {};
