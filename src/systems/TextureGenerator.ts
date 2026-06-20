@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { drawDiamond, drawExtrudedTile, WALL_HEIGHT } from './IsoUtils';
+import { drawDiamond, drawExtrudedTile, drawBuildingShape, WALL_HEIGHT } from './IsoUtils';
 
 const wallPalettes: Record<string, [number, number, number]> = {
   FOREST: [0x3a3a4a, 0x2a2a3a, 0x222230],
@@ -460,8 +460,12 @@ export function generateAll(scene: Phaser.Scene): void {
   };
 
   for (const [id, colors] of Object.entries(buildingConfigs)) {
-    make(scene, g, `building_${id}`, 80, 64, () => {
-      drawExtrudedTile(g, 40, 44, colors[0], colors[1], colors[2], WALL_HEIGHT);
+    const gw = id === 'gate' ? 2 : 3;
+    const gh = id === 'gate' ? 1 : 2;
+    const cw = id === 'gate' ? 120 : 160;
+    const ch = id === 'gate' ? 80 : 100;
+    make(scene, g, `building_${id}`, cw, ch, () => {
+      drawBuildingShape(g, cw, ch, gw, gh, colors[0], colors[1], colors[2], WALL_HEIGHT);
     });
   }
 

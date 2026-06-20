@@ -261,3 +261,11 @@ Resolved Bugs:
 
 ## ✅ Player Default Facing (June 2026)
 - **Default direction bottom-left** — `facingY` changed from `-1` to `1` in HomelandScene and ExpeditionScene, so the player sprite initially faces downward (bottom-left texture) instead of upward (top-right texture)
+
+## ✅ Building Sprite Revamp (June 2026)
+- **Single composite sprite per building** — replaced 6-tile grid rendering (repeated 80×64 wall tiles) with one cohesive 160×100 (3×2) or 120×80 (gate) sprite per building, procedurally generated via new `drawBuildingShape()` in IsoUtils.ts
+- **Full building silhouette** — roof diamond + left/right wall faces as a single extruded isometric shape, color-coded per building type
+- **Painter's algorithm depth** — buildings removed from fixed-depth container, now use `6 + centerY*0.002 + centerX*0.001` to interleave with player; south-most renders on top
+- **Player Y-weighted depth** — player depth formula changed to `6 + y*0.002 + x*0.001 + 0.0005` so southward movement (Y) has double the depth impact of eastward (X), matching painter's sort
+- **Editable PNGs** — `scripts/generate_building_sprites.py` exports placeholder PNGs to `tiles/building_*.png`; replace any with custom artwork to override the procedural fallback
+- **BootScene restores building loads** — PNGs loaded from disk in preload, procedural generation in TextureGenerator is skipped when PNG exists

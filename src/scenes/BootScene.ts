@@ -122,7 +122,6 @@ export class BootScene extends Phaser.Scene {
     this.load.image('building_laboratory', 'tiles/building_laboratory.png');
     this.load.image('building_gate', 'tiles/building_gate.png');
     this.load.image('gate_glow', 'tiles/gate_glow.png');
-    this.load.image('villager_npc', 'npcs/villager_npc.png');
     for (let i = 0; i < 20; i++) {
       this.load.image(`npc_${i}`, `npcs/npc_${i}.png`);
     }

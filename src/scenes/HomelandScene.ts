@@ -156,16 +156,16 @@ export class HomelandScene extends Phaser.Scene {
       const texKey = buildingTextureKeys[b.id] ?? 'building_trading_post';
       const alpha = ul ? 1 : 0.4;
 
-      for (let dy = 0; dy < b.gh; dy++) {
-        for (let dx = 0; dx < b.gw; dx++) {
-          const p = gridToIso(b.gx + dx, b.gy + dy);
-          const img = this.add.image(p.x, p.y, texKey).setAlpha(alpha);
-          img.setData('bid', b.buildingId || b.id);
-          this.buildingsContainer.add(img);
-        }
-      }
-
       const c = gridToIso(b.gx + b.gw / 2, b.gy + b.gh / 2);
+      const cfg = getSpriteConfig(texKey);
+      const img = this.add.image(
+        c.x + (cfg.offsetX ?? 0),
+        c.y + (cfg.offsetY ?? 0),
+        texKey,
+      ).setAlpha(alpha);
+      img.setData('bid', b.buildingId || b.id);
+      img.setDepth(6 + (b.gy + b.gh / 2) * 0.002 + (b.gx + b.gw / 2) * 0.001);
+
       const label = this.add.text(c.x, c.y - 48, b.label, {
         fontSize: '11px', fontFamily: 'monospace', color: ul ? '#e8d5b7' : '#6a5a4a',
       }).setOrigin(0.5).setAlpha(alpha);
@@ -185,15 +185,15 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private drawHubGate(): void {
-    for (let dy = 0; dy < 1; dy++) {
-      for (let dx = 0; dx < 2; dx++) {
-        const p = gridToIso(7 + dx, 9 + dy);
-        this.add.image(p.x, p.y, 'building_gate');
-      }
-    }
-
     const c = gridToIso(8, 9);
-    const glow = this.add.image(c.x, c.y - 36, 'gate_glow');
+    const cfg = getSpriteConfig('building_gate');
+    this.add.image(
+      c.x + (cfg.offsetX ?? 0),
+      c.y + (cfg.offsetY ?? 0),
+      'building_gate',
+    ).setDepth(6 + 9 * 0.002 + 8 * 0.001);
+
+    const glow = this.add.image(c.x, c.y - 36, 'gate_glow').setDepth(6 + 9 * 0.002 + 8 * 0.001 + 0.001);
 
     this.tweens.add({
       targets: glow,
@@ -206,11 +206,11 @@ export class HomelandScene extends Phaser.Scene {
 
     this.add.text(c.x, c.y - 60, 'FORGOTTEN DEPTHS', {
       fontSize: '10px', fontFamily: 'monospace', color: '#7a6a9a',
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(7);
 
     const descendText = this.add.text(c.x, c.y + 24, '[SPACE] Descend', {
       fontSize: '11px', fontFamily: 'monospace', color: '#8a7aba',
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(7);
     descendText.setInteractive({ useHandCursor: true }).setData('isUI', true);
     descendText.on('pointerdown', () => this.showGatePanel());
 
@@ -228,7 +228,7 @@ export class HomelandScene extends Phaser.Scene {
       p.x + (cfg.offsetX ?? 0),
       p.y + (cfg.offsetY ?? 0),
       'player_bottom_left',
-    ).setDepth(6 + (this.playerGx + this.playerGy) * 0.001 + 0.0005);
+    ).setDepth(6 + this.playerGy * 0.002 + this.playerGx * 0.001 + 0.0005);
     if (cfg.originX !== undefined || cfg.originY !== undefined) {
       this.player.setOrigin(cfg.originX ?? 0.5, cfg.originY ?? 0.5);
     }
@@ -254,7 +254,7 @@ export class HomelandScene extends Phaser.Scene {
     const p = gridToIso(this.playerGx, this.playerGy);
     const cfg = getSpriteConfig('player_bottom_left');
     this.player.setPosition(p.x + (cfg.offsetX ?? 0), p.y + (cfg.offsetY ?? 0));
-    this.player.setDepth(6 + (this.playerGx + this.playerGy) * 0.001 + 0.0005);
+    this.player.setDepth(6 + this.playerGy * 0.002 + this.playerGx * 0.001 + 0.0005);
     this.playerLabel.setPosition(p.x, p.y - 30);
   }
 
@@ -503,7 +503,7 @@ export class HomelandScene extends Phaser.Scene {
       targets: this.player,
       x: target.x + (cfg.offsetX ?? 0),
       y: target.y + (cfg.offsetY ?? 0),
-      depth: 6 + (nx + ny) * 0.001 + 0.0005,
+      depth: 6 + ny * 0.002 + nx * 0.001 + 0.0005,
       duration: 100,
       ease: 'Linear',
       onComplete: () => { this.isMoving = false; },

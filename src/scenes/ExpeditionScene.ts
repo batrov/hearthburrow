@@ -29,7 +29,7 @@ function getWallTextureKey(depth: number): string {
 }
 
 function playerDepth(x: number, y: number): number {
-  return 6 + (x + y) * 0.001 + 0.0005;
+  return 6 + y * 0.002 + x * 0.001 + 0.0005;
 }
 
 const DEPTH = {

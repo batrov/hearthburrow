@@ -127,6 +127,57 @@ export function drawExtrudedAt(
   drawExtrudedTile(g, p.x, p.y, topColor, leftColor, rightColor, height);
 }
 
+/** Draw a cohesive building shape (roof + side walls) covering a gw×gh grid, centered in a w×h canvas. */
+export function drawBuildingShape(
+  g: Phaser.GameObjects.Graphics,
+  w: number, h: number,
+  gw: number, gh: number,
+  topColor: number,
+  leftColor: number,
+  rightColor: number,
+  height: number = WALL_HEIGHT,
+): void {
+  const cx = w / 2;
+  const cy = h / 2;
+
+  const bn = { x: cx + gh * 20, y: cy - gh * 10 };
+  const bs = { x: cx - gh * 20, y: cy + gh * 10 };
+  const bw = { x: cx - gw * 20, y: cy - gw * 10 };
+  const be = { x: cx + gw * 20, y: cy + gw * 10 };
+
+  const bn_t = { x: bn.x, y: bn.y - height };
+  const bs_t = { x: bs.x, y: bs.y - height };
+  const bw_t = { x: bw.x, y: bw.y - height };
+  const be_t = { x: be.x, y: be.y - height };
+
+  g.fillStyle(leftColor, 1);
+  g.beginPath();
+  g.moveTo(bw.x, bw.y);
+  g.lineTo(bs.x, bs.y);
+  g.lineTo(bs_t.x, bs_t.y);
+  g.lineTo(bw_t.x, bw_t.y);
+  g.closePath();
+  g.fill();
+
+  g.fillStyle(rightColor, 1);
+  g.beginPath();
+  g.moveTo(bs.x, bs.y);
+  g.lineTo(be.x, be.y);
+  g.lineTo(be_t.x, be_t.y);
+  g.lineTo(bs_t.x, bs_t.y);
+  g.closePath();
+  g.fill();
+
+  g.fillStyle(topColor, 1);
+  g.beginPath();
+  g.moveTo(bn_t.x, bn_t.y);
+  g.lineTo(be_t.x, be_t.y);
+  g.lineTo(bs_t.x, bs_t.y);
+  g.lineTo(bw_t.x, bw_t.y);
+  g.closePath();
+  g.fill();
+}
+
 /** Compute world width in pixels for an isometric grid of given dimensions. */
 export function worldWidth(cols: number, rows: number): number {
   return (cols + rows) * HALF_W;
