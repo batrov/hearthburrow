@@ -519,8 +519,11 @@ export class ExpeditionScene extends Phaser.Scene {
     this.staminaBg.fillRoundedRect(8, 8, 260, 72, 6);
     this.staminaBg.setScrollFactor(0).setDepth(201);
 
-    this.portraitSprite = this.add.image(40, 44, 'portrait')
-      .setScale(0.25).setScrollFactor(0).setDepth(201);
+    this.portraitSprite = this.add.image(30, 84, 'portrait')
+      .setScrollFactor(0).setDepth(201);
+    this.portraitSprite.setCrop(54, 0, 108, 108);
+    this.portraitSprite.setDisplaySize(160, 160);
+    this.portraitSprite.setFlipX(true);
 
     this.staminaBarGfx = this.add.graphics().setScrollFactor(0).setDepth(201);
 
@@ -741,7 +744,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.invBtnRing.lineStyle(2, color, 1);
     this.invBtnRing.beginPath();
-    this.invBtnRing.arc(cx, cy, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(ratio, 1), false);
+    this.invBtnRing.arc(cx, cy, radius, Math.PI / 2, Math.PI / 2 + Math.PI * 2 * Math.min(ratio, 1), false);
     this.invBtnRing.strokePath();
 
     this.invSlotText.setText(`${used}/${max}`);
@@ -761,7 +764,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.pickaxeRing.lineStyle(2, color, 1);
     this.pickaxeRing.beginPath();
-    this.pickaxeRing.arc(pickCx, pickCy, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(ratio, 1), false);
+    this.pickaxeRing.arc(pickCx, pickCy, radius, Math.PI / 2, Math.PI / 2 + Math.PI * 2 * Math.min(ratio, 1), false);
     this.pickaxeRing.strokePath();
 
     this.pickaxeUsesText.setText(tier > 1 && runsLeft >= 0 ? `${runsLeft}/${maxRuns}` : '∞');

@@ -228,3 +228,5 @@ Resolved Bugs:
 - **Retreat button** — `[ ESC ] Retreat` text button below timing bar at y:395, replacing touch zone bottom-half tap
 - **Miss feedback timing fixed** — miss SFX/text fire immediately before marker pause (was inside the delayed callback)
 - **Fix: queueObtainPopup stale references** — `activeObtainPopups` now resets on every `create()` so destroyed containers from prior runs don't block new popups
+- **Portrait cropped to head** — `setCrop(50, 15, 156, 60)` on stamina HUD portrait, scale adjusted from 0.25 to 0.5
+- **Ring arcs start at 6 o'clock** — inventory and pickaxe rings now sweep from `Math.PI/2` (bottom) instead of `-Math.PI/2` (top)
