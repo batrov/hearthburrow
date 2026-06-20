@@ -269,3 +269,17 @@ Resolved Bugs:
 - **Player Y-weighted depth** — player depth formula changed to `6 + y*0.002 + x*0.001 + 0.0005` so southward movement (Y) has double the depth impact of eastward (X), matching painter's sort
 - **Editable PNGs** — `scripts/generate_building_sprites.py` exports placeholder PNGs to `tiles/building_*.png`; replace any with custom artwork to override the procedural fallback
 - **BootScene restores building loads** — PNGs loaded from disk in preload, procedural generation in TextureGenerator is skipped when PNG exists
+
+## ✅ Homeland Map Expansion (June 2026)
+- **Bigger map** — hub grid expanded from 16×12 to **20×18** (56% larger)
+- **Buildings now 3×3** — all 6 main buildings upgraded from 3×2 to 3×3 footprint for chunkier visual
+- **Asymmetric staggered layout** — buildings placed at varied offsets (gx=3,4,5,12,13,14) instead of uniform left/right columns
+- **Central path at cols 9-10** — shifted to center of wider grid
+- **Gate at southern edge** — moved to row 16 (was row 9), player spawns at (9,15) directly above
+- **Removed buildingsContainer** — building sprites tracked via Map<string,Image>, labels added directly to scene at depth 7
+- **Un-restored alpha 0.2** (was 0.4)
+- **Building texture sizes** — 3×3 canvas 160×120 (was 160×100), gate stays 120×80; all PNGs regenerated
+
+## ✅ Bug Fix: Restoration Affordability Check (June 2026)
+- **SPACE keyboard shortcut** was calling `tryRestore()` without checking `canRestore()`, bypassing the RESTORE button's affordability gate
+- **Fix**: added `if (!canRestore(buildingId)) return;` at the top of `tryRestore()` so insufficient materials is a silent no-op before any animation starts

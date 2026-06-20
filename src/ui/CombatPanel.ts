@@ -221,6 +221,9 @@ export class CombatPanel extends BasePanel {
       if (this.currentEnemy?.bossDamageMult) damage = Math.floor(damage * this.currentEnemy.bossDamageMult);
 
       this.enemyHP -= damage;
+      if (this.enemyHP < 0) {
+        this.enemyHP = 0;
+      }
       this.drawHP();
       this.showFeedback(isCrit ? 'CRIT! +' + damage : 'HIT!', '#44cc66');
       audio.playCombatHit();

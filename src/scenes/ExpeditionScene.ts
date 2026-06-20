@@ -320,7 +320,7 @@ export class ExpeditionScene extends Phaser.Scene {
     for (const { x, y } of tiles) {
       const tile = floor.tiles[y][x];
       const p = gridToIso(x, y);
-      const depth = 6 + (x + y) * 0.001;
+      const depth = 6 + y * 0.002 + x * 0.001;
 
       const makeImg = (key: string) => {
         const cfg = getSpriteConfig(key);
@@ -375,7 +375,7 @@ export class ExpeditionScene extends Phaser.Scene {
           } else if (tile.type === 'event_boss' && !tile.broken) {
             if (this.textures.exists('enemy_boss')) {
               const img = makeImg('enemy_boss');
-              img.setDepth(6 + (x + y + 3) * 0.001);
+              img.setDepth(6 + y * 0.002 + x * 0.001 + 0.003);
             }
           }
           break;

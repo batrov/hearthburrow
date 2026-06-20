@@ -167,7 +167,7 @@ export class HomelandScene extends Phaser.Scene {
         texKey,
       ).setAlpha(alpha);
       img.setData('bid', b.buildingId || b.id);
-      img.setDepth(6 + (b.gy + b.gh / 2) * 0.002 + (b.gx + b.gw / 2) * 0.001);
+      img.setDepth(6 + b.gy * 0.002 + (b.gx + b.gw - 1) * 0.001);
       this.buildingImages.set(b.buildingId || b.id, img);
 
       const label = this.add.text(c.x, c.y - 48, b.label, {
@@ -195,9 +195,9 @@ export class HomelandScene extends Phaser.Scene {
       c.x + (cfg.offsetX ?? 0),
       c.y + (cfg.offsetY ?? 0),
       'building_gate',
-    ).setDepth(6 + 16.5 * 0.002 + 10 * 0.001);
+    ).setDepth(6 + 16 * 0.002 + 10 * 0.001);
 
-    const glow = this.add.image(c.x, c.y - 36, 'gate_glow').setDepth(6 + 16.5 * 0.002 + 10 * 0.001 + 0.001);
+    const glow = this.add.image(c.x, c.y - 36, 'gate_glow').setDepth(6 + 16 * 0.002 + 10 * 0.001 + 0.001);
 
     this.tweens.add({
       targets: glow,
