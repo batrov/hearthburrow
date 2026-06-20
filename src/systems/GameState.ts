@@ -472,7 +472,8 @@ class GameState {
     const tierRanges: Record<string, number> = {
       lantern_bronze: 3, lantern_silver: 4, lantern_gold: 5,
     };
-    const bonus = this.equippedLantern ? (tierRanges[this.equippedLantern] ?? 0) : 0;
+    let bonus = this.equippedLantern ? (tierRanges[this.equippedLantern] ?? 0) : 0;
+    if (this.getResearchLevel('lantern_efficiency') >= 1) bonus++;
     if (isDarkFloor) {
       return 90 + bonus * 30;
     }

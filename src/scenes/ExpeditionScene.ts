@@ -196,6 +196,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.stairsSpawned = false;
     this.floorEntry = true;
     this.stamina = new StaminaSystem(staminaMax);
+    if (gameState.getResearchLevel('second_wind') >= 1) this.stamina.refill(5);
     this.mining = new MiningSystem();
     this.mining.setPickaxeTier(gameState.currentPickaxeTier);
     this.inventory = new InventorySystem(this.debugMode ? 100 : 16 + gameState.inventorySlotBonus, false);
@@ -1181,7 +1182,8 @@ export class ExpeditionScene extends Phaser.Scene {
 
     if (this.isMining) {
       this.animTimer += delta;
-      if (this.animTimer >= 80) {
+      const mineInterval = gameState.getResearchLevel('excavation_mastery') >= 1 ? 40 : 80;
+      if (this.animTimer >= mineInterval) {
         this.animTimer = 0;
         this.animFrame++;
         if (this.animFrame > 2) {
@@ -1651,6 +1653,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.showRecipeDiscovery('Gold Lantern');
     }
 
+    if (gameState.getResearchLevel('second_wind') >= 1) this.stamina.refill(5);
     if (this.runSeed) this.dungeonGen.setSeed(`${this.runSeed}_depth_${this.expeditionState.depth}`);
     const floor = this.dungeonGen.generateFloor(this.expeditionState.depth);
     this.currentFloor = floor;
@@ -1667,6 +1670,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.safeExtract();
     } else {
       this.expeditionState.ascend();
+      if (gameState.getResearchLevel('second_wind') >= 1) this.stamina.refill(5);
       if (this.runSeed) this.dungeonGen.setSeed(`${this.runSeed}_depth_${this.expeditionState.depth}`);
       const floor = this.dungeonGen.generateFloor(this.expeditionState.depth);
       this.currentFloor = floor;
@@ -1860,7 +1864,9 @@ export class ExpeditionScene extends Phaser.Scene {
     const tile = floor.tiles[ty][tx];
     if (tile.type !== 'mineable' || tile.broken) return;
 
-    tile.durability -= this.mining.getDamage();
+    let mineDmg = this.mining.getDamage();
+    if (gameState.getResearchLevel('deep_core_mining') >= 1) mineDmg++;
+    tile.durability -= mineDmg;
     audio.playMineHit(tile.maxDurability);
     this.cameras.main.shake(50, 0.006);
 
@@ -1885,7 +1891,9 @@ export class ExpeditionScene extends Phaser.Scene {
       }
     }
 
-    if (!this.stamina.consume(5)) {
+    let staminaCost = 5;
+    if (gameState.getResearchLevel('efficient_mining') >= 1) staminaCost--;
+    if (!this.stamina.consume(staminaCost)) {
       this.handleExhaustion();
     }
 
@@ -1900,6 +1908,11 @@ export class ExpeditionScene extends Phaser.Scene {
 
       const luckBonus = gameState.getBootEffects().luckBonus;
       if (Math.random() < luckBonus) {
+        this.createItemPopup(tx, ty, minedResource);
+        this.spawnItemSprite(tx, ty, minedResource);
+      }
+
+      if (gameState.getResearchLevel('ore_magnet') >= 1 && Math.random() < 0.15) {
         this.createItemPopup(tx, ty, minedResource);
         this.spawnItemSprite(tx, ty, minedResource);
       }
@@ -2276,6 +2289,9 @@ export class ExpeditionScene extends Phaser.Scene {
       rewards: data.rewards,
       ringBonusDamage: ringEffects.bonusDamage,
       ringCritChance: ringEffects.critChance,
+      researchBonusDamage: gameState.getResearchLevel('combat_training') >= 1 ? 1 : 0,
+      researchCritChance: gameState.getResearchLevel('critical_strikes') >= 1 ? 0.1 : 0,
+      bossDamageMult: isBoss && gameState.getResearchLevel('boss_slayer') >= 1 ? 1.5 : 1,
     };
 
     this.movePath = [];
@@ -2366,8 +2382,9 @@ export class ExpeditionScene extends Phaser.Scene {
     switch (itemId) {
       case 'stamina_potion': {
         this.inventory.removeItem(itemId, 1);
-        this.stamina.refill(30);
-        this.showConsumableFeedback('+30 Stamina');
+        const restore = Math.floor(30 * (gameState.getResearchLevel('trail_rations') >= 1 ? 1.25 : 1));
+        this.stamina.refill(restore);
+        this.showConsumableFeedback(`+${restore} Stamina`);
         audio.playPotion();
         break;
       }

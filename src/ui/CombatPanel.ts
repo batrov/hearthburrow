@@ -13,6 +13,9 @@ export interface EnemyConfig {
   rewards?: { id: string; quantity: number }[];
   ringBonusDamage?: number;
   ringCritChance?: number;
+  researchBonusDamage?: number;
+  researchCritChance?: number;
+  bossDamageMult?: number;
 }
 
 export class CombatPanel extends BasePanel {
@@ -212,9 +215,10 @@ export class CombatPanel extends BasePanel {
     const inZone = markerX >= zoneLeft && markerX <= zoneRight;
 
     if (inZone) {
-      let damage = 1 + (this.currentEnemy?.ringBonusDamage ?? 0);
-      const isCrit = Math.random() < (this.currentEnemy?.ringCritChance ?? 0);
+      let damage = 1 + (this.currentEnemy?.ringBonusDamage ?? 0) + (this.currentEnemy?.researchBonusDamage ?? 0);
+      const isCrit = Math.random() < ((this.currentEnemy?.ringCritChance ?? 0) + (this.currentEnemy?.researchCritChance ?? 0));
       if (isCrit) damage *= 2;
+      if (this.currentEnemy?.bossDamageMult) damage = Math.floor(damage * this.currentEnemy.bossDamageMult);
 
       this.enemyHP -= damage;
       this.drawHP();

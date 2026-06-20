@@ -244,3 +244,4 @@ Resolved Bugs:
 - **Click-focused interaction** — click to focus, re-click to research; confirmation prompt overlay with SPACE/Confirm/Cancel
 - **Description bar** — fixed bottom panel showing node name, description, cost, and status (LOCKED/AVAILABLE/MAXED) for the focused node
 - **Vitality Surge percent bonus** — +20% max stamina scales with all flat stamina sources; stored as `gameState.staminaPercentBonus`
+- **All 10 effects wired** — mining stamina cost, double ore, mine tier offset, animation speed, combat damage, crit chance, boss multiplier, consumable boost, lantern range, and floor stamina recovery all read research levels at their respective hook sites
