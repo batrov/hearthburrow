@@ -12,6 +12,53 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
+    const cx = this.cameras.main.centerX;
+    const cy = this.cameras.main.centerY;
+
+    this.cameras.main.setBackgroundColor('#0a0a1a');
+
+    this.load.setPath('');
+    this.load.image('title_img', 'icons/title.png');
+    this.load.setPath('assets/sprites');
+
+    const barWidth = 300;
+    const barHeight = 20;
+    const barX = cx - barWidth / 2;
+    const barY = cy + 30;
+
+    const barBg = this.add.graphics();
+    barBg.fillStyle(0x2a2a3a, 1);
+    barBg.fillRoundedRect(barX, barY, barWidth, barHeight, 4);
+
+    this.loadingBar = this.add.graphics();
+
+    this.progressText = this.add.text(cx, barY + barHeight + 12, 'Loading...', {
+      fontSize: '14px',
+      fontFamily: 'monospace',
+      color: '#6a5a4a',
+    }).setOrigin(0.5);
+
+    this.load.on('progress', (progress: number) => {
+      const pct = Math.floor(progress * 100);
+      this.loadingBar.clear();
+      this.loadingBar.fillStyle(0xe8d5b7, 1);
+      this.loadingBar.fillRoundedRect(barX + 2, barY + 2, (barWidth - 4) * progress, barHeight - 4, 3);
+      this.progressText.setText(`${pct}%`);
+    });
+
+    const startGame = () => {
+      this.progressText.setText('[ click anywhere to proceed ]');
+      this.tweens.add({
+        targets: this.progressText,
+        alpha: { from: 1, to: 0.3 },
+        duration: 800,
+        yoyo: true,
+        repeat: -1,
+      });
+    };
+
+    this.load.once('complete', startGame);
+
     this.load.setPath('assets/sprites');
 
     for (let f = 0; f < 6; f++) {
@@ -107,58 +154,26 @@ export class BootScene extends Phaser.Scene {
     const cx = this.cameras.main.centerX;
     const cy = this.cameras.main.centerY;
 
-    this.cameras.main.setBackgroundColor('#0a0a1a');
+    this.add.image(cx, cy - 80, 'title_img').setOrigin(0.5).setScale(1);
+
     generateAll(this);
 
-    this.add.text(cx, cy - 80, 'HEARTHBURROW', {
-      fontSize: '48px',
-      fontFamily: 'monospace',
-      color: '#e8d5b7',
-      fontStyle: 'bold',
-    }).setOrigin(0.5);
-
-    this.add.text(cx, cy - 30, 'a cozy mining roguelite', {
-      fontSize: '16px',
-      fontFamily: 'monospace',
-      color: '#8a7a6a',
-    }).setOrigin(0.5);
-
-    const barWidth = 300;
-    const barHeight = 20;
-    const barX = cx - barWidth / 2;
-    const barY = cy + 30;
-
-    const barBg = this.add.graphics();
-    barBg.fillStyle(0x2a2a3a, 1);
-    barBg.fillRoundedRect(barX, barY, barWidth, barHeight, 4);
-
-    this.loadingBar = this.add.graphics();
-
-    this.progressText = this.add.text(cx, barY + barHeight + 12, 'Loading...', {
-      fontSize: '14px',
-      fontFamily: 'monospace',
-      color: '#6a5a4a',
-    }).setOrigin(0.5);
-
-    const startGame = () => {
-      this.progressText.setText('Ready!');
-      this.time.delayedCall(300, () => {
-        this.cameras.main.fadeOut(400, 0, 0, 0);
-        this.cameras.main.once('camerafadeoutcomplete', () => {
-          this.scene.start('HomelandScene');
-        });
+    const proceed = () => {
+      this.tweens.killTweensOf(this.progressText);
+      this.cameras.main.fadeOut(400, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('HomelandScene');
       });
     };
 
-    this.load.on('progress', (progress: number) => {
-      const pct = Math.floor(progress * 100);
-      this.loadingBar.clear();
-      this.loadingBar.fillStyle(0xe8d5b7, 1);
-      this.loadingBar.fillRoundedRect(barX + 2, barY + 2, (barWidth - 4) * progress, barHeight - 4, 3);
-      this.progressText.setText(`${pct}%`);
-    });
+    this.input.once('pointerdown', proceed);
+    this.input.keyboard?.on('keydown-SPACE', proceed);
+    this.input.keyboard?.on('keydown-ENTER', proceed);
 
-    this.load.once('complete', startGame);
-    this.time.delayedCall(3000, startGame);
+    this.time.delayedCall(3000, () => {
+      if (this.scene.isActive('BootScene')) {
+        this.progressText.setText('[ click anywhere to proceed ]');
+      }
+    });
   }
 }

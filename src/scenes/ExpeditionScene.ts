@@ -111,7 +111,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private exhausted: boolean = false;
   private stairsSpawned: boolean = false;
   private facingX: number = 0;
-  private facingY: number = -1;
+  private facingY: number = 1;
   private debugMode: boolean = false;
   private loadoutConsumables: Record<string, number> = {};
   private inventoryPanel!: InventoryPanel;

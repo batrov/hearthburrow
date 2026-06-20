@@ -253,3 +253,11 @@ Resolved Bugs:
 - **SPACE/ESC keyboard kept** — both keyboard shortcuts and mouse buttons work in parallel
 - **Building descriptions fixed** — buildings.json descriptions now explain gameplay effects (e.g. "+20 max stamina", "+8 inventory capacity")
 - **isRestored() bug fixed** — removed stale `return true` stub that caused all buildings to appear permanently restored
+
+## ✅ Boot Screen Improvements (June 2026)
+- **Title image** — replaced 48px text "HEARTHBURROW" with centered title.png sprite (480×320 @ 0.22 scale ≈ 106×70px displayed)
+- **Loading bar fix** — progress/complete handlers moved from `create()` to `preload()` so they fire during actual asset loading instead of attaching after loading finished
+- **Click to proceed** — loading complete now shows pulsing hint (`[ click anywhere to proceed ]`) instead of auto-transitioning; waits for click, SPACE, or ENTER before fading to HomelandScene
+
+## ✅ Player Default Facing (June 2026)
+- **Default direction bottom-left** — `facingY` changed from `-1` to `1` in HomelandScene and ExpeditionScene, so the player sprite initially faces downward (bottom-left texture) instead of upward (top-right texture)

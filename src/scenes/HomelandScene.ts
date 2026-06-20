@@ -54,7 +54,7 @@ export class HomelandScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Image;
   private playerLabel!: Phaser.GameObjects.Text;
   private facingX: number = 0;
-  private facingY: number = -1;
+  private facingY: number = 1;
   private playerGx: number = 7;
   private playerGy: number = 8;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
