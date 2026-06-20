@@ -215,3 +215,9 @@ Resolved Bugs:
 - **Phase 2: BasePanel lifecycle** — `fadeIn()`/`fadeOut()`, `createOverlay()`, `addCloseButton()` helpers; all 9 panel subclasses migrated
 - **Phase 3: HomelandScene panels extracted** — BuildingInfoPanel, RestorePanel, GatePanel as proper BasePanel subclasses; HomelandScene drops ~686 lines
 - **Phase 4: isModalActive unified** — all 3 scenes use consistent getter pattern; ExpeditionScene covers all panels
+
+## ✅ Combat Panel Revamp (June 2026)
+- **Stamina display removed from CombatPanel** — redundant stamina label/bar at y:525–535 eliminated; persists as HUD element in ExpeditionScene top-left
+- **HUD stamina visible during combat** — stamina bar, portrait, and text depth bumped from 50–51 to 201, rendering above the combat overlay
+- **HUD stamina updates live** — `drawStaminaBar()` called each combat frame so stamina consumed on miss reflects immediately
+- **Enemy name/sprite swapped** — name now at y:120 (centered), sprite at y:150, creating a natural top-down reading order

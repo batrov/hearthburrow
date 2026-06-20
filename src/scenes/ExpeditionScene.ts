@@ -515,16 +515,16 @@ export class ExpeditionScene extends Phaser.Scene {
     const staminaBg = this.add.graphics();
     staminaBg.fillStyle(0x0a0a1a, 0.75);
     staminaBg.fillRoundedRect(8, 8, 260, 72, 6);
-    staminaBg.setScrollFactor(0).setDepth(DEPTH.HUD_BG);
+    staminaBg.setScrollFactor(0).setDepth(201);
 
     this.portraitSprite = this.add.image(40, 44, 'portrait')
-      .setScale(0.25).setScrollFactor(0).setDepth(DEPTH.HUD);
+      .setScale(0.25).setScrollFactor(0).setDepth(201);
 
-    this.staminaBarGfx = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD);
+    this.staminaBarGfx = this.add.graphics().setScrollFactor(0).setDepth(201);
 
     this.staminaValueText = this.add.text(82, 44, '', {
       fontSize: '13px', fontFamily: 'monospace', color: '#ffffff',
-    }).setScrollFactor(0).setDepth(DEPTH.HUD);
+    }).setScrollFactor(0).setDepth(201);
 
     this.drawStaminaBar();
 
@@ -1009,8 +1009,6 @@ export class ExpeditionScene extends Phaser.Scene {
     }
 
     if (this.combatActive) {
-      this.combatPanel.updateStamina(this.stamina.remaining, this.stamina.maxStamina);
-
       if (this.stamina.remaining <= 10 && this.combatPanel.getResult() !== 'victory') {
         this.combatPanel.handleRetreat();
         return;
@@ -1029,6 +1027,7 @@ export class ExpeditionScene extends Phaser.Scene {
       if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
         this.combatPanel.handleRetreat();
       }
+      this.drawStaminaBar();
       return;
     }
 
@@ -2281,8 +2280,6 @@ export class ExpeditionScene extends Phaser.Scene {
         }
       }
     },
-    this.stamina.remaining,
-    this.stamina.maxStamina,
   );
   }
 

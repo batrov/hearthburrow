@@ -26,9 +26,6 @@ export class CombatPanel extends BasePanel {
   private hintText: Phaser.GameObjects.Text;
   private instructionText: Phaser.GameObjects.Text;
   private enemySprite: Phaser.GameObjects.Image;
-  private staminaGfx: Phaser.GameObjects.Graphics;
-  private staminaLabel: Phaser.GameObjects.Text;
-
   private touchZone: Phaser.GameObjects.Rectangle;
   private result: CombatResult = null;
   private enemyHP: number = 0;
@@ -54,10 +51,14 @@ export class CombatPanel extends BasePanel {
     this.overlay = scene.add.graphics();
     this.container.add(this.overlay);
 
-    this.enemyNameText = scene.add.text(960 / 2, 150, '', {
+    this.enemyNameText = scene.add.text(960 / 2, 120, '', {
       fontSize: '20px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.enemyNameText);
+
+    this.enemySprite = scene.add.image(960 / 2, 150, '__DEFAULT');
+    this.enemySprite.setOrigin(0.5);
+    this.container.add(this.enemySprite);
 
     this.hpBar = scene.add.graphics();
     this.container.add(this.hpBar);
@@ -66,10 +67,6 @@ export class CombatPanel extends BasePanel {
       fontSize: '12px', fontFamily: 'monospace', color: '#cc6666',
     }).setOrigin(0.5);
     this.container.add(this.hpText);
-
-    this.enemySprite = scene.add.image(960 / 2, 120, '__DEFAULT');
-    this.enemySprite.setOrigin(0.5);
-    this.container.add(this.enemySprite);
 
     this.instructionText = scene.add.text(960 / 2, 230, '', {
       fontSize: '13px', fontFamily: 'monospace', color: '#b8a898',
@@ -105,14 +102,6 @@ export class CombatPanel extends BasePanel {
     });
     this.container.add(this.hintText);
 
-    this.staminaLabel = scene.add.text(960 / 2, 525, '', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#6aaa6a',
-    }).setOrigin(0.5);
-    this.container.add(this.staminaLabel);
-
-    this.staminaGfx = scene.add.graphics();
-    this.container.add(this.staminaGfx);
-
     this.touchZone = scene.add.rectangle(480, 320, 960, 640, 0x000000, 0)
       .setInteractive({ useHandCursor: true }).setData('isUI', true)
       .setDepth(199).setScrollFactor(0).setVisible(false);
@@ -133,8 +122,6 @@ export class CombatPanel extends BasePanel {
   show(
     config: EnemyConfig,
     onComplete: (result: CombatResult, rewards: { id: string; quantity: number }[]) => void,
-    staminaRemaining?: number,
-    staminaMax?: number,
   ): void {
     this.result = null;
     this._visible = true;
@@ -161,7 +148,6 @@ export class CombatPanel extends BasePanel {
     }
 
     this.hitZoneOffset = 0;
-    this.updateStamina(staminaRemaining, staminaMax);
     this.drawHP();
     this.drawTimingBar(config.hitZoneWidth);
     this.startMarker(config.timingSpeed);
@@ -175,17 +161,6 @@ export class CombatPanel extends BasePanel {
       duration: 200,
       ease: 'Quad.easeOut',
     });
-  }
-
-  updateStamina(current?: number, max?: number): void {
-    if (current !== undefined && max !== undefined) {
-      this.staminaLabel.setText(`Stamina: ${current}/${max}`);
-      this.staminaLabel.setColor(current >= 10 ? '#6aaa6a' : '#cc6644');
-      this.drawStaminaBar(current, max);
-    } else {
-      this.staminaLabel.setText('');
-      this.staminaGfx.clear();
-    }
   }
 
   hide(): void {
@@ -275,22 +250,6 @@ export class CombatPanel extends BasePanel {
     this.hpBar.fillRoundedRect(x + 1, y + 1, (barW - 2) * ratio, barH - 2, 2);
 
     this.hpText.setText(`HP: ${this.enemyHP}/${this.enemyMaxHP}`);
-  }
-
-  private drawStaminaBar(current: number, max: number): void {
-    this.staminaGfx.clear();
-    const barW = 200;
-    const barH = 10;
-    const x = 960 / 2 - barW / 2;
-    const y = 535;
-
-    this.staminaGfx.fillStyle(0x1a1a2a, 1);
-    this.staminaGfx.fillRoundedRect(x, y, barW, barH, 3);
-
-    const ratio = current / max;
-    const color = ratio > 0.5 ? 0x44cc66 : ratio > 0.25 ? 0xcccc44 : 0xcc4444;
-    this.staminaGfx.fillStyle(color, 1);
-    this.staminaGfx.fillRoundedRect(x + 1, y + 1, (barW - 2) * Math.max(0, ratio), barH - 2, 2);
   }
 
   private drawTimingBar(hitZoneWidth: number): void {
