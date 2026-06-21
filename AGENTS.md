@@ -92,6 +92,7 @@ When modifying `DungeonGenerator.ts`, follow this sequence to maintain floor con
 - **Edit Safety**: When editing large functions in `ExpeditionScene.ts`, ensure the entire function block is replaced to avoid duplicating the function body, which causes catastrophic syntax errors.
 - **Type Safety**: Always run `npm run build` to catch TypeScript errors that may not be apparent in the editor.
 - **Phaser 4 Masking**: The custom `enableFilters().filters!.internal.addMask()` system is **broken for `Phaser.Container`** — child objects added to a masked container will not render. Always add UI text/images directly to the scene (`this.add.text(...)`) instead of to a container with a mask. The mask/clip behavior for scrollable content is non-functional; skip it and render directly.
+- **Phaser 4 Container Input**: **NEVER use `setInteractive()` on children of a `Container`.** It does not reliably fire `pointerdown`/`pointerup` events. Instead, use a single `scene.input.on('pointerdown', handler)` registered in `show()` and removed in `hide()`, with manual hit-testing against known element bounding boxes. To prevent clicks from reaching panels below, add a transparent interactive `Rectangle` blocker (`scene.add.rectangle(...).setInteractive()`) inside the container with an empty `pointerdown` handler (`() => {}`).
 
 ---
 

@@ -480,6 +480,40 @@ class GameState {
     return bonus * 30;
   }
 
+  /** Get boot effects for a specific boot ID (preview, doesn't need to be equipped). */
+  getBootEffectsById(id: string | null): { maxStaminaBonus: number; luckBonus: number; stairMultiplier: number } {
+    switch (id) {
+      case 'boots_stamina_bronze': return { maxStaminaBonus: 10, luckBonus: 0, stairMultiplier: 1 };
+      case 'boots_stamina_silver': return { maxStaminaBonus: 20, luckBonus: 0, stairMultiplier: 1 };
+      case 'boots_stamina_gold':   return { maxStaminaBonus: 30, luckBonus: 0, stairMultiplier: 1 };
+      case 'boots_luck_bronze':    return { maxStaminaBonus: 0, luckBonus: 0.10, stairMultiplier: 1.1 };
+      case 'boots_luck_silver':    return { maxStaminaBonus: 0, luckBonus: 0.25, stairMultiplier: 1.25 };
+      case 'boots_luck_gold':      return { maxStaminaBonus: 0, luckBonus: 0.40, stairMultiplier: 1.4 };
+      default:                     return { maxStaminaBonus: 0, luckBonus: 0, stairMultiplier: 1 };
+    }
+  }
+
+  /** Get lantern range in pixels for a specific lantern ID (preview). */
+  getLanternRangeForPreview(id: string | null): number {
+    const tierRanges: Record<string, number> = {
+      lantern_bronze: 3, lantern_silver: 4, lantern_gold: 5,
+    };
+    let bonus = id ? (tierRanges[id] ?? 0) : 0;
+    if (this.getResearchLevel('lantern_efficiency') >= 1) bonus++;
+    return bonus * 30;
+  }
+
+  /** Get human-readable description of a ring's effect. */
+  getRingDescription(id: string | null): string {
+    switch (id) {
+      case 'ring_critical': return '+20% crit chance';
+      case 'ring_damage': return '+1 combat damage';
+      case 'ring_precision': return '1.3× wider timing window';
+      case 'ring_hunter': return 'Double monster loot';
+      default: return '-';
+    }
+  }
+
   /** Check if an item has per-run durability (boots, lanterns). */
   hasUsageLimit(id: string): boolean {
     return id.startsWith('boots_') || id.startsWith('lantern_');

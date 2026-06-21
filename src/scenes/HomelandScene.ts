@@ -578,25 +578,19 @@ export class HomelandScene extends Phaser.Scene {
     }
 
     if (this.gatePanel.isVisible()) {
-      if (this.gatePanel.gateTab === 9 && this.gatePanel.seedEditing) {
-        if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
-          this.gatePanel.seedEditing = false;
-          this.gatePanel.render();
-        }
-      } else {
-        if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
-          this.gatePanel.hide();
-        }
-        const up = Phaser.Input.Keyboard.JustDown(this.keys.UP) || Phaser.Input.Keyboard.JustDown(this.keys.W);
-        const down = Phaser.Input.Keyboard.JustDown(this.keys.DOWN) || Phaser.Input.Keyboard.JustDown(this.keys.S);
-        const left = Phaser.Input.Keyboard.JustDown(this.keys.LEFT) || Phaser.Input.Keyboard.JustDown(this.keys.A);
-        const right = Phaser.Input.Keyboard.JustDown(this.keys.RIGHT) || Phaser.Input.Keyboard.JustDown(this.keys.D);
-        if (up) this.gatePanel.handleUp();
-        else if (down) this.gatePanel.handleDown();
-        else if (left) this.gatePanel.handleLeft();
-        else if (right) this.gatePanel.handleRight();
-        else if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) this.gatePanel.handleSpace();
+      if (this.gatePanel.isPickerOpen()) return;
+      if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
+        if (!this.gatePanel.handleESC()) this.gatePanel.hide();
       }
+      const up = Phaser.Input.Keyboard.JustDown(this.keys.UP) || Phaser.Input.Keyboard.JustDown(this.keys.W);
+      const down = Phaser.Input.Keyboard.JustDown(this.keys.DOWN) || Phaser.Input.Keyboard.JustDown(this.keys.S);
+      const left = Phaser.Input.Keyboard.JustDown(this.keys.LEFT) || Phaser.Input.Keyboard.JustDown(this.keys.A);
+      const right = Phaser.Input.Keyboard.JustDown(this.keys.RIGHT) || Phaser.Input.Keyboard.JustDown(this.keys.D);
+      if (up) this.gatePanel.handleUp();
+      else if (down) this.gatePanel.handleDown();
+      else if (left) this.gatePanel.handleLeft();
+      else if (right) this.gatePanel.handleRight();
+      else if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) this.gatePanel.handleSpace();
       return;
     }
 

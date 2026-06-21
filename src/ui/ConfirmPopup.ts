@@ -1,0 +1,146 @@
+import Phaser from 'phaser';
+
+export class ConfirmPopup {
+  private scene: Phaser.Scene;
+  private container: Phaser.GameObjects.Container;
+  private visible = false;
+  private onConfirmCb: (() => void) | null = null;
+  private onCancelCb: (() => void) | null = null;
+
+  private overlay: Phaser.GameObjects.Graphics;
+  private popupBg: Phaser.GameObjects.Graphics;
+  private messageText: Phaser.GameObjects.Text;
+  private subText: Phaser.GameObjects.Text;
+  private yesBtn: Phaser.GameObjects.Text;
+  private noBtn: Phaser.GameObjects.Text;
+  private footerText: Phaser.GameObjects.Text;
+  private keyHandler: ((e: KeyboardEvent) => void) | null = null;
+  private destroyed = false;
+
+  private selectedYes = true;
+
+  constructor(scene: Phaser.Scene) {
+    this.scene = scene;
+    this.container = scene.add.container(0, 0).setDepth(250).setScrollFactor(0).setVisible(false);
+
+    this.overlay = scene.add.graphics();
+    this.overlay.fillStyle(0x000000, 0.55);
+    this.overlay.fillRect(0, 0, 960, 640);
+    this.overlay.setInteractive(new Phaser.Geom.Rectangle(0, 0, 960, 640), Phaser.Geom.Rectangle.Contains);
+    this.overlay.on('pointerdown', () => this.hide());
+    this.container.add(this.overlay);
+
+    this.popupBg = scene.add.graphics();
+    this.container.add(this.popupBg);
+
+    this.messageText = scene.add.text(480, 200, '', {
+      fontSize: '20px', fontFamily: 'monospace', color: '#ff8844', fontStyle: 'bold',
+    }).setOrigin(0.5);
+    this.container.add(this.messageText);
+
+    this.subText = scene.add.text(480, 230, '', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#b8a898',
+    }).setOrigin(0.5);
+    this.container.add(this.subText);
+
+    this.yesBtn = scene.add.text(420, 280, '[  YES  ]', {
+      fontSize: '18px', fontFamily: 'monospace', color: '#cc6666',
+      backgroundColor: '#3a1a1acc', padding: { x: 16, y: 6 },
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setData('isUI', true);
+    this.yesBtn.on('pointerdown', () => { this.selectedYes = true; this.confirm(); });
+    this.container.add(this.yesBtn);
+
+    this.noBtn = scene.add.text(540, 280, '[ Cancel ]', {
+      fontSize: '18px', fontFamily: 'monospace', color: '#aaaacc',
+      backgroundColor: '#1a1a3acc', padding: { x: 12, y: 6 },
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setData('isUI', true);
+    this.noBtn.on('pointerdown', () => { this.selectedYes = false; this.hide(); });
+    this.container.add(this.noBtn);
+
+    this.footerText = scene.add.text(480, 340, '[← →] switch  [SPACE] confirm  [ESC] cancel', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#8a7a9a',
+    }).setOrigin(0.5);
+    this.container.add(this.footerText);
+  }
+
+  show(
+    message: string,
+    subMessage: string,
+    onConfirm: () => void,
+    onCancel?: () => void,
+  ): void {
+    this.messageText.setText(message);
+    this.subText.setText(subMessage);
+    this.onConfirmCb = onConfirm;
+    this.onCancelCb = onCancel ?? null;
+    this.selectedYes = false;
+
+    this.popupBg.clear();
+    this.popupBg.fillStyle(0x0a0a1a, 0.95);
+    this.popupBg.fillRoundedRect(300, 150, 360, 230, 10);
+    this.popupBg.lineStyle(2, 0x6a5a8a);
+    this.popupBg.strokeRoundedRect(300, 150, 360, 230, 10);
+
+    this.keyHandler = (e: KeyboardEvent) => {
+      switch (e.key) {
+        case 'ArrowLeft': case 'a': e.preventDefault(); this.selectedYes = false; this.render(); break;
+        case 'ArrowRight': case 'd': e.preventDefault(); this.selectedYes = true; this.render(); break;
+        case ' ': case 'Enter': e.preventDefault(); this.confirm(); break;
+        case 'Escape': this.hide(); break;
+      }
+    };
+    this.scene.input.keyboard!.on('keydown', this.keyHandler);
+
+    this.render();
+    this.container.setAlpha(0).setVisible(true);
+    this.scene.tweens.add({
+      targets: this.container,
+      alpha: 1,
+      duration: 120,
+      ease: 'Quad.easeOut',
+    });
+    this.visible = true;
+  }
+
+  private render(): void {
+    this.yesBtn.setStyle({
+      backgroundColor: this.selectedYes ? '#4a2222cc' : '#2a1a1acc',
+      color: this.selectedYes ? '#ff6666' : '#886666',
+    });
+  }
+
+  private confirm(): void {
+    if (this.selectedYes) {
+      this.onConfirmCb?.();
+    }
+    this.hide();
+  }
+
+  hide(): void {
+    if (!this.visible) return;
+    if (this.keyHandler) {
+      this.scene.input.keyboard!.off('keydown', this.keyHandler);
+      this.keyHandler = null;
+    }
+    this.scene.tweens.add({
+      targets: this.container,
+      alpha: 0,
+      duration: 100,
+      ease: 'Quad.easeIn',
+      onComplete: () => {
+        this.container.setVisible(false);
+        this.visible = false;
+        this.onCancelCb?.();
+      },
+    });
+  }
+
+  isVisible(): boolean { return this.visible; }
+
+  destroy(): void {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    this.hide();
+    this.container.destroy(true);
+  }
+}
