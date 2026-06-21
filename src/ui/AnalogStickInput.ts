@@ -6,6 +6,7 @@ export interface AnalogStickConfig {
   isPointerOverUI?: (pointer: Phaser.Input.Pointer) => boolean;
   onDragStart?: () => void;
   onClick?: (worldX: number, worldY: number) => void;
+  onGfxCreated?: (gfx: Phaser.GameObjects.Graphics) => void;
 }
 
 export class AnalogStickInput {
@@ -109,6 +110,7 @@ export class AnalogStickInput {
 
     if (!this.gfx) {
       this.gfx = this.scene.add.graphics().setScrollFactor(0).setDepth(this.config.depth!);
+      this.config.onGfxCreated?.(this.gfx);
     }
     this.gfx.clear();
     this.gfx.lineStyle(2, 0xffffff, 0.25);

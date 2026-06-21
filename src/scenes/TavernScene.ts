@@ -63,6 +63,7 @@ export class TavernScene extends Phaser.Scene {
   private moveDelay: number = 150;
   private analog!: AnalogStickInput;
   private photobook!: NPCPhotobookPanel;
+  private hudCam!: Phaser.Cameras.Scene2D.Camera;
   private animFrame: number = 0;
   private animTimer: number = 0;
   private readonly ANIM_INTERVAL: number = 60;
@@ -74,6 +75,9 @@ export class TavernScene extends Phaser.Scene {
   create(): void {
     this.cameras.main.fadeIn(300, 0, 0, 0);
     this.cameras.main.setBackgroundColor('#0a0500');
+
+    this.hudCam = this.cameras.add(0, 0, 960, 640, false, 'hud');
+    this.hudCam.setZoom(1);
 
     this.greetingActive = false;
     this.isMoving = false;
@@ -90,8 +94,10 @@ export class TavernScene extends Phaser.Scene {
     this.createNPCs();
     this.createUI();
     this.photobook = new NPCPhotobookPanel(this);
+    this.cameras.main.ignore(this.photobook.container);
     this.setupInput();
     this.setupPointerInput();
+    this.cameras.main.setZoom(1.5);
   }
 
   private drawTavern(): void {
@@ -100,9 +106,10 @@ export class TavernScene extends Phaser.Scene {
         const cell = TAVERN_MAP[y][x];
         const pos = gridToScreen(x, y);
 
-        this.add.image(pos.x, pos.y, 'terrain_diamond')
+        const tileImg = this.add.image(pos.x, pos.y, 'terrain_diamond')
           .setTint(cell === 1 ? 0x2a1a0a : 0x3a2a1a)
           .setDepth(4);
+        this.hudCam.ignore(tileImg);
       }
     }
 
@@ -115,21 +122,27 @@ export class TavernScene extends Phaser.Scene {
         if (cell === 1) {
           const g = this.add.graphics().setDepth(depth);
           drawExtrudedTile(g, pos.x, pos.y, 0x4a2a10, 0x3a1a0a, 0x2a1000, 20);
+          this.hudCam.ignore(g);
         } else if (cell === 2) {
           const g = this.add.graphics().setDepth(depth);
           drawExtrudedTile(g, pos.x, pos.y, 0x5a3a1a, 0x4a2a10, 0x3a1a0a, 12);
+          this.hudCam.ignore(g);
         } else if (cell === 3) {
           const g = this.add.graphics().setDepth(depth);
           drawExtrudedTile(g, pos.x, pos.y, 0x6a4a2a, 0x5a3a1a, 0x4a2a0a, 8);
+          this.hudCam.ignore(g);
         } else if (cell === 4) {
           const g = this.add.graphics().setDepth(depth);
           drawDiamond(g, pos.x, pos.y, 0x4a3a2a);
           drawExtrudedTile(g, pos.x, pos.y, 0x5a4a2a, 0x4a3a1a, 0x3a2a0a, 10);
-          this.add.text(pos.x, pos.y - 28, 'EXIT', {
+          this.hudCam.ignore(g);
+          const exitLabel = this.add.text(pos.x, pos.y - 28, 'EXIT', {
             fontSize: '9px', fontFamily: 'monospace', color: '#6a5a3a',
           }).setOrigin(0.5).setDepth(15);
+          this.hudCam.ignore(exitLabel);
           const glow = this.add.image(pos.x, pos.y - 14, 'terrain_diamond')
             .setTint(0x8a7a5a).setAlpha(0.3).setDepth(depth + 0.1);
+          this.hudCam.ignore(glow);
           this.tweens.add({
             targets: glow, alpha: 0.6, yoyo: true, repeat: -1,
             duration: 1000, ease: 'Sine.easeInOut',
@@ -154,6 +167,8 @@ export class TavernScene extends Phaser.Scene {
     this.playerLabel = this.add.text(p.x, p.y - 30, 'You', {
       fontSize: '11px', fontFamily: 'monospace', color: '#aaddff',
     }).setOrigin(0.5);
+    this.hudCam.ignore(this.player);
+    this.hudCam.ignore(this.playerLabel);
     this.updatePlayerSprite();
   }
 
@@ -190,6 +205,7 @@ export class TavernScene extends Phaser.Scene {
         pos.x + (npcCfg.offsetX ?? 0),
         pos.y + (npcCfg.offsetY ?? 0),
       ).setDepth(depth);
+      this.hudCam.ignore(container);
 
       const sprite = this.add.image(0, 0, `npc_${npc.variant}`);
       if (npcCfg.originX !== undefined || npcCfg.originY !== undefined) {
@@ -225,28 +241,33 @@ export class TavernScene extends Phaser.Scene {
   private createUI(): void {
     const cx = 960 / 2;
 
-    this.add.text(cx, 12, 'THE COZY TAVERN', {
+    const title = this.add.text(cx, 12, 'THE COZY TAVERN', {
       fontSize: '18px', fontFamily: 'monospace', color: '#cc8844', fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(50);
+    }).setOrigin(0.5).setDepth(50).setScrollFactor(0);
+    this.cameras.main.ignore(title);
 
     const rescued = gameState.rescuedVillagers;
-    this.add.text(cx, 620, `${rescued.length} / 20 villagers resting here    [P] Photobook`, {
+    const countText = this.add.text(cx, 620, `${rescued.length} / 20 villagers resting here    [P] Photobook`, {
       fontSize: '11px', fontFamily: 'monospace', color: '#7a6a5a',
-    }).setOrigin(0.5).setDepth(50);
+    }).setOrigin(0.5).setDepth(50).setScrollFactor(0);
+    this.cameras.main.ignore(countText);
 
-    this.add.text(940, 620, '[EXIT]', {
+    const exitBtn = this.add.text(940, 620, '[EXIT]', {
       fontSize: '20px', fontFamily: 'monospace', color: '#ff8844',
-    }).setOrigin(1, 1).setDepth(50).setInteractive({ useHandCursor: true })
+    }).setOrigin(1, 1).setDepth(50).setInteractive({ useHandCursor: true }).setScrollFactor(0)
       .on('pointerdown', () => this.leave());
+    this.cameras.main.ignore(exitBtn);
 
-    this.add.text(20, 620, '[PHOTOBOOK]', {
+    const photobookBtn = this.add.text(20, 620, '[PHOTOBOOK]', {
       fontSize: '20px', fontFamily: 'monospace', color: '#7a6a5a',
-    }).setOrigin(0, 1).setDepth(50).setInteractive({ useHandCursor: true })
+    }).setOrigin(0, 1).setDepth(50).setInteractive({ useHandCursor: true }).setScrollFactor(0)
       .on('pointerdown', () => this.photobook.toggle());
+    this.cameras.main.ignore(photobookBtn);
 
     this.promptText = this.add.text(0, 0, '', {
       fontSize: '11px', fontFamily: 'monospace', color: '#ffdd88',
     }).setOrigin(0.5).setDepth(100).setAlpha(0);
+    this.hudCam.ignore(this.promptText);
   }
 
   private setupInput(): void {
@@ -330,6 +351,7 @@ export class TavernScene extends Phaser.Scene {
       isPointerOverUI: (p) => this.isPointerOverUI(p),
       onDragStart: () => { this.movePath = []; },
       onClick: (worldX, worldY) => { this.doClickToMove(worldX, worldY); },
+      onGfxCreated: (gfx) => this.cameras.main.ignore(gfx),
     });
   }
 
@@ -500,19 +522,22 @@ export class TavernScene extends Phaser.Scene {
 
     this.greetingActive = true;
 
-    const overlayBg = this.add.graphics().setDepth(200);
+    const overlayBg = this.add.graphics().setDepth(200).setScrollFactor(0);
     overlayBg.fillStyle(0x0a0a1a, 0.85);
     overlayBg.fillRoundedRect(960 / 2 - 250, 640 / 2 - 60, 500, 120, 10);
     overlayBg.lineStyle(1, 0x6a5a8a, 0.5);
     overlayBg.strokeRoundedRect(960 / 2 - 250, 640 / 2 - 60, 500, 120, 10);
+    this.cameras.main.ignore(overlayBg);
 
     const overlayText = this.add.text(960 / 2, 640 / 2 - 30, `${npc.name} says:`, {
       fontSize: '14px', fontFamily: 'monospace', color: '#ccaa66', fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(201);
+    }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
+    this.cameras.main.ignore(overlayText);
 
     const speechText = this.add.text(960 / 2, 640 / 2 + 5, `"${greeting}"`, {
       fontSize: '13px', fontFamily: 'monospace', color: '#e8d5b7', align: 'center',
-    }).setOrigin(0.5).setDepth(201);
+    }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
+    this.cameras.main.ignore(speechText);
 
     if (isFirstTalk) {
       const recipeWasNew = !gameState.crafting.isDiscovered('miners_potion');
@@ -534,7 +559,8 @@ export class TavernScene extends Phaser.Scene {
 
     const closeHint = this.add.text(960 / 2, 640 / 2 + 40, '[SPACE / ESC] close', {
       fontSize: '11px', fontFamily: 'monospace', color: '#6a5a4a',
-    }).setOrigin(0.5).setDepth(201);
+    }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
+    this.cameras.main.ignore(closeHint);
 
     const close = () => {
       overlayBg.destroy();
@@ -557,6 +583,7 @@ export class TavernScene extends Phaser.Scene {
   private showObtainPopup(id: string, qty: number, prefix?: string, stackIndex: number = 0): void {
     const y = 116 + stackIndex * 36;
     const container = this.add.container(20, y).setScrollFactor(0).setDepth(250);
+    this.cameras.main.ignore(container);
 
     const bg = this.add.graphics();
     bg.fillStyle(0x0a0a1a, 0.8);

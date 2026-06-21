@@ -213,6 +213,7 @@ export class HomelandScene extends Phaser.Scene {
   private movePath: { x: number; y: number }[] = [];
   private decorationImages: Phaser.GameObjects.Image[] = [];
   private analog!: AnalogStickInput;
+  private hudCam!: Phaser.Cameras.Scene2D.Camera;
   private animFrame: number = 0;
   private animTimer: number = 0;
   private readonly ANIM_INTERVAL: number = 60;
@@ -224,6 +225,10 @@ export class HomelandScene extends Phaser.Scene {
   create(): void {
     this.cameras.main.fadeIn(400, 0, 0, 0);
     this.cameras.main.setBackgroundColor('#0a0a0a');
+
+    this.hudCam = this.cameras.add(0, 0, 960, 640, false, 'hud');
+    this.hudCam.setZoom(1);
+
     this.currentBuilding = null;
     this.moveTimer = 0;
     this.animFrame = 0;
@@ -245,6 +250,7 @@ export class HomelandScene extends Phaser.Scene {
     const yMin = -HALF_H * 3;
     this.cameras.main.startFollow(this.player, true, 0.5, 0.5);
     this.cameras.main.setBounds(xMin, yMin, worldWidth(HUB_COLS, HUB_ROWS) + HALF_W * 4, worldHeight(HUB_COLS, HUB_ROWS) + HALF_H * 4);
+    this.cameras.main.setZoom(1);
 
     this.buildingInfoPanel = new BuildingInfoPanel(this);
     this.restorePanel = new RestorePanel(this, () => { this.restoreBuildingId = ''; }, (id) => this.tryRestore(id));
@@ -256,6 +262,14 @@ export class HomelandScene extends Phaser.Scene {
     this.tradePanel = new TradePanel(this);
     this.researchPanel = new ResearchPanel(this);
     this.farmPanel = new FarmPanel(this);
+    this.cameras.main.ignore(this.buildingInfoPanel.container);
+    this.cameras.main.ignore(this.restorePanel.container);
+    this.cameras.main.ignore(this.gatePanel.container);
+    this.cameras.main.ignore(this.inventoryPanel.container);
+    this.cameras.main.ignore(this.craftingPanel.container);
+    this.cameras.main.ignore(this.tradePanel.container);
+    this.cameras.main.ignore(this.researchPanel.container);
+    this.cameras.main.ignore(this.farmPanel.container);
   }
 
   private drawHubTerrain(): void {
@@ -275,6 +289,7 @@ export class HomelandScene extends Phaser.Scene {
         }
         const tile = this.add.image(p.x, p.y, key);
         tile.setDepth(4);
+        this.hudCam.ignore(tile);
       }
     }
   }
@@ -311,17 +326,20 @@ export class HomelandScene extends Phaser.Scene {
       ).setAlpha(alpha);
       img.setData('bid', b.buildingId || b.id);
       img.setDepth(6 + b.gy * 0.002 + (b.gx + b.gw - 1) * 0.001);
+      this.hudCam.ignore(img);
       this.buildingImages.set(b.buildingId || b.id, img);
 
       const label = this.add.text(c.x, c.y - 48, b.label, {
         fontSize: '11px', fontFamily: 'monospace', color: ul ? '#e8d5b7' : '#6a5a4a',
       }).setOrigin(0.5).setAlpha(alpha).setDepth(7);
+      this.hudCam.ignore(label);
       this.buildingLabels.push(label);
 
       const bRef = b;
       const zone = this.add.rectangle(c.x, c.y, 120, 72, ul ? 0xffffff : 0x000000, ul ? 0.08 : 0)
         .setInteractive({ useHandCursor: true }).setData('isUI', true)
         .setDepth(6);
+      this.hudCam.ignore(zone);
       zone.on('pointerdown', () => this.activateBuilding(bRef));
       zone.on('pointerover', () => { if (ul) zone.setFillStyle(0xffffff, 0.15); });
       zone.on('pointerout', () => { if (ul) zone.setFillStyle(0xffffff, 0.08); });
@@ -334,13 +352,15 @@ export class HomelandScene extends Phaser.Scene {
   private drawHubGate(): void {
     const c = gridToIso(13, 20.5);
     const cfg = getSpriteConfig('building_gate');
-    this.add.image(
+    const gateImg = this.add.image(
       c.x + (cfg.offsetX ?? 0),
       c.y + (cfg.offsetY ?? 0),
       'building_gate',
     ).setDepth(6 + 20 * 0.002 + 13 * 0.001);
+    this.hudCam.ignore(gateImg);
 
     const glow = this.add.image(c.x, c.y - 36, 'gate_glow').setDepth(6 + 20 * 0.002 + 13 * 0.001 + 0.001);
+    this.hudCam.ignore(glow);
 
     this.tweens.add({
       targets: glow,
@@ -351,18 +371,21 @@ export class HomelandScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
     });
 
-    this.add.text(c.x, c.y - 60, 'FORGOTTEN DEPTHS', {
+    const gateLabel = this.add.text(c.x, c.y - 60, 'FORGOTTEN DEPTHS', {
       fontSize: '10px', fontFamily: 'monospace', color: '#7a6a9a',
     }).setOrigin(0.5).setDepth(7);
+    this.hudCam.ignore(gateLabel);
 
     const descendText = this.add.text(c.x, c.y + 24, '[SPACE] Descend', {
       fontSize: '11px', fontFamily: 'monospace', color: '#8a7aba',
     }).setOrigin(0.5).setDepth(7);
+    this.hudCam.ignore(descendText);
     descendText.setInteractive({ useHandCursor: true }).setData('isUI', true);
     descendText.on('pointerdown', () => this.showGatePanel());
 
     const gateZone = this.add.rectangle(c.x, c.y, 140, 84, 0xffffff, 0.06)
       .setInteractive({ useHandCursor: true }).setData('isUI', true).setDepth(6);
+    this.hudCam.ignore(gateZone);
     gateZone.on('pointerdown', () => this.showGatePanel());
     gateZone.on('pointerover', () => gateZone.setFillStyle(0xffffff, 0.12));
     gateZone.on('pointerout', () => gateZone.setFillStyle(0xffffff, 0.06));
@@ -382,6 +405,7 @@ export class HomelandScene extends Phaser.Scene {
       }
       if (cfg.scale !== undefined) img.setScale(cfg.scale);
       img.setDepth(6 + d.gy * 0.002 + d.gx * 0.001);
+      this.hudCam.ignore(img);
       this.decorationImages.push(img);
     }
 
@@ -395,6 +419,7 @@ export class HomelandScene extends Phaser.Scene {
       p.y + (cfg.offsetY ?? 0),
       'player_bottom_left',
     ).setDepth(6 + this.playerGy * 0.002 + this.playerGx * 0.001 + 0.0005);
+    this.hudCam.ignore(this.player);
     if (cfg.originX !== undefined || cfg.originY !== undefined) {
       this.player.setOrigin(cfg.originX ?? 0.5, cfg.originY ?? 0.5);
     }
@@ -402,6 +427,7 @@ export class HomelandScene extends Phaser.Scene {
     this.playerLabel = this.add.text(p.x, p.y - 30, 'You', {
       fontSize: '11px', fontFamily: 'monospace', color: '#aaddff',
     }).setOrigin(0.5);
+    this.hudCam.ignore(this.playerLabel);
     this.updatePlayerSprite();
   }
 
@@ -428,6 +454,7 @@ export class HomelandScene extends Phaser.Scene {
     this.promptText = this.add.text(0, 0, '', {
       fontSize: '12px', fontFamily: 'monospace', color: '#ffdd88',
     }).setOrigin(0.5).setAlpha(0).setDepth(55);
+    this.hudCam.ignore(this.promptText);
   }
 
   private setupInput(): void {
@@ -469,6 +496,7 @@ export class HomelandScene extends Phaser.Scene {
       isPointerOverUI: (p) => this.isPointerOverUI(p),
       onDragStart: () => { this.movePath = []; },
       onClick: (worldX, worldY) => { this.doClickToMove(worldX, worldY); },
+      onGfxCreated: (gfx) => this.cameras.main.ignore(gfx),
     });
   }
 
@@ -812,6 +840,7 @@ export class HomelandScene extends Phaser.Scene {
     this.closePanel();
 
     const container = this.add.container(960 / 2, 640 / 2).setScrollFactor(0).setDepth(250);
+    this.cameras.main.ignore(container);
 
     const bg = this.add.graphics();
     bg.fillStyle(0x0a0a1a, 0.85);
@@ -879,6 +908,7 @@ export class HomelandScene extends Phaser.Scene {
           const popup = this.add.text(960 / 2, 640 / 2, `${name} Restored!`, {
             fontSize: '18px', fontFamily: 'monospace', color: '#44cc66', fontStyle: 'bold', align: 'center',
           }).setOrigin(0.5).setScrollFactor(0).setDepth(250);
+          this.cameras.main.ignore(popup);
 
           this.tweens.add({
             targets: popup,

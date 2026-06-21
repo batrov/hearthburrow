@@ -144,6 +144,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private analog!: AnalogStickInput;
   private actionBtnBg!: Phaser.GameObjects.Graphics;
   private actionBtnText!: Phaser.GameObjects.Text;
+  private hudCam!: Phaser.Cameras.Scene2D.Camera;
 
   constructor() {
     super({ key: 'ExpeditionScene' });
@@ -173,6 +174,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const popup = this.add.text(x, y, text, {
       fontSize: '16px', fontFamily: 'monospace', color, fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(DEPTH.POPUP).setScrollFactor(0);
+    this.cameras.main.ignore(popup);
     const tween: any = { targets: popup, y: y + (opts?.moveY ?? -40), alpha: 0, duration: opts?.duration ?? 1200, ease: 'Quad.easeOut', onComplete: () => popup.destroy() };
     if (opts?.scaleFrom || opts?.scaleTo) tween.scale = { from: opts?.scaleFrom ?? 1.2, to: opts?.scaleTo ?? 0.9 };
     this.tweens.add(tween);
@@ -188,6 +190,9 @@ export class ExpeditionScene extends Phaser.Scene {
   create(): void {
     this.cameras.main.fadeIn(500, 0, 0, 0);
     this.cameras.main.setBackgroundColor('#0a0a0a');
+
+    this.hudCam = this.cameras.add(0, 0, 960, 640, false, 'hud');
+    this.hudCam.setZoom(1);
 
     this.exhausted = false;
     this.hasFinished = false;
@@ -214,6 +219,10 @@ export class ExpeditionScene extends Phaser.Scene {
     this.darknessOverlay = this.add.graphics().setDepth(DEPTH.DARKNESS);
     this.darknessMaskGfx = this.add.graphics().setVisible(false);
     this.darknessOverlay.enableFilters().filters!.internal.addMask(this.darknessMaskGfx, true);
+    this.hudCam.ignore(this.facingHighlight);
+    this.hudCam.ignore(this.selectedObject);
+    this.hudCam.ignore(this.darknessOverlay);
+    this.hudCam.ignore(this.darknessMaskGfx);
 
     this.inventoryPanel = new InventoryPanel(
       this, this.inventory,
@@ -221,20 +230,28 @@ export class ExpeditionScene extends Phaser.Scene {
       (id) => this.trashItem(id),
       'Run Inventory',
     );
+    this.cameras.main.ignore(this.inventoryPanel.container);
     this.eventPanel = new EventPanel(this);
     this.eventActive = false;
+    this.cameras.main.ignore(this.eventPanel.container);
     this.combatPanel = new CombatPanel(this);
     this.combatActive = false;
+    this.cameras.main.ignore(this.combatPanel.container);
     this.gamblePanel = new GamblePanel(this);
+    this.cameras.main.ignore(this.gamblePanel.container);
     this.interactTarget = null;
 
     this.minimapBg = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD_BG);
     this.minimapGfx = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD);
     this.minimapDot = this.add.rectangle(0, 0, 3, 3, 0x88ccff).setScrollFactor(0).setDepth(DEPTH.MINIMAP_DOT);
+    this.cameras.main.ignore(this.minimapBg);
+    this.cameras.main.ignore(this.minimapGfx);
+    this.cameras.main.ignore(this.minimapDot);
 
     this.interactPrompt = this.add.text(0, 0, '', {
       fontSize: '12px', fontFamily: 'monospace', color: '#ffdd88',
     }).setOrigin(0.5).setAlpha(0).setDepth(DEPTH.INTERACT_PROMPT);
+    this.hudCam.ignore(this.interactPrompt);
 
     if (this.runSeed) this.dungeonGen.setSeed(`${this.runSeed}_depth_${this.startFloor}`);
     this.currentFloor = this.dungeonGen.generateFloor(this.startFloor);
@@ -253,6 +270,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const yMin = -HALF_H;
     this.cameras.main.startFollow(this.player, true, 0.5, 0.5);
     this.cameras.main.setBounds(xMin, yMin, worldWidth(floor.cols, floor.rows), worldHeight(floor.cols, floor.rows));
+    this.cameras.main.setZoom(1.5);
 
     this.expeditionState.initExplored(floor.cols, floor.rows);
     this.revealSurroundings();
@@ -291,10 +309,12 @@ export class ExpeditionScene extends Phaser.Scene {
       const key = isCorridor ? `corridor_${biome}` : `floor_${biome}_a`;
 
       const img = this.add.image(p.x, p.y, key).setDepth(DEPTH.TERRAIN).setScale(0.5);
+      this.hudCam.ignore(img);
       this.floorSpriteObjects.push(img);
 
       if (!isCorridor && (x + y) % 2 === 0) {
         const check = this.add.image(p.x, p.y, `floor_${biome}_b`).setDepth(DEPTH.TERRAIN + 0.01).setScale(0.5);
+        this.hudCam.ignore(check);
         this.floorSpriteObjects.push(check);
       }
     }
@@ -336,6 +356,7 @@ export class ExpeditionScene extends Phaser.Scene {
           img.setOrigin(cfg.originX ?? 0.5, cfg.originY ?? 0.5);
         }
         if (cfg.scale !== undefined) img.setScale(cfg.scale);
+        this.hudCam.ignore(img);
         this.tileObjects.push(img);
         return img;
       };
@@ -434,6 +455,7 @@ export class ExpeditionScene extends Phaser.Scene {
       previewX += previewCfg.offsetX ?? 0;
       previewY += previewCfg.offsetY ?? 0;
       this.previewTile = this.add.image(previewX, previewY, texKey).setDepth(DEPTH.PREVIEW_TILE);
+      this.hudCam.ignore(this.previewTile);
       if (previewCfg.originX !== undefined || previewCfg.originY !== undefined) {
         this.previewTile.setOrigin(previewCfg.originX ?? 0.5, previewCfg.originY ?? 0.5);
       }
@@ -459,6 +481,7 @@ export class ExpeditionScene extends Phaser.Scene {
             .setTint(0xffffff).setTintMode(Phaser.TintModes.FILL)
             .setAlpha(alpha);
           if (s !== 1) img.setScale(s);
+          this.hudCam.ignore(img);
           this.facingOutlineImages.push(img);
         }
       }
@@ -474,6 +497,7 @@ export class ExpeditionScene extends Phaser.Scene {
       p.y + (cfg.offsetY ?? 0),
       'player_bottom_left',
     ).setDepth(playerDepth(this.playerX, this.playerY));
+    this.hudCam.ignore(this.playerSprite);
     if (cfg.originX !== undefined || cfg.originY !== undefined) {
       this.playerSprite.setOrigin(cfg.originX ?? 0.5, cfg.originY ?? 0.5);
     }
@@ -531,18 +555,22 @@ export class ExpeditionScene extends Phaser.Scene {
     this.staminaBg.fillStyle(0x0a0a1a, 0.75);
     this.staminaBg.fillRoundedRect(8, 8, 260, 72, 6);
     this.staminaBg.setScrollFactor(0).setDepth(201);
+    this.cameras.main.ignore(this.staminaBg);
 
     this.portraitSprite = this.add.image(30, 84, 'portrait')
       .setScrollFactor(0).setDepth(201);
+    this.cameras.main.ignore(this.portraitSprite);
     this.portraitSprite.setCrop(54, 0, 108, 108);
     this.portraitSprite.setDisplaySize(160, 160);
     this.portraitSprite.setFlipX(true);
 
     this.staminaBarGfx = this.add.graphics().setScrollFactor(0).setDepth(201);
+    this.cameras.main.ignore(this.staminaBarGfx);
 
     this.staminaValueText = this.add.text(82, 44, '', {
       fontSize: '13px', fontFamily: 'monospace', color: '#ffffff',
     }).setScrollFactor(0).setDepth(201);
+    this.cameras.main.ignore(this.staminaValueText);
 
     this.drawStaminaBar();
 
@@ -550,21 +578,26 @@ export class ExpeditionScene extends Phaser.Scene {
     this.depthTextCentered = this.add.text(camW / 2, 12, `Depth: ${this.expeditionState.depth}`, {
       fontSize: '16px', fontFamily: 'monospace', color: '#ffffff', fontStyle: 'bold',
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(DEPTH.HUD);
+    this.cameras.main.ignore(this.depthTextCentered);
 
     // === TOP-RIGHT: Pickaxe Block ===
     const pickBg = this.add.graphics();
     pickBg.fillStyle(0x0a0a1a, 0.75);
     pickBg.fillRoundedRect(camW - 100, 8, 92, 72, 6);
     pickBg.setScrollFactor(0).setDepth(DEPTH.HUD_BG);
+    this.cameras.main.ignore(pickBg);
 
     const pickCx = camW - 54;
     const tier = gameState.currentPickaxeTier;
     this.pickaxeSprite = this.add.image(pickCx, 34, `item_pickaxe_${tier}`)
       .setScrollFactor(0).setDepth(DEPTH.HUD);
+    this.cameras.main.ignore(this.pickaxeSprite);
     this.pickaxeRing = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD + 1);
+    this.cameras.main.ignore(this.pickaxeRing);
     this.pickaxeUsesText = this.add.text(pickCx, 56, '', {
       fontSize: '10px', fontFamily: 'monospace', color: '#cccccc', align: 'center',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
+    this.cameras.main.ignore(this.pickaxeUsesText);
 
     this.drawPickaxeRing();
 
@@ -573,18 +606,23 @@ export class ExpeditionScene extends Phaser.Scene {
     invBg.fillStyle(0x0a0a1a, 0.75);
     invBg.fillRoundedRect(8, camH - 80, 80, 72, 6);
     invBg.setScrollFactor(0).setDepth(DEPTH.HUD_BG);
+    this.cameras.main.ignore(invBg);
 
     const invCx = 48;
     const invCy = camH - 44;
     this.invBtnSprite = this.add.image(invCx, invCy - 4, 'item_inventory_bag')
       .setScrollFactor(0).setDepth(DEPTH.HUD);
+    this.cameras.main.ignore(this.invBtnSprite);
     this.invBtnRing = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD + 1);
+    this.cameras.main.ignore(this.invBtnRing);
     this.invSlotText = this.add.text(invCx, invCy + 16, '', {
       fontSize: '10px', fontFamily: 'monospace', color: '#cccccc', align: 'center',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
+    this.cameras.main.ignore(this.invSlotText);
 
     const invZone = this.add.rectangle(invCx, camH - 44, 68, 56, 0x000000, 0)
       .setScrollFactor(0).setDepth(DEPTH.CLICK_ZONES).setInteractive({ useHandCursor: true }).setData('isUI', true);
+    this.cameras.main.ignore(invZone);
     invZone.on('pointerdown', () => {
       if (this.isModalActive) return;
       this.inventoryPanel.refresh();
@@ -598,6 +636,7 @@ export class ExpeditionScene extends Phaser.Scene {
     // Escape (above minimap)
     this.escapeSprite = this.add.image(0, 0, 'item_teleport_scroll')
       .setScrollFactor(0).setDepth(DEPTH.HUD).setInteractive({ useHandCursor: true }).setData('isUI', true);
+    this.cameras.main.ignore(this.escapeSprite);
     this.escapeSprite.on('pointerdown', () => {
       if (this.isModalActive) return;
       if (this.inventory.count('teleport_scroll') > 0) {
@@ -610,10 +649,12 @@ export class ExpeditionScene extends Phaser.Scene {
       fontSize: '12px', fontFamily: 'monospace', color: '#cccccc',
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
+    this.cameras.main.ignore(this.escapeLabel);
 
     // Potion (bottom row)
     this.potionImg = this.add.image(0, 0, 'item_stamina_potion')
       .setScrollFactor(0).setDepth(DEPTH.HUD).setInteractive({ useHandCursor: true }).setData('isUI', true);
+    this.cameras.main.ignore(this.potionImg);
     this.potionImg.on('pointerdown', () => {
       if (this.isModalActive) return;
       this.tryUseConsumable('stamina_potion');
@@ -622,10 +663,12 @@ export class ExpeditionScene extends Phaser.Scene {
       fontSize: '14px', fontFamily: 'monospace', color: '#ffdd88',
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(DEPTH.HUD);
+    this.cameras.main.ignore(this.potionCountText);
 
     // Bomb (bottom row, left of potion)
     this.bombImg = this.add.image(0, 0, 'item_mining_bomb')
       .setScrollFactor(0).setDepth(DEPTH.HUD).setInteractive({ useHandCursor: true }).setData('isUI', true);
+    this.cameras.main.ignore(this.bombImg);
     this.bombImg.on('pointerdown', () => {
       if (this.isModalActive) return;
       this.tryUseConsumable('mining_bomb');
@@ -634,6 +677,7 @@ export class ExpeditionScene extends Phaser.Scene {
       fontSize: '14px', fontFamily: 'monospace', color: '#ffdd88',
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(DEPTH.HUD);
+    this.cameras.main.ignore(this.bombCountText);
 
     // Loadout consumables
     for (const [id, qty] of Object.entries(this.loadoutConsumables)) {
@@ -651,12 +695,15 @@ export class ExpeditionScene extends Phaser.Scene {
   private createActionButton(): void {
     const x = 920, y = 320, size = 72;
     this.actionBtnBg = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD);
+    this.cameras.main.ignore(this.actionBtnBg);
     this.actionBtnText = this.add.text(x, y, '', {
       fontSize: '28px', fontFamily: 'monospace',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD + 1);
+    this.cameras.main.ignore(this.actionBtnText);
 
     const hit = this.add.rectangle(x, y, size, size, 0x000000, 0)
       .setScrollFactor(0).setDepth(DEPTH.HUD + 2).setData('isUI', true);
+    this.cameras.main.ignore(hit);
     hit.setInteractive({ useHandCursor: true });
     hit.on('pointerdown', () => this.handleActionButton());
   }
@@ -986,6 +1033,7 @@ export class ExpeditionScene extends Phaser.Scene {
       isModal: () => this.isModalActive,
       isPointerOverUI: (p) => this.isPointerOverUI(p),
       onDragStart: () => { this.movePath = []; },
+      onGfxCreated: (gfx) => this.cameras.main.ignore(gfx),
       onClick: (worldX, worldY) => {
         const floor = this.currentFloor;
         if (floor) {
@@ -1677,22 +1725,27 @@ export class ExpeditionScene extends Phaser.Scene {
     bg.fillRect(0, 0, 960, 640);
     bg.lineStyle(2, 0x5a4a7a, 0.6);
     bg.strokeRoundedRect(cx - 180, cy - 55, 360, 145, 10);
+    this.cameras.main.ignore(bg);
 
     const text = this.add.text(cx, cy - 20, 'Use stairs?', {
       fontSize: '20px', fontFamily: 'monospace', color: '#ffffff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
+    this.cameras.main.ignore(text);
 
     const hint = this.add.text(cx, cy + 10, `[SPACE] ${action}  [ESC] Cancel`, {
       fontSize: '12px', fontFamily: 'monospace', color: '#aaaaaa',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
+    this.cameras.main.ignore(hint);
 
     const proceedBtn = this.add.text(cx - 70, cy + 48, `[ ${action} ]`, {
       fontSize: '14px', fontFamily: 'monospace', color: '#66dd66',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
+    this.cameras.main.ignore(proceedBtn);
 
     const cancelBtn = this.add.text(cx + 70, cy + 48, '[ Cancel ]', {
       fontSize: '14px', fontFamily: 'monospace', color: '#cc6666',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
+    this.cameras.main.ignore(cancelBtn);
 
     this._stairProceedBtn = proceedBtn;
     this._stairCancelBtn = cancelBtn;
@@ -1734,6 +1787,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.stairPrompt = this.add.container(0, 0, [bg, text, hint, proceedBtn, cancelBtn])
       .setDepth(DEPTH.OVERLAY).setScrollFactor(0);
+    this.cameras.main.ignore(this.stairPrompt);
   }
 
   private hideStairPrompt(): void {
@@ -2145,6 +2199,7 @@ export class ExpeditionScene extends Phaser.Scene {
       const dist = Phaser.Math.Between(8, 22);
       const radius = Phaser.Math.FloatBetween(2, 4);
       const particle = this.add.circle(cx, cy, radius, 0xffffff, 0.7).setDepth(DEPTH.PARTICLES);
+      this.hudCam.ignore(particle);
 
       this.tweens.add({
         targets: particle,
@@ -2160,6 +2215,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     // Central flash
     const flash = this.add.circle(cx, cy, HALF_W * 0.8, 0xffffff, 0.25).setDepth(DEPTH.EFFECTS);
+    this.hudCam.ignore(flash);
     this.tweens.add({
       targets: flash,
       scale: 1.5,
@@ -2179,6 +2235,7 @@ export class ExpeditionScene extends Phaser.Scene {
       `+1 ${label}`,
       { fontSize: '13px', fontFamily: 'monospace', color: '#ffcc44', fontStyle: 'bold' }
     ).setOrigin(0.5).setDepth(DEPTH.ITEM_POPUP);
+    this.hudCam.ignore(popup);
 
     this.tweens.add({
       targets: popup,
@@ -2297,12 +2354,14 @@ export class ExpeditionScene extends Phaser.Scene {
       this.cameras.main.width, this.cameras.main.height,
       0x000000, 0
     ).setDepth(DEPTH.OVERLAY).setScrollFactor(0);
+    this.cameras.main.ignore(overlay);
 
-    this.add.text(
+    const exhaustionText = this.add.text(
       cx, cy,
       'EXHAUSTED\nTeleporting home...',
       { fontSize: '24px', fontFamily: 'monospace', color: '#cc4444', align: 'center' }
     ).setOrigin(0.5).setDepth(DEPTH.OVERLAY_TEXT).setScrollFactor(0);
+    this.cameras.main.ignore(exhaustionText);
 
     this.tweens.add({
       targets: overlay,
@@ -2322,17 +2381,19 @@ export class ExpeditionScene extends Phaser.Scene {
     const cx = this.cameras.main.width / 2;
     const cy = this.cameras.main.height / 2;
 
-    this.add.text(
+    const safeExtractText = this.add.text(
       cx, cy,
       'Returning to Homeland...',
       { fontSize: '20px', fontFamily: 'monospace', color: '#44cc66' }
     ).setOrigin(0.5).setDepth(DEPTH.OVERLAY_TEXT).setScrollFactor(0);
+    this.cameras.main.ignore(safeExtractText);
 
     const overlay = this.add.rectangle(
       cx, cy,
       this.cameras.main.width, this.cameras.main.height,
       0x000000, 0
     ).setDepth(DEPTH.OVERLAY).setScrollFactor(0);
+    this.cameras.main.ignore(overlay);
 
     this.tweens.add({
       targets: overlay,
@@ -2352,17 +2413,19 @@ export class ExpeditionScene extends Phaser.Scene {
     const cx = this.cameras.main.width / 2;
     const cy = this.cameras.main.height / 2;
 
-    this.add.text(
+    const emergencyText = this.add.text(
       cx, cy,
       'Giving Up...\nLosing some items...',
       { fontSize: '18px', fontFamily: 'monospace', color: '#cc8844', align: 'center' }
     ).setOrigin(0.5).setDepth(DEPTH.OVERLAY_TEXT).setScrollFactor(0);
+    this.cameras.main.ignore(emergencyText);
 
     const overlay = this.add.rectangle(
       cx, cy,
       this.cameras.main.width, this.cameras.main.height,
       0x000000, 0
     ).setDepth(DEPTH.OVERLAY).setScrollFactor(0);
+    this.cameras.main.ignore(overlay);
 
     this.tweens.add({
       targets: overlay,
@@ -2658,6 +2721,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const anchorY = this.cameras.main.height - 90;
     const popY = anchorY - this.activeObtainPopups.length * 36;
     const container = this.add.container(anchorX, popY).setScrollFactor(0).setDepth(DEPTH.HUD + 2);
+    this.cameras.main.ignore(container);
 
     const bg = this.add.graphics();
     bg.fillStyle(0x0a0a1a, 0.8);
@@ -2718,6 +2782,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const sprite = this.add.image(p.x, p.y, textureKey)
       .setDepth(DEPTH.ITEM_SPRITE)
       .setScale(0);
+    this.hudCam.ignore(sprite);
     this.tweens.add({
       targets: sprite,
       scale: 1.2,
@@ -2759,6 +2824,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const screenX = sprite.x - cam.scrollX;
     const screenY = sprite.y - cam.scrollY;
     sprite.setScrollFactor(0).setPosition(screenX, screenY);
+    this.cameras.main.ignore(sprite);
     const targetX = 48;
     const targetY = this.cameras.main.height - 44;
     this.tweens.add({

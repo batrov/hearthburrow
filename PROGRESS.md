@@ -330,6 +330,13 @@ Resolved Bugs:
 - **All inline text removed** — equipment/consumable names moved to dedicated bottom description panel
 - **Phaser 4 Container Input fix** — interactive children of Container do not reliably fire pointerdown events; all click handling uses scene-level `pointerdown` with manual hit-testing and a transparent Rectangle blocker inside the container to prevent click-through
 
+## ✅ Camera Zoom 1.5× (June 2026)
+- **Dual-camera compositing** — `ExpeditionScene` now creates a second HUD camera (`this.hudCam`) at 1.0× zoom that renders all HUD elements (minimap, stamina, pickaxe, inventory button, potion/bomb, escape, action button, stair prompt, exhaustion/extraction overlays, obtain popups, recipe popups) while the main camera renders the game world at 1.5× zoom with player follow and bounds
+- **Camera.ignore() approach** — ~50 per-object `cameras.main.ignore()` and `hudCam.ignore()` calls ensure each object renders in exactly one camera (world → main cam, HUD → HUD cam), avoiding Phaser 4's broken `cameraFilter` bit manipulation
+- **HomelandScene zoom** — simple `cameras.main.setZoom(1.5)` since there are no HUD elements to exclude
+- **All `setScrollFactor(0)` objects properly routed** — runtime-created objects (popups, particles, stair prompts, extraction overlays, item fly sprites, obtain popups) all tagged at creation time; item fly sprites correctly transition from world (`hudCam.ignore`) to screen (`cameras.main.ignore`) during fly-to-backpack animation
+- **Clean build** — `tsc` + `vite build` pass with zero errors
+
 ## Resolved Bugs
 - **Click-outside-to-close broken in consumable popup** — Graphics.setInteractive() and container-child Rectangle.setInteractive() both unreliable in Phaser 4. Fixed with scene-level pointerdown handler + transparent Rectangle blocker
 - **Placeholder sprites showing pickaxe** — scene.textures.exists() guard in else-branch skipped setTexture() when texture was generated (not PNG-loaded). Removed guard

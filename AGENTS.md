@@ -50,6 +50,44 @@ Every object added to the scene at depth 6 must use the formula `6 + (x + y) * 0
 
 ---
 
+## 📷 Dual-Camera System (ExpeditionScene)
+
+`ExpeditionScene` uses a **dual-camera setup** to render the game world at 1.5× zoom while keeping HUD at 1.0×:
+
+### Camera Setup
+```typescript
+// Main camera: world rendering at 1.5×, follows player
+this.cameras.main.setZoom(1.5);
+this.cameras.main.startFollow(this.player, true, 0.5, 0.5);
+
+// HUD camera: fixed viewport at 1.0×, transparent, no follow
+this.hudCam = this.cameras.add(0, 0, 960, 640, false, 'hud');
+this.hudCam.setZoom(1);
+```
+
+### Object Routing Rules
+1. **World objects** (tiles, player, enemies, interactives, darkness, effects, particles): `this.hudCam.ignore(obj)`
+2. **HUD objects** (minimap, stamina, pickaxe, buttons, popups, overlays, prompts): `this.cameras.main.ignore(obj)`
+
+### Key Implementation Details
+- `Camera.ignore()` sets a bitmask (`cameraFilter`) checked at render time — `(cameraFilter & camera.id) !== 0` means **excluded from that camera**
+- Main camera has `id = 1` (bit 0), HUD camera has `id = 2` (bit 1)
+- Objects created at runtime (popups, particles, item fly sprites) must get appropriate `ignore()` at creation time
+- Item fly sprites transition from world space → screen space: start with `hudCam.ignore()`, then add `cameras.main.ignore()` in `flySpriteToBackpack()` when `setScrollFactor(0)` is applied
+- **`HomelandScene`** uses full dual-camera (hudCam for analog stick + gate panel), same pattern as ExpeditionScene
+- **`TavernScene`** uses dual-camera (hudCam for terrains/walls/player/NPCs, main Cam ignore for HUD text + greeting overlay + obtain popup + photobook panel + analog stick)
+- **Missable gotcha**: World-space UI elements at fixed screen coords (e.g. `this.add.text(940, 620, ...)`) need **both** `setScrollFactor(0)` AND `cameras.main.ignore()` — otherwise they render at wrong positions under 1.5× zoom or appear in both cameras
+- **Greeting overlay and obtain popups** are HUD objects despite being created at runtime in method calls — must get `setScrollFactor(0)` + `cameras.main.ignore()` at creation, not just `hudCam.ignore()`
+- The zoom persists across `rebuildFloor()` calls (doesn't need re-setting after `stopFollow/startFollow`)
+
+### ⚠️ Phaser 4 Camera Notes
+- `cameraFilter` property on GameObjects is **not for direct manipulation** — always use `Camera.ignore()` which properly sets the bitmask
+- `Camera.transparent` defaults to `true` (no need to set it explicitly)
+- `clearBeforeRender` is **readonly** at the Game config level — not per-camera
+- Camera ordering: first camera in `this.cameras.cameras[]` array renders first. The HUD camera is added after the main camera and renders on top since it doesn't clear the buffer
+
+---
+
 ## 📦 State & Persistence
 
 ### State Management
