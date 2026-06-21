@@ -448,6 +448,87 @@ export function generateAll(scene: Phaser.Scene): void {
     drawDiamond(g, 40, 20, 0xffffff, 1);
   });
 
+  // --- Water tile ---
+  make(scene, g, 'terrain_water', 80, 40, () => {
+    drawDiamond(g, 40, 20, 0x3a5a7a, 1);
+    g.fillStyle(0x5a8aaa, 0.25);
+    g.beginPath();
+    g.moveTo(20, 12);
+    g.lineTo(44, 8);
+    g.lineTo(60, 12);
+    g.lineTo(36, 16);
+    g.closePath();
+    g.fill();
+    g.fillStyle(0x2a4a6a, 0.2);
+    g.beginPath();
+    g.moveTo(16, 20);
+    g.lineTo(40, 18);
+    g.lineTo(56, 22);
+    g.lineTo(32, 24);
+    g.closePath();
+    g.fill();
+    g.lineStyle(1, 0x7aaacc, 0.15);
+    g.lineBetween(34, 18, 46, 22);
+    g.lineBetween(36, 16, 44, 18);
+  });
+
+  // --- Terrain variants (textured grass & path) ---
+  function drawTerrainDiamond(g: Phaser.GameObjects.Graphics, cx: number, cy: number, base: number, hl: number, dark: number): void {
+    drawDiamond(g, cx, cy, base, 1);
+    g.fillStyle(hl, 0.25);
+    g.beginPath();
+    g.moveTo(cx, cy - 20);
+    g.lineTo(cx + 6, cy);
+    g.lineTo(cx, cy + 3);
+    g.lineTo(cx - 6, cy);
+    g.closePath();
+    g.fill();
+    for (let i = 0; i < 6; i++) {
+      const gx = cx - 30 + (i * 12);
+      const gy = cy - 16 + (i * 6);
+      g.fillStyle(dark, 0.15);
+      g.fillRect(gx, gy, 2, 1);
+    }
+  }
+  make(scene, g, 'terrain_grass_a', 80, 40, () => {
+    drawTerrainDiamond(g, 40, 20, 0x3a5a2a, 0x5a7a4a, 0x2a4a1a);
+  });
+  make(scene, g, 'terrain_grass_b', 80, 40, () => {
+    drawTerrainDiamond(g, 40, 20, 0x4a6a3a, 0x6a8a5a, 0x3a5a2a);
+  });
+  make(scene, g, 'terrain_path', 80, 40, () => {
+    drawTerrainDiamond(g, 40, 20, 0x5a4a3a, 0x6a5a4a, 0x4a3a2a);
+    g.fillStyle(0x000000, 0.08);
+    for (let i = 0; i < 12; i++) {
+      const px = 6 + (i * 5 + 3) % 68;
+      const py = 2 + (i * 3 + 7) % 36;
+      g.fillCircle(px - 40, py - 20, 1);
+    }
+  });
+  make(scene, g, 'terrain_bridge', 80, 40, () => {
+    drawTerrainDiamond(g, 40, 20, 0x7a5a3a, 0x8a6a4a, 0x5a3a1a);
+    // Plank lines
+    g.lineStyle(1, 0x5a3a1a, 0.4);
+    for (let i = -3; i <= 3; i++) {
+      g.lineBetween(32 + i * 10, 14 + i * 2, 48 + i * 10, 26 + i * 2);
+    }
+    // Top surface highlight
+    g.fillStyle(0x8a6a4a, 0.7);
+    g.beginPath();
+    g.moveTo(40, 2);
+    g.lineTo(72, 20);
+    g.lineTo(40, 38);
+    g.lineTo(8, 20);
+    g.closePath();
+    g.fill();
+    // Nail dots
+    g.fillStyle(0xaa8866, 0.8);
+    g.fillCircle(32, 18, 1);
+    g.fillCircle(48, 18, 1);
+    g.fillCircle(28, 24, 1);
+    g.fillCircle(52, 24, 1);
+  });
+
   // --- Hub buildings (extruded tiles per type) ---
   const buildingConfigs: Record<string, [number, number, number]> = {
     trading_post: [0x8a6a3a, 0x6a4a2a, 0x5a3a1a],
@@ -486,6 +567,165 @@ export function generateAll(scene: Phaser.Scene): void {
       g.fillCircle(cx, cy + 2, 7);
       g.fillStyle(headColor, 1);
       g.fillRect(cx - 4, cy - 7, 8, 5);
+    });
+  }
+
+  // --- Environment decorations ---
+  const decoSize: Record<string, [number, number]> = {
+    decoration_tree_pine: [64, 80],
+    decoration_tree_oak: [64, 80],
+    decoration_bush: [48, 32],
+    decoration_rock: [48, 24],
+    decoration_flower_red: [24, 24],
+    decoration_flower_yellow: [24, 24],
+    decoration_fence: [40, 24],
+    decoration_lantern_post: [24, 48],
+    decoration_well: [60, 40],
+    decoration_signpost: [24, 48],
+  };
+
+  const decoDraw: Record<string, (cx: number, cy: number) => void> = {
+    decoration_tree_pine: (cx, cy) => {
+      g.fillStyle(0x5a3a1a, 1);
+      g.fillRect(cx - 4, cy + 12, 8, 18);
+      const layers = [60, 44, 28, 14];
+      const widths = [20, 16, 12, 8];
+      for (let i = 0; i < 4; i++) {
+        const by = layers[i];
+        const bw = widths[i];
+        g.fillStyle(0x2a6a1a, 1);
+        g.beginPath();
+        g.moveTo(cx, by - bw);
+        g.lineTo(cx + bw, by);
+        g.lineTo(cx + bw - 4, by);
+        g.lineTo(cx, by + 6);
+        g.lineTo(cx - bw + 4, by);
+        g.lineTo(cx - bw, by);
+        g.closePath();
+        g.fill();
+        g.fillStyle(0x3a8a2a, 0.5);
+        g.beginPath();
+        g.moveTo(cx, by - bw + 4);
+        g.lineTo(cx + bw - 4, by - 2);
+        g.lineTo(cx, by + 4);
+        g.lineTo(cx - bw + 4, by - 2);
+        g.closePath();
+        g.fill();
+      }
+      g.fillStyle(0x3a8a2a, 1);
+      g.fillTriangle(cx, 0, cx + 4, 10, cx - 4, 10);
+    },
+    decoration_tree_oak: (cx, cy) => {
+      g.fillStyle(0x6a4a2a, 1);
+      g.fillRect(cx - 5, cy + 14, 10, 18);
+      g.fillStyle(0x3a7a2a, 1);
+      g.fillCircle(cx, cy + 7, 26);
+      g.fillStyle(0x4a8a3a, 0.7);
+      g.fillCircle(cx, cy + 2, 20);
+      g.fillStyle(0x5a9a4a, 0.4);
+      g.fillCircle(cx - 8, cy, 12);
+      g.fillCircle(cx + 10, cy - 3, 12);
+      g.fillStyle(0x2a5a1a, 0.3);
+      g.fillCircle(cx, cy + 20, 22);
+    },
+    decoration_bush: (cx, cy) => {
+      g.fillStyle(0x3a7a2a, 1);
+      g.fillCircle(cx, cy + 3, 16);
+      g.fillStyle(0x4a8a3a, 1);
+      g.fillCircle(cx, cy - 2, 12);
+      g.fillStyle(0x5a9a4a, 0.6);
+      g.fillCircle(cx, cy - 6, 6);
+    },
+    decoration_rock: (cx, cy) => {
+      g.fillStyle(0x6a6a7a, 1);
+      g.fillEllipse(cx, cy, 28, 12);
+      g.fillStyle(0x7a7a8a, 1);
+      g.fillEllipse(cx, cy - 1, 20, 10);
+      g.fillStyle(0x8a8a9a, 0.6);
+      g.fillEllipse(cx, cy - 4, 12, 6);
+      g.lineStyle(1, 0x4a4a5a, 0.3);
+      g.lineBetween(cx - 4, cy - 4, cx + 2, cy);
+      g.lineBetween(cx + 2, cy, cx + 6, cy - 2);
+    },
+    decoration_flower_red: (cx, cy) => {
+      g.lineStyle(1, 0x44aa33, 0.6);
+      g.lineBetween(cx - 4, cy, cx - 4, cy + 4);
+      g.lineBetween(cx + 4, cy - 2, cx + 4, cy + 4);
+      g.fillStyle(0xcc3333, 1);
+      g.fillCircle(cx - 4, cy, 3);
+      g.fillCircle(cx + 4, cy - 2, 3);
+      g.fillStyle(0xff6644, 0.7);
+      g.fillCircle(cx - 4, cy, 1);
+      g.fillCircle(cx + 4, cy - 2, 1);
+    },
+    decoration_flower_yellow: (cx, cy) => {
+      g.lineStyle(1, 0x44aa33, 0.6);
+      g.lineBetween(cx - 3, cy, cx - 3, cy + 4);
+      g.lineBetween(cx + 3, cy - 2, cx + 3, cy + 4);
+      g.fillStyle(0xddaa33, 1);
+      g.fillCircle(cx - 3, cy, 2);
+      g.fillCircle(cx + 3, cy - 2, 2);
+      g.fillStyle(0xffdd66, 0.7);
+      g.fillCircle(cx - 3, cy, 1);
+      g.fillCircle(cx + 3, cy - 2, 1);
+    },
+    decoration_fence: (cx, cy) => {
+      g.fillStyle(0x6a4a2a, 1);
+      g.fillRect(cx - 16, cy - 2, 32, 4);
+      g.fillStyle(0x5a3a1a, 1);
+      g.fillRect(cx - 14, cy - 6, 4, 14);
+      g.fillRect(cx + 10, cy - 6, 4, 14);
+      g.fillTriangle(cx - 14, cy - 6, cx - 10, cy - 6, cx - 12, cy - 10);
+      g.fillTriangle(cx + 10, cy - 6, cx + 14, cy - 6, cx + 12, cy - 10);
+    },
+    decoration_lantern_post: (cx, cy) => {
+      g.fillStyle(0x4a3a2a, 1);
+      g.fillRect(cx - 2, cy + 4, 4, 14);
+      g.fillStyle(0x6a5a3a, 1);
+      g.fillRect(cx - 6, cy - 6, 12, 10);
+      g.fillTriangle(cx - 6, cy - 6, cx + 6, cy - 6, cx, cy - 12);
+      g.fillStyle(0xffaa44, 0.8);
+      g.fillCircle(cx, cy - 1, 3);
+      g.fillStyle(0xffaa44, 0.2);
+      g.fillCircle(cx, cy - 1, 5);
+    },
+    decoration_well: (cx, cy) => {
+      g.fillStyle(0x5a5a6a, 1);
+      g.fillEllipse(cx, cy, 40, 16);
+      g.fillStyle(0x3a3a4a, 1);
+      g.fillEllipse(cx, cy, 32, 12);
+      g.fillStyle(0x3a5a8a, 0.7);
+      g.fillEllipse(cx, cy, 24, 8);
+      g.fillStyle(0x5a8acc, 0.4);
+      g.fillEllipse(cx, cy, 16, 4);
+      g.fillStyle(0x4a3a2a, 1);
+      g.fillRect(cx - 16, cy - 14, 2, 12);
+      g.fillRect(cx + 14, cy - 14, 2, 12);
+      g.fillStyle(0x5a4a3a, 1);
+      g.fillRect(cx - 16, cy - 16, 32, 2);
+      g.lineStyle(1, 0x8a7a5a, 0.7);
+      g.lineBetween(cx - 2, cy - 14, cx - 2, cy - 4);
+      g.lineBetween(cx + 2, cy - 14, cx + 2, cy - 4);
+    },
+    decoration_signpost: (cx, cy) => {
+      g.fillStyle(0x5a3a1a, 1);
+      g.fillRect(cx - 2, cy + 4, 4, 16);
+      g.fillStyle(0x6a4a2a, 1);
+      g.fillRect(cx - 10, cy - 2, 20, 6);
+      g.fillTriangle(cx - 10, cy - 2, cx + 10, cy - 2, cx + 8, cy - 6);
+      g.fillTriangle(cx - 10, cy - 2, cx + 10, cy - 2, cx - 8, cy - 6);
+      g.fillStyle(0x3a2a0a, 0.3);
+      g.fillRect(cx, cy + 4, 2, 16);
+      g.fillStyle(0x8a8a8a, 1);
+      g.fillCircle(cx - 6, cy + 1, 1);
+      g.fillCircle(cx + 6, cy + 1, 1);
+    },
+  };
+
+  for (const [key, [w, h]] of Object.entries(decoSize)) {
+    make(scene, g, key, w, h, () => {
+      const { cx, cy } = centered(w, h);
+      decoDraw[key](cx, cy);
     });
   }
 

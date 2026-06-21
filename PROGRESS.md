@@ -154,6 +154,7 @@ Resolved Bugs:
 - **Clickable stair buttons** — [Proceed]/[Cancel] buttons use scene-level pointerdown handler (same BasePanel pattern) to bypass Phaser 4 scrollFactor input bug
 
 ## ✅ Bug Fixes (June 2026)
+- **Bridge tiles show path instead of bridge** — bridge tiles at (12,6)(13,6)(12,7)(13,7) were in `PATH_COORDS` so they rendered `terrain_path` with a separate `decoration_bridge` overlay sprite. Fixed: added `BRIDGE_COORDS` set, tiles now render `terrain_bridge` at depth 4 (terrain layer) instead of `terrain_path`, and the overlay sprite was removed entirely.
 - **Stairs_down broken flag** — mining sets `tile.broken = true`, then `spawnStairsOnBreak` changes type to `stairs_down` without resetting `broken`, so `!curTile.broken` guard rejects the tile. Fixed: `broken = false` in all three `stairs_down` placement paths (random spawn, puzzle, boss kill). Added `drawFloor()` after spawn for visual texture.
 - **Facing-edge stairs detection** — `checkEventProximity` returned early when facing tile was out-of-bounds (player at map edge), skipping stairs-underfoot check. Fixed: stairs check moved before facing-tile bounds guard.
 - **Facing highlight depth** — `previewTile.destroy()` moved to top of `updateFacingHighlight()` before early return guard, preventing stale Image at same depth from accumulating.

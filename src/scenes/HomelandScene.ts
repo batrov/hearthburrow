@@ -30,24 +30,159 @@ interface HubBuildingDef {
   solid: boolean;
 }
 
-const HUB_COLS = 20;
-const HUB_ROWS = 18;
+interface HubDecoration {
+  key: string;
+  gx: number;
+  gy: number;
+  solid: boolean;
+}
+
+const HUB_COLS = 26;
+const HUB_ROWS = 22;
 
 const HUB_BUILDINGS: HubBuildingDef[] = [
-  { id: 'trading_post', label: 'Trading Post', gx: 5, gy: 2, gw: 3, gh: 3, buildingId: 'trading_post',
+  { id: 'trading_post', label: 'Trading Post', gx: 6, gy: 2, gw: 3, gh: 3, buildingId: 'trading_post',
     description: 'Trade resources with wandering merchants.', solid: true },
-  { id: 'crafting', label: 'Crafting Station', gx: 3, gy: 7, gw: 3, gh: 3, buildingId: 'crafting_station',
+  { id: 'crafting', label: 'Crafting Station', gx: 4, gy: 8, gw: 3, gh: 3, buildingId: 'crafting_station',
     description: 'Craft tools and equipment from mined materials.', solid: true },
-  { id: 'farm', label: 'Farm', gx: 4, gy: 12, gw: 3, gh: 3, buildingId: 'farm',
+  { id: 'farm', label: 'Farm', gx: 4, gy: 14, gw: 3, gh: 3, buildingId: 'farm',
     description: 'Plant carrots and harvest more carrots.', solid: true },
-  { id: 'tavern', label: 'Tavern', gx: 13, gy: 2, gw: 3, gh: 3, buildingId: 'housing',
+  { id: 'tavern', label: 'Tavern', gx: 18, gy: 2, gw: 3, gh: 3, buildingId: 'housing',
     description: 'A warm gathering place for rescued villagers.', solid: true },
-  { id: 'storage', label: 'Storage', gx: 14, gy: 7, gw: 3, gh: 3, buildingId: 'storage',
+  { id: 'storage', label: 'Storage', gx: 19, gy: 8, gw: 3, gh: 3, buildingId: 'storage',
     description: 'Store and manage your collected resources.', solid: true },
-  { id: 'laboratory', label: 'Laboratory', gx: 12, gy: 12, gw: 3, gh: 3, buildingId: 'laboratory',
+  { id: 'laboratory', label: 'Laboratory', gx: 18, gy: 14, gw: 3, gh: 3, buildingId: 'laboratory',
     description: 'Research advanced upgrades and recipes.', solid: true },
-  { id: 'gate', label: 'Expedition Gate', gx: 9, gy: 16, gw: 2, gh: 1, buildingId: '',
+  { id: 'gate', label: 'Expedition Gate', gx: 12, gy: 20, gw: 2, gh: 1, buildingId: '',
     description: 'Descend into the procedural dungeon to mine resources.', solid: false },
+];
+
+// Branch path coordinates (main path cols 12-13 + connections to each building)
+function buildPathSet(): Set<string> {
+  const s = new Set<string>();
+  for (let y = 0; y < HUB_ROWS; y++) {
+    if (y >= 6 && y <= 7) continue;
+    s.add(`12,${y}`); s.add(`13,${y}`);
+  }
+  for (let y = 2; y <= 4; y++) s.add(`11,${y}`);
+  for (let y = 8; y <= 10; y++) for (let x = 7; x <= 11; x++) s.add(`${x},${y}`);
+  for (let y = 14; y <= 16; y++) for (let x = 7; x <= 11; x++) s.add(`${x},${y}`);
+  for (let y = 2; y <= 4; y++) for (let x = 14; x <= 16; x++) s.add(`${x},${y}`);
+  for (let y = 8; y <= 10; y++) for (let x = 14; x <= 18; x++) s.add(`${x},${y}`);
+  for (let y = 14; y <= 16; y++) for (let x = 14; x <= 16; x++) s.add(`${x},${y}`);
+  s.add('12,19'); s.add('13,19');
+  return s;
+}
+
+const BRIDGE_COORDS = new Set<string>(['12,6', '13,6', '12,7', '13,7']);
+
+function buildWaterSet(): Set<string> {
+  const s = new Set<string>();
+  for (let x = 0; x < HUB_COLS; x++) {
+    if (x >= 12 && x <= 13) continue;
+    s.add(`${x},6`); s.add(`${x},7`);
+  }
+  const pond = [[1,16],[2,16],[3,16],[1,17],[2,17],[3,17],[1,18],[2,18],[2,15]];
+  for (const [x, y] of pond) s.add(`${x},${y}`);
+  return s;
+}
+
+const PATH_COORDS = buildPathSet();
+const WATER_COORDS = buildWaterSet();
+
+const HUB_DECORATIONS: HubDecoration[] = [
+  { key: 'decoration_tree_pine', gx: 0, gy: 0, solid: true },
+  { key: 'decoration_tree_oak', gx: 25, gy: 0, solid: true },
+  { key: 'decoration_tree_pine', gx: 3, gy: 1, solid: true },
+  { key: 'decoration_tree_oak', gx: 22, gy: 1, solid: true },
+  { key: 'decoration_tree_pine', gx: 4, gy: 5, solid: true },
+  { key: 'decoration_tree_oak', gx: 21, gy: 5, solid: true },
+  { key: 'decoration_tree_pine', gx: 0, gy: 8, solid: true },
+  { key: 'decoration_tree_oak', gx: 25, gy: 8, solid: true },
+  { key: 'decoration_tree_oak', gx: 10, gy: 1, solid: true },
+  { key: 'decoration_tree_pine', gx: 15, gy: 1, solid: true },
+  { key: 'decoration_tree_oak', gx: 1, gy: 4, solid: true },
+  { key: 'decoration_tree_pine', gx: 24, gy: 4, solid: true },
+  { key: 'decoration_tree_pine', gx: 9, gy: 5, solid: true },
+  { key: 'decoration_tree_oak', gx: 16, gy: 5, solid: true },
+  { key: 'decoration_tree_oak', gx: 2, gy: 11, solid: true },
+  { key: 'decoration_tree_pine', gx: 23, gy: 11, solid: true },
+  { key: 'decoration_tree_pine', gx: 0, gy: 13, solid: true },
+  { key: 'decoration_tree_oak', gx: 25, gy: 13, solid: true },
+  { key: 'decoration_tree_pine', gx: 9, gy: 11, solid: true },
+  { key: 'decoration_tree_oak', gx: 16, gy: 11, solid: true },
+  { key: 'decoration_tree_pine', gx: 2, gy: 17, solid: true },
+  { key: 'decoration_tree_oak', gx: 23, gy: 17, solid: true },
+  { key: 'decoration_tree_pine', gx: 0, gy: 19, solid: true },
+  { key: 'decoration_tree_oak', gx: 25, gy: 19, solid: true },
+  { key: 'decoration_tree_pine', gx: 3, gy: 21, solid: true },
+  { key: 'decoration_tree_oak', gx: 22, gy: 21, solid: true },
+  { key: 'decoration_lantern_post', gx: 11, gy: 1, solid: true },
+  { key: 'decoration_lantern_post', gx: 14, gy: 1, solid: true },
+  { key: 'decoration_lantern_post', gx: 14, gy: 5, solid: true },
+  { key: 'decoration_lantern_post', gx: 11, gy: 5, solid: true },
+  { key: 'decoration_lantern_post', gx: 11, gy: 11, solid: true },
+  { key: 'decoration_lantern_post', gx: 14, gy: 11, solid: true },
+  { key: 'decoration_lantern_post', gx: 11, gy: 17, solid: true },
+  { key: 'decoration_lantern_post', gx: 14, gy: 17, solid: true },
+  { key: 'decoration_lantern_post', gx: 11, gy: 19, solid: true },
+  { key: 'decoration_lantern_post', gx: 14, gy: 19, solid: true },
+  { key: 'decoration_bush', gx: 2, gy: 2, solid: false },
+  { key: 'decoration_bush', gx: 5, gy: 1, solid: false },
+  { key: 'decoration_bush', gx: 20, gy: 1, solid: false },
+  { key: 'decoration_bush', gx: 23, gy: 2, solid: false },
+  { key: 'decoration_bush', gx: 1, gy: 5, solid: false },
+  { key: 'decoration_bush', gx: 5, gy: 5, solid: false },
+  { key: 'decoration_bush', gx: 20, gy: 5, solid: false },
+  { key: 'decoration_bush', gx: 24, gy: 5, solid: false },
+  { key: 'decoration_bush', gx: 0, gy: 11, solid: false },
+  { key: 'decoration_bush', gx: 1, gy: 12, solid: false },
+  { key: 'decoration_bush', gx: 24, gy: 11, solid: false },
+  { key: 'decoration_bush', gx: 23, gy: 12, solid: false },
+  { key: 'decoration_bush', gx: 7, gy: 12, solid: false },
+  { key: 'decoration_bush', gx: 10, gy: 12, solid: false },
+  { key: 'decoration_bush', gx: 15, gy: 12, solid: false },
+  { key: 'decoration_bush', gx: 18, gy: 12, solid: false },
+  { key: 'decoration_bush', gx: 7, gy: 17, solid: false },
+  { key: 'decoration_bush', gx: 18, gy: 17, solid: false },
+  { key: 'decoration_bush', gx: 0, gy: 20, solid: false },
+  { key: 'decoration_bush', gx: 25, gy: 20, solid: false },
+  { key: 'decoration_rock', gx: 5, gy: 0, solid: true },
+  { key: 'decoration_rock', gx: 20, gy: 0, solid: true },
+  { key: 'decoration_rock', gx: 9, gy: 0, solid: true },
+  { key: 'decoration_rock', gx: 16, gy: 0, solid: true },
+  { key: 'decoration_rock', gx: 0, gy: 2, solid: true },
+  { key: 'decoration_rock', gx: 25, gy: 3, solid: true },
+  { key: 'decoration_rock', gx: 0, gy: 14, solid: true },
+  { key: 'decoration_rock', gx: 25, gy: 14, solid: true },
+  { key: 'decoration_rock', gx: 5, gy: 19, solid: true },
+  { key: 'decoration_rock', gx: 20, gy: 19, solid: true },
+  { key: 'decoration_rock', gx: 3, gy: 12, solid: true },
+  { key: 'decoration_rock', gx: 22, gy: 12, solid: true },
+  { key: 'decoration_flower_red', gx: 11, gy: 2, solid: false },
+  { key: 'decoration_flower_yellow', gx: 14, gy: 2, solid: false },
+  { key: 'decoration_flower_red', gx: 10, gy: 5, solid: false },
+  { key: 'decoration_flower_yellow', gx: 15, gy: 5, solid: false },
+  { key: 'decoration_flower_red', gx: 11, gy: 8, solid: false },
+  { key: 'decoration_flower_yellow', gx: 14, gy: 8, solid: false },
+  { key: 'decoration_flower_red', gx: 11, gy: 12, solid: false },
+  { key: 'decoration_flower_yellow', gx: 14, gy: 12, solid: false },
+  { key: 'decoration_flower_red', gx: 11, gy: 14, solid: false },
+  { key: 'decoration_flower_yellow', gx: 14, gy: 14, solid: false },
+  { key: 'decoration_flower_red', gx: 10, gy: 17, solid: false },
+  { key: 'decoration_flower_yellow', gx: 15, gy: 17, solid: false },
+  { key: 'decoration_flower_red', gx: 4, gy: 3, solid: false },
+  { key: 'decoration_flower_yellow', gx: 21, gy: 3, solid: false },
+  { key: 'decoration_flower_red', gx: 8, gy: 4, solid: false },
+  { key: 'decoration_flower_yellow', gx: 17, gy: 4, solid: false },
+  { key: 'decoration_flower_red', gx: 4, gy: 11, solid: false },
+  { key: 'decoration_flower_yellow', gx: 21, gy: 11, solid: false },
+  { key: 'decoration_fence', gx: 11, gy: 5, solid: true },
+  { key: 'decoration_fence', gx: 14, gy: 5, solid: true },
+  { key: 'decoration_fence', gx: 11, gy: 8, solid: true },
+  { key: 'decoration_fence', gx: 14, gy: 8, solid: true },
+  { key: 'decoration_well', gx: 7, gy: 11, solid: true },
+  { key: 'decoration_signpost', gx: 11, gy: 19, solid: false },
 ];
 
 export class HomelandScene extends Phaser.Scene {
@@ -55,8 +190,8 @@ export class HomelandScene extends Phaser.Scene {
   private playerLabel!: Phaser.GameObjects.Text;
   private facingX: number = 0;
   private facingY: number = 1;
-  private playerGx: number = 9;
-  private playerGy: number = 15;
+  private playerGx: number = 12;
+  private playerGy: number = 19;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private promptText!: Phaser.GameObjects.Text;
   private restoreBuildingId: string = '';
@@ -76,6 +211,7 @@ export class HomelandScene extends Phaser.Scene {
   private buildingLabels: Phaser.GameObjects.Text[] = [];
   private buildingZones: Phaser.GameObjects.Rectangle[] = [];
   private movePath: { x: number; y: number }[] = [];
+  private decorationImages: Phaser.GameObjects.Image[] = [];
   private analog!: AnalogStickInput;
   private animFrame: number = 0;
   private animTimer: number = 0;
@@ -94,18 +230,21 @@ export class HomelandScene extends Phaser.Scene {
     this.animTimer = 0;
     this.isMoving = false;
 
+    this.decorationImages.forEach(img => img.destroy());
+    this.decorationImages = [];
     this.drawHubTerrain();
     this.drawHubBuildings();
     this.drawHubGate();
+    this.drawHubDecorations();
     this.drawPlayer();
     this.createInteractionUI();
     this.setupInput();
     this.setupPointerInput();
 
-    const xMin = -HUB_ROWS * HALF_W;
-    const yMin = -HALF_H;
+    const xMin = -(HUB_ROWS + 4) * HALF_W;
+    const yMin = -HALF_H * 3;
     this.cameras.main.startFollow(this.player, true, 0.5, 0.5);
-    this.cameras.main.setBounds(xMin, yMin, worldWidth(HUB_COLS, HUB_ROWS), worldHeight(HUB_COLS, HUB_ROWS));
+    this.cameras.main.setBounds(xMin, yMin, worldWidth(HUB_COLS, HUB_ROWS) + HALF_W * 4, worldHeight(HUB_COLS, HUB_ROWS) + HALF_H * 4);
 
     this.buildingInfoPanel = new BuildingInfoPanel(this);
     this.restorePanel = new RestorePanel(this, () => { this.restoreBuildingId = ''; }, (id) => this.tryRestore(id));
@@ -120,18 +259,22 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private drawHubTerrain(): void {
-    const isPath = (x: number) => x === 9 || x === 10;
-
     for (let y = 0; y < HUB_ROWS; y++) {
       for (let x = 0; x < HUB_COLS; x++) {
         const p = gridToIso(x, y);
-        const tile = this.add.image(p.x, p.y, 'terrain_diamond');
-        tile.setDepth(4);
-        if (isPath(x)) {
-          tile.setTint(0x5a4a3a);
+        const coord = `${x},${y}`;
+        let key: string;
+        if (WATER_COORDS.has(coord)) {
+          key = 'terrain_water';
+        } else if (BRIDGE_COORDS.has(coord)) {
+          key = 'terrain_bridge';
+        } else if (PATH_COORDS.has(coord)) {
+          key = 'terrain_path';
         } else {
-          tile.setTint((x + y) % 2 === 0 ? 0x3a5a2a : 0x4a6a3a);
+          key = (x + y) % 2 === 0 ? 'terrain_grass_a' : 'terrain_grass_b';
         }
+        const tile = this.add.image(p.x, p.y, key);
+        tile.setDepth(4);
       }
     }
   }
@@ -189,15 +332,15 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private drawHubGate(): void {
-    const c = gridToIso(10, 16.5);
+    const c = gridToIso(13, 20.5);
     const cfg = getSpriteConfig('building_gate');
     this.add.image(
       c.x + (cfg.offsetX ?? 0),
       c.y + (cfg.offsetY ?? 0),
       'building_gate',
-    ).setDepth(6 + 16 * 0.002 + 10 * 0.001);
+    ).setDepth(6 + 20 * 0.002 + 13 * 0.001);
 
-    const glow = this.add.image(c.x, c.y - 36, 'gate_glow').setDepth(6 + 16 * 0.002 + 10 * 0.001 + 0.001);
+    const glow = this.add.image(c.x, c.y - 36, 'gate_glow').setDepth(6 + 20 * 0.002 + 13 * 0.001 + 0.001);
 
     this.tweens.add({
       targets: glow,
@@ -223,6 +366,25 @@ export class HomelandScene extends Phaser.Scene {
     gateZone.on('pointerdown', () => this.showGatePanel());
     gateZone.on('pointerover', () => gateZone.setFillStyle(0xffffff, 0.12));
     gateZone.on('pointerout', () => gateZone.setFillStyle(0xffffff, 0.06));
+  }
+
+  private drawHubDecorations(): void {
+    for (const d of HUB_DECORATIONS) {
+      const p = gridToIso(d.gx, d.gy);
+      const cfg = getSpriteConfig(d.key);
+      const img = this.add.image(
+        p.x + (cfg.offsetX ?? 0),
+        p.y + (cfg.offsetY ?? 0),
+        d.key,
+      );
+      if (cfg.originX !== undefined || cfg.originY !== undefined) {
+        img.setOrigin(cfg.originX ?? 0.5, cfg.originY ?? 0.5);
+      }
+      if (cfg.scale !== undefined) img.setScale(cfg.scale);
+      img.setDepth(6 + d.gy * 0.002 + d.gx * 0.001);
+      this.decorationImages.push(img);
+    }
+
   }
 
   private drawPlayer(): void {
@@ -479,6 +641,11 @@ export class HomelandScene extends Phaser.Scene {
         return true;
       }
     }
+    for (const d of HUB_DECORATIONS) {
+      if (!d.solid) continue;
+      if (d.gx === gx && d.gy === gy) return true;
+    }
+    if (WATER_COORDS.has(`${gx},${gy}`)) return true;
     return false;
   }
 

@@ -114,6 +114,11 @@ export class BootScene extends Phaser.Scene {
     this.load.image('overlay_crack', 'overlays/crack.png');
 
     this.load.image('terrain_diamond', 'tiles/terrain_diamond.png');
+    this.load.image('terrain_grass_a', 'tiles/terrain_grass_a.png');
+    this.load.image('terrain_grass_b', 'tiles/terrain_grass_b.png');
+    this.load.image('terrain_path', 'tiles/terrain_path.png');
+    this.load.image('terrain_bridge', 'tiles/terrain_bridge.png');
+    this.load.image('terrain_water', 'tiles/terrain_water.png');
     this.load.image('building_trading_post', 'tiles/building_trading_post.png');
     this.load.image('building_crafting', 'tiles/building_crafting.png');
     this.load.image('building_farm', 'tiles/building_farm.png');
@@ -122,6 +127,18 @@ export class BootScene extends Phaser.Scene {
     this.load.image('building_laboratory', 'tiles/building_laboratory.png');
     this.load.image('building_gate', 'tiles/building_gate.png');
     this.load.image('gate_glow', 'tiles/gate_glow.png');
+
+    const decorationSprites = [
+      'decoration_tree_pine', 'decoration_tree_oak',
+      'decoration_bush', 'decoration_rock',
+      'decoration_flower_red', 'decoration_flower_yellow',
+      'decoration_fence', 'decoration_lantern_post',
+      'decoration_well', 'decoration_signpost',
+    ];
+    for (const id of decorationSprites) {
+      this.load.image(id, `decoration/${id}.png`);
+    }
+
     for (let i = 0; i < 20; i++) {
       this.load.image(`npc_${i}`, `npcs/npc_${i}.png`);
     }
