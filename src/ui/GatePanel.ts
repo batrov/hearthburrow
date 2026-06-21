@@ -100,6 +100,8 @@ export class GatePanel extends BasePanel {
   private seedPopup: SeedEntryPopup;
   private confirmPopup: ConfirmPopup;
 
+  private clickHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
+
   constructor(scene: Phaser.Scene) {
     super(scene);
     this.equipPicker = new EquipmentPicker(scene);
@@ -159,9 +161,7 @@ export class GatePanel extends BasePanel {
 
       const zoneW = 62;
       const zone = this.scene.add.rectangle(equipYX[i].x, equipYX[i].y, zoneW, 48, 0xffffff, 0)
-        .setScrollFactor(0).setDepth(220).setInteractive({ useHandCursor: true }).setData('isUI', true);
-      const idx = i;
-      zone.on('pointerdown', () => this.onEquipClick(idx));
+        .setScrollFactor(0);
       zone.setVisible(false);
       this.container.add(zone);
 
@@ -195,9 +195,7 @@ export class GatePanel extends BasePanel {
 
       const zoneW = 62;
       const zone = this.scene.add.rectangle(consYX[i].x, consYX[i].y, zoneW, 48, 0xffffff, 0)
-        .setScrollFactor(0).setDepth(220).setInteractive({ useHandCursor: true }).setData('isUI', true);
-      const idx = i;
-      zone.on('pointerdown', () => this.onConsumableClick(idx));
+        .setScrollFactor(0);
       zone.setVisible(false);
       this.container.add(zone);
 
@@ -218,9 +216,7 @@ export class GatePanel extends BasePanel {
       this.settingsTexts.push(t);
 
       const zone = this.scene.add.rectangle(518, 268 + i * 24, 300, 22, 0xffffff, 0)
-        .setScrollFactor(0).setDepth(220).setInteractive({ useHandCursor: true }).setData('isUI', true);
-      const idx = i;
-      zone.on('pointerdown', () => this.onSettingsClick(idx));
+        .setScrollFactor(0);
       zone.setVisible(false);
       this.container.add(zone);
       this.settingsZones.push(zone);
@@ -235,10 +231,7 @@ export class GatePanel extends BasePanel {
     this.embarkBtn = this.scene.add.text(480, 435, '[  EMBARK  ]', {
       fontSize: '18px', fontFamily: 'monospace', color: '#ffcc44',
       backgroundColor: '#442a1acc', padding: { x: 16, y: 6 },
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(220).setInteractive({ useHandCursor: true }).setData('isUI', true);
-    this.embarkBtn.on('pointerdown', () => {
-      if (this.isVisible()) this.embark();
-    });
+    }).setOrigin(0.5).setScrollFactor(0);
     this.embarkBtn.setVisible(false);
     this.container.add(this.embarkBtn);
 
@@ -285,7 +278,7 @@ export class GatePanel extends BasePanel {
     }
 
     this.elevatorFloorOptions = gameState.getAvailableElevatorFloors();
-    this.selectedElevatorFloor = this.elevatorFloorOptions.includes(0) ? 0 : (this.elevatorFloorOptions[0] ?? 0);
+    this.selectedElevatorFloor = this.elevatorFloorOptions[this.elevatorFloorOptions.length - 1] ?? 0;
     this.gateSeed = gameState.currentRunSeed || Math.random().toString(36).substring(2, 10);
     this.debugMode = false;
     this.resetConfirm = false;
@@ -296,6 +289,51 @@ export class GatePanel extends BasePanel {
     this.equipSlots.forEach(s => s.zone.setVisible(true));
     this.consSlots.forEach(s => s.zone.setVisible(true));
     this.settingsZones.forEach(z => z.setVisible(true));
+
+    this.clickHandler = (p: Phaser.Input.Pointer) => {
+      if (this.equipPicker.isVisible() || this.consumablePicker.isVisible() ||
+          this.floorPicker.isVisible() || this.seedPopup.isVisible() ||
+          this.confirmPopup.isVisible()) {
+        return;
+      }
+      const eb = this.embarkBtn.getBounds();
+      if (eb.contains(p.x, p.y)) {
+        if (this.isVisible()) this.embark();
+        return;
+      }
+      for (let i = 0; i < 5; i++) {
+        const z = this.equipSlots[i].zone;
+        if (z.visible) {
+          const b = z.getBounds();
+          if (b.contains(p.x, p.y)) {
+            this.onEquipClick(i);
+            return;
+          }
+        }
+      }
+      for (let i = 0; i < 3; i++) {
+        const z = this.consSlots[i].zone;
+        if (z.visible) {
+          const b = z.getBounds();
+          if (b.contains(p.x, p.y)) {
+            this.onConsumableClick(i);
+            return;
+          }
+        }
+      }
+      for (let i = 0; i < 4; i++) {
+        const z = this.settingsZones[i];
+        if (z.visible) {
+          const b = z.getBounds();
+          if (b.contains(p.x, p.y)) {
+            this.onSettingsClick(i);
+            return;
+          }
+        }
+      }
+    };
+    this.scene.input.on('pointerdown', this.clickHandler);
+
     this.fadeIn();
   }
 
@@ -305,6 +343,10 @@ export class GatePanel extends BasePanel {
     this.equipSlots.forEach(s => s.zone.setVisible(false));
     this.consSlots.forEach(s => s.zone.setVisible(false));
     this.settingsZones.forEach(z => z.setVisible(false));
+    if (this.clickHandler) {
+      this.scene.input.off('pointerdown', this.clickHandler);
+      this.clickHandler = null;
+    }
     this.onCloseCb();
     super.hide();
   }
@@ -469,8 +511,8 @@ export class GatePanel extends BasePanel {
   // ── Settings ──
   private renderSettings(): void {
     const elevStr = this.selectedElevatorFloor === 0
-      ? '0 (Homeland)'
-      : `Floor ${this.selectedElevatorFloor}`;
+      ? '0'
+      : `Depth ${this.selectedElevatorFloor}`;
     const seedDisplay = this.gateSeed || '(none)';
     const debugStr = this.debugMode ? 'ON' : 'OFF';
     const resetStr = this.resetConfirm ? 'Reset? [SPACE]' : 'Reset Game';

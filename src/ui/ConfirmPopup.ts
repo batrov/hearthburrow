@@ -15,6 +15,8 @@ export class ConfirmPopup {
   private noBtn: Phaser.GameObjects.Text;
   private footerText: Phaser.GameObjects.Text;
   private keyHandler: ((e: KeyboardEvent) => void) | null = null;
+  private blocker: Phaser.GameObjects.Rectangle;
+  private clickHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
   private destroyed = false;
 
   private selectedYes = true;
@@ -26,9 +28,14 @@ export class ConfirmPopup {
     this.overlay = scene.add.graphics();
     this.overlay.fillStyle(0x000000, 0.55);
     this.overlay.fillRect(0, 0, 960, 640);
-    this.overlay.setInteractive(new Phaser.Geom.Rectangle(0, 0, 960, 640), Phaser.Geom.Rectangle.Contains);
-    this.overlay.on('pointerdown', () => this.hide());
     this.container.add(this.overlay);
+
+    this.blocker = scene.add.rectangle(480, 320, 960, 640, 0x000000, 0)
+      .setScrollFactor(0)
+      .setInteractive()
+      .setData('isUI', true);
+    this.blocker.on('pointerdown', () => {});
+    this.container.add(this.blocker);
 
     this.popupBg = scene.add.graphics();
     this.container.add(this.popupBg);
@@ -46,15 +53,13 @@ export class ConfirmPopup {
     this.yesBtn = scene.add.text(420, 280, '[  YES  ]', {
       fontSize: '18px', fontFamily: 'monospace', color: '#cc6666',
       backgroundColor: '#3a1a1acc', padding: { x: 16, y: 6 },
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setData('isUI', true);
-    this.yesBtn.on('pointerdown', () => { this.selectedYes = true; this.confirm(); });
+    }).setOrigin(0.5);
     this.container.add(this.yesBtn);
 
     this.noBtn = scene.add.text(540, 280, '[ Cancel ]', {
       fontSize: '18px', fontFamily: 'monospace', color: '#aaaacc',
       backgroundColor: '#1a1a3acc', padding: { x: 12, y: 6 },
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setData('isUI', true);
-    this.noBtn.on('pointerdown', () => { this.selectedYes = false; this.hide(); });
+    }).setOrigin(0.5);
     this.container.add(this.noBtn);
 
     this.footerText = scene.add.text(480, 340, '[← →] switch  [SPACE] confirm  [ESC] cancel', {
@@ -91,6 +96,29 @@ export class ConfirmPopup {
     };
     this.scene.input.keyboard!.on('keydown', this.keyHandler);
 
+    this.clickHandler = (p: Phaser.Input.Pointer) => {
+      const popX = 300, popY = 150, popW = 360, popH = 230;
+      if (p.x < popX || p.x > popX + popW || p.y < popY || p.y > popY + popH) {
+        this.hide();
+        return;
+      }
+      const yesBounds = this.yesBtn.getBounds();
+      if (p.x >= yesBounds.x && p.x <= yesBounds.x + yesBounds.width &&
+          p.y >= yesBounds.y && p.y <= yesBounds.y + yesBounds.height) {
+        this.selectedYes = true;
+        this.confirm();
+        return;
+      }
+      const noBounds = this.noBtn.getBounds();
+      if (p.x >= noBounds.x && p.x <= noBounds.x + noBounds.width &&
+          p.y >= noBounds.y && p.y <= noBounds.y + noBounds.height) {
+        this.selectedYes = false;
+        this.hide();
+        return;
+      }
+    };
+    this.scene.input.on('pointerdown', this.clickHandler);
+
     this.render();
     this.container.setAlpha(0).setVisible(true);
     this.scene.tweens.add({
@@ -121,6 +149,10 @@ export class ConfirmPopup {
     if (this.keyHandler) {
       this.scene.input.keyboard!.off('keydown', this.keyHandler);
       this.keyHandler = null;
+    }
+    if (this.clickHandler) {
+      this.scene.input.off('pointerdown', this.clickHandler);
+      this.clickHandler = null;
     }
     this.scene.tweens.add({
       targets: this.container,

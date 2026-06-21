@@ -92,7 +92,61 @@ When modifying `DungeonGenerator.ts`, follow this sequence to maintain floor con
 - **Edit Safety**: When editing large functions in `ExpeditionScene.ts`, ensure the entire function block is replaced to avoid duplicating the function body, which causes catastrophic syntax errors.
 - **Type Safety**: Always run `npm run build` to catch TypeScript errors that may not be apparent in the editor.
 - **Phaser 4 Masking**: The custom `enableFilters().filters!.internal.addMask()` system is **broken for `Phaser.Container`** — child objects added to a masked container will not render. Always add UI text/images directly to the scene (`this.add.text(...)`) instead of to a container with a mask. The mask/clip behavior for scrollable content is non-functional; skip it and render directly.
-- **Phaser 4 Container Input**: **NEVER use `setInteractive()` on children of a `Container`.** It does not reliably fire `pointerdown`/`pointerup` events. Instead, use a single `scene.input.on('pointerdown', handler)` registered in `show()` and removed in `hide()`, with manual hit-testing against known element bounding boxes. To prevent clicks from reaching panels below, add a transparent interactive `Rectangle` blocker (`scene.add.rectangle(...).setInteractive()`) inside the container with an empty `pointerdown` handler (`() => {}`).
+- **Phaser 4 Container Input — DO NOT USE `setInteractive()` ON CONTAINER CHILDREN.**
+  **Problem**: `setInteractive()` on any child (Graphics, Rectangle, Text, Image, Zone) that is then added to a `Phaser.GameObjects.Container` via `container.add()` does **not reliably fire** `pointerdown`/`pointerup` events. The input system registers the child for hit-testing (`hitTestPointer` still finds it, so `isPointerOverUI()` works), but event dispatch to the child's `on('pointerdown', ...)` callback is broken. This means clicks appear to do nothing.
+
+  **Symptoms:**
+  - Clicking a button inside a panel does nothing (no callback fires).
+  - Keyboard navigation still works (it bypasses the input system).
+  - `hitTestPointer` may still find the object, so `isPointerOverUI()` returns true (absorbing clicks in AnalogStickInput), making the panel feel "dead to clicks."
+  - Clicks on transparent zones pass through to the scene below (click-to-move, building activation).
+
+  **THE CORRECT PATTERN (scene-level handler):**
+  1. Add a transparent `Rectangle` blocker to the container with `setInteractive()` — this ensures `hitTestPointer` finds it so `isPointerOverUI()` blocks scene clicks. Its own `pointerdown` handler is empty (`() => {}`).
+  2. Register a scene-level `scene.input.on('pointerdown', handler)` in `show()` and remove it in `off('pointerdown', handler)` in `hide()`.
+  3. The handler manually hit-tests each interactive element using `element.getBounds().contains(pointer.x, pointer.y)`.
+  4. Clicks outside the popup bounds call `this.hide()`.
+
+  ```typescript
+  // CONSTRUCTOR — create elements without setInteractive, add a blocker
+  this.blocker = scene.add.rectangle(480, 320, 960, 640, 0x000000, 0)
+    .setScrollFactor(0).setInteractive().setData('isUI', true);
+  this.blocker.on('pointerdown', () => {});
+  this.container.add(this.blocker);
+
+  // Rows/buttons — just positional markers, no setInteractive
+  const zone = scene.add.rectangle(x, y, w, h, 0xffffff, 0).setScrollFactor(0);
+  zone.setVisible(false);
+  this.container.add(zone);
+
+  // show() — register scene-level handler
+  this.clickHandler = (p: Phaser.Input.Pointer) => {
+    // Outside popup? Close it.
+    if (p.x < popX || p.x > popX + popW || p.y < popY || p.y > popY + popH) {
+      this.hide();
+      return;
+    }
+    // Hit-test each interactive zone
+    for (let i = 0; i < this.rows.length; i++) {
+      const b = this.rows[i].zone.getBounds();
+      if (b.contains(p.x, p.y)) { this.selectItem(i); return; }
+    }
+  };
+  this.scene.input.on('pointerdown', this.clickHandler);
+
+  // hide() — clean up handler
+  if (this.clickHandler) {
+    this.scene.input.off('pointerdown', this.clickHandler);
+    this.clickHandler = null;
+  }
+  ```
+
+  **Exception**: The `BasePanel.addCloseButton()` method places its hitZone Rectangle as a direct scene child (NOT in the container), so traditional `setInteractive()` works there. Follow that pattern for any element that must be outside the container.
+
+  **Audit checklist** (run after any new UI panel or popup):
+  - [ ] Does the panel have a `Container` that holds interactive children?
+  - [ ] Does any child call `.setInteractive()` before/after `container.add()`?
+  - [ ] If yes, remove `setInteractive()` + `on('pointerdown')` from the child, add a blocker, and use a scene-level handler.
 
 ---
 

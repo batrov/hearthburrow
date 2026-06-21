@@ -32,6 +32,8 @@ export class EquipmentPicker {
   }[] = [];
   private footerText: Phaser.GameObjects.Text;
   private keyHandler: ((e: KeyboardEvent) => void) | null = null;
+  private blocker: Phaser.GameObjects.Rectangle;
+  private clickHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
   private destroyed = false;
 
   constructor(scene: Phaser.Scene) {
@@ -41,9 +43,14 @@ export class EquipmentPicker {
     this.overlay = scene.add.graphics();
     this.overlay.fillStyle(0x000000, 0.55);
     this.overlay.fillRect(0, 0, 960, 640);
-    this.overlay.setInteractive(new Phaser.Geom.Rectangle(0, 0, 960, 640), Phaser.Geom.Rectangle.Contains);
-    this.overlay.on('pointerdown', () => this.hide());
     this.container.add(this.overlay);
+
+    this.blocker = scene.add.rectangle(480, 320, 960, 640, 0x000000, 0)
+      .setScrollFactor(0)
+      .setInteractive()
+      .setData('isUI', true);
+    this.blocker.on('pointerdown', () => {});
+    this.container.add(this.blocker);
 
     this.popupBg = scene.add.graphics();
     this.container.add(this.popupBg);
@@ -74,11 +81,7 @@ export class EquipmentPicker {
       this.container.add(descText);
 
       const zone = scene.add.rectangle(0, 0, 420, 44, 0xffffff, 0)
-        .setInteractive({ useHandCursor: true })
-        .setScrollFactor(0)
-        .setData('isUI', true);
-      const idx = i;
-      zone.on('pointerdown', () => this.selectItem(idx));
+        .setScrollFactor(0);
       zone.setVisible(false);
       this.container.add(zone);
 
@@ -115,6 +118,26 @@ export class EquipmentPicker {
       }
     };
     this.scene.input.keyboard!.on('keydown', this.keyHandler);
+
+    this.clickHandler = (p: Phaser.Input.Pointer) => {
+      const count = Math.min(this.options.length, 7);
+      const popH = 70 + count * 48 + 30;
+      const popY = Math.floor((640 - popH) / 2);
+      const popX = 220, popW = 520;
+      if (p.x < popX || p.x > popX + popW || p.y < popY || p.y > popY + popH) {
+        this.hide();
+        return;
+      }
+      const startY = popY + 55;
+      for (let i = 0; i < count; i++) {
+        const rowY = startY + i * 48;
+        if (p.y >= rowY && p.y < rowY + 44) {
+          this.selectItem(i);
+          return;
+        }
+      }
+    };
+    this.scene.input.on('pointerdown', this.clickHandler);
 
     this.render();
     this.container.setAlpha(0).setVisible(true);
@@ -223,6 +246,10 @@ export class EquipmentPicker {
     if (this.keyHandler) {
       this.scene.input.keyboard!.off('keydown', this.keyHandler);
       this.keyHandler = null;
+    }
+    if (this.clickHandler) {
+      this.scene.input.off('pointerdown', this.clickHandler);
+      this.clickHandler = null;
     }
     this.scene.tweens.add({
       targets: this.container,

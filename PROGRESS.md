@@ -334,3 +334,7 @@ Resolved Bugs:
 - **Click-outside-to-close broken in consumable popup** — Graphics.setInteractive() and container-child Rectangle.setInteractive() both unreliable in Phaser 4. Fixed with scene-level pointerdown handler + transparent Rectangle blocker
 - **Placeholder sprites showing pickaxe** — scene.textures.exists() guard in else-branch skipped setTexture() when texture was generated (not PNG-loaded). Removed guard
 - **GatePanel click-through during consumable picker** — added transparent interactive Rectangle blocker in container with empty pointerdown handler to consume clicks
+- **Equipment picker not opening on click** — GatePanel's equip/consumable/settings zones and embark button used broken container-child setInteractive(). Replaced all per-zone setInteractive() with a single scene-level pointerdown handler using getBounds().contains() hit-testing + picker-visible guard to prevent sub-picker conflicts
+- **FloorPicker/ConfirmPopup clicks not registering** — overlay Graphics.setInteractive() and row Rectangles inside container all broken. Same fix: blocker + scene-level handler with manual hit-testing
+- **All remaining container-child setInteractive() instances fixed** — audit across 7 UI files: FloorPicker, ConfirmPopup, EquipmentPicker, GatePanel all migrated to blocker + scene-level handler pattern
+- **Starting floor defaults to highest unlocked** — now picks the deepest elevator floor the player has reached instead of always defaulting to floor 0
