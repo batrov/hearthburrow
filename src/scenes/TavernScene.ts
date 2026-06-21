@@ -235,12 +235,12 @@ export class TavernScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(50);
 
     this.add.text(940, 620, '[EXIT]', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#ff8844',
+      fontSize: '20px', fontFamily: 'monospace', color: '#ff8844',
     }).setOrigin(1, 1).setDepth(50).setInteractive({ useHandCursor: true })
       .on('pointerdown', () => this.leave());
 
     this.add.text(20, 620, '[PHOTOBOOK]', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#7a6a5a',
+      fontSize: '20px', fontFamily: 'monospace', color: '#7a6a5a',
     }).setOrigin(0, 1).setDepth(50).setInteractive({ useHandCursor: true })
       .on('pointerdown', () => this.photobook.toggle());
 
@@ -318,10 +318,16 @@ export class TavernScene extends Phaser.Scene {
     return this.greetingActive || this.photobook.isVisible();
   }
 
+  private isPointerOverUI(pointer: Phaser.Input.Pointer): boolean {
+    const hits = this.input.hitTestPointer(pointer);
+    return hits.some(obj => (obj as Phaser.GameObjects.GameObject).getData?.('isUI'));
+  }
+
   private setupPointerInput(): void {
     this.analog = new AnalogStickInput(this, {
       depth: 250,
       isModal: () => this.isModalActive,
+      isPointerOverUI: (p) => this.isPointerOverUI(p),
       onDragStart: () => { this.movePath = []; },
       onClick: (worldX, worldY) => { this.doClickToMove(worldX, worldY); },
     });

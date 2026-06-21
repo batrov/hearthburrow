@@ -44,16 +44,22 @@ export class NPCPhotobookPanel extends BasePanel {
     this.container.add(this.hintText);
 
     const upBtn = scene.add.text(960 / 2, 68, '▲', {
-      fontSize: '16px', fontFamily: 'monospace', color: '#886644',
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(210).setScrollFactor(0);
-    upBtn.on('pointerdown', () => { this.handleInput('W'); this.dirty = true; });
+      fontSize: '22px', fontFamily: 'monospace', color: '#886644',
+    }).setOrigin(0.5).setDepth(210).setScrollFactor(0);
     this.container.add(upBtn);
+    const upHit = scene.add.rectangle(960 / 2, 68, 60, 40, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true }).setDepth(211).setScrollFactor(0);
+    upHit.on('pointerdown', () => { this.handleInput('W'); this.dirty = true; });
+    this.container.add(upHit);
 
     const downBtn = scene.add.text(960 / 2, 580, '▼', {
-      fontSize: '16px', fontFamily: 'monospace', color: '#886644',
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(210).setScrollFactor(0);
-    downBtn.on('pointerdown', () => { this.handleInput('S'); this.dirty = true; });
+      fontSize: '22px', fontFamily: 'monospace', color: '#886644',
+    }).setOrigin(0.5).setDepth(210).setScrollFactor(0);
     this.container.add(downBtn);
+    const downHit = scene.add.rectangle(960 / 2, 580, 60, 40, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true }).setDepth(211).setScrollFactor(0);
+    downHit.on('pointerdown', () => { this.handleInput('S'); this.dirty = true; });
+    this.container.add(downHit);
 
     this.addCloseButton(920, 30);
   }

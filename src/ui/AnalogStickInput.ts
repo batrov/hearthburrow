@@ -56,6 +56,7 @@ export class AnalogStickInput {
 
   private onPointerDown(pointer: Phaser.Input.Pointer): void {
     if (this.config.isModal()) return;
+    if (this.config.isPointerOverUI?.(pointer)) return;
 
     this.stickCenterX = pointer.x;
     this.stickCenterY = pointer.y;

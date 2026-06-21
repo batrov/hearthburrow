@@ -62,9 +62,16 @@ export class BasePanel {
 
   protected addCloseButton(x = 920, y = 44): Phaser.GameObjects.Text {
     const btn = this.scene.add.text(x, y, '[X]', {
-      fontSize: '16px', fontFamily: 'monospace', color: '#886666',
+      fontSize: '24px', fontFamily: 'monospace', color: '#886666',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(220).setData('isUI', true);
     btn.setVisible(false);
+
+    const hitZone = this.scene.add.rectangle(x, y, 48, 48, 0xffffff, 0)
+      .setScrollFactor(0).setDepth(220).setData('isUI', true).setVisible(false);
+    hitZone.setInteractive({ useHandCursor: true });
+    hitZone.on('pointerdown', () => {
+      if (this.isVisible()) this.fadeOut();
+    });
 
     this._closePointerDown = (pointer: Phaser.Input.Pointer) => {
       if (!this.isVisible()) return;

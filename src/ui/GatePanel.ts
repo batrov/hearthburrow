@@ -77,7 +77,7 @@ export class GatePanel extends BasePanel {
   private buildUI(): void {
     const PL = 130, PT = 40, PW = 700, PH = 560;
     const CX = 395;
-    const TEXT_STYLE = { fontSize: '14px', fontFamily: 'monospace', color: '#e8d5b7' };
+    const TEXT_STYLE = { fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7' };
     const ROW_YS = [114, 152, 190, 228, 266];
     const CONS_YS = [324, 356, 388];
     const BOTTOM_YS = [440, 470, 500, 530];
@@ -135,7 +135,7 @@ export class GatePanel extends BasePanel {
     }
 
     this.gateConsumableHeader = this.scene.add.text(CX, 304, 'Consumables:', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#b8a898',
+      fontSize: '16px', fontFamily: 'monospace', color: '#b8a898',
     });
     this.container.add(this.gateConsumableHeader);
 
@@ -208,14 +208,14 @@ export class GatePanel extends BasePanel {
     }
 
     this.gateFooter = this.scene.add.text(480, 564, '', {
-      fontSize: '13px', fontFamily: 'monospace', color: '#8a7a9a', align: 'center',
+      fontSize: '15px', fontFamily: 'monospace', color: '#8a7a9a', align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.gateFooter);
 
     this.container.add(this.scene.add.image(258, 180, 'portrait'));
 
     this.embarkBtn = this.scene.add.text(258, 320, '[ EMBARK ]', {
-      fontSize: '15px', fontFamily: 'monospace', color: '#ffcc44',
+      fontSize: '18px', fontFamily: 'monospace', color: '#ffcc44',
       backgroundColor: '#442a1acc', padding: { x: 12, y: 6 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(220).setInteractive({ useHandCursor: true }).setData('isUI', true);
     this.embarkBtn.on('pointerdown', () => {
@@ -223,11 +223,14 @@ export class GatePanel extends BasePanel {
     });
     this.embarkBtn.setVisible(false);
 
-    this.closeBtn = this.scene.add.text(810, 50, '[X]', {
-      fontSize: '16px', fontFamily: 'monospace', color: '#aa6666',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(220).setInteractive({ useHandCursor: true }).setData('isUI', true);
-    this.closeBtn.on('pointerdown', () => this.hide());
+    this.closeBtn = this.scene.add.text(920, 44, '[X]', {
+      fontSize: '24px', fontFamily: 'monospace', color: '#aa6666',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(220).setData('isUI', true);
+    const closeHit = this.scene.add.rectangle(920, 44, 48, 48, 0xffffff, 0)
+      .setScrollFactor(0).setDepth(220).setData('isUI', true).setInteractive({ useHandCursor: true });
+    closeHit.on('pointerdown', () => this.hide());
     this.closeBtn.setVisible(false);
+    closeHit.setVisible(false);
   }
 
   show(): void {

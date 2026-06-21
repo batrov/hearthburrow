@@ -35,19 +35,19 @@ export class EventPanel extends BasePanel {
     this.container.add(this.titleText);
 
     this.descText = scene.add.text(960 / 2, 210, '', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#b8a898',
+      fontSize: '16px', fontFamily: 'monospace', color: '#b8a898',
       align: 'center', wordWrap: { width: 500 }, lineSpacing: 4,
     }).setOrigin(0.5, 0);
     this.container.add(this.descText);
 
     this.choicesText = scene.add.text(960 / 2, 310, '', {
-      fontSize: '15px', fontFamily: 'monospace', color: '#c8b898',
+      fontSize: '17px', fontFamily: 'monospace', color: '#c8b898',
       align: 'left', lineSpacing: 14,
     }).setOrigin(0.5, 0);
     this.container.add(this.choicesText);
 
     this.hintText = scene.add.text(960 / 2, 520, '', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#5a4a6a',
+      fontSize: '14px', fontFamily: 'monospace', color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
@@ -143,6 +143,7 @@ export class EventPanel extends BasePanel {
     const choice = this.currentChoices[index];
     this._visible = false;
     this.container.setVisible(false);
+    if (this._closeBtn) this._closeBtn.setVisible(false);
 
     choice.action();
     audio.playItemPickup();

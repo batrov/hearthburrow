@@ -25,7 +25,7 @@ export class BuildingInfoPanel extends BasePanel {
     }).setOrigin(0.5);
     this.container.add(this.descText);
 
-    this.addCloseButton(665, 234);
+    this.addCloseButton();
   }
 
   show(label: string, description: string): void {

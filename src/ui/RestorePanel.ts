@@ -22,7 +22,7 @@ export class RestorePanel extends BasePanel {
     this.contentContainer = scene.add.container(0, 0);
     this.container.add(this.contentContainer);
 
-    this.addCloseButton(665, 216);
+    this.addCloseButton();
   }
 
   show(buildingId: string): void {

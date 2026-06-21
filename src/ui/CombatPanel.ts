@@ -70,12 +70,12 @@ export class CombatPanel extends BasePanel {
     this.container.add(this.hpBar);
 
     this.hpText = scene.add.text(960 / 2, 330, '', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#cc6666',
+      fontSize: '15px', fontFamily: 'monospace', color: '#cc6666',
     }).setOrigin(0.5);
     this.container.add(this.hpText);
 
     this.instructionText = scene.add.text(960 / 2, 490, '', {
-      fontSize: '13px', fontFamily: 'monospace', color: '#b8a898',
+      fontSize: '15px', fontFamily: 'monospace', color: '#b8a898',
     }).setOrigin(0.5);
     this.container.add(this.instructionText);
 
@@ -99,12 +99,12 @@ export class CombatPanel extends BasePanel {
     this.container.add(this.feedbackText);
 
     this.hintText = scene.add.text(960 / 2, 520, '[SPACE] Strike  |  Click enemy to attack', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#5a4a6a',
+      fontSize: '14px', fontFamily: 'monospace', color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
     this.retreatBtn = scene.add.text(960 / 2, 395, '[ ESC ] Retreat', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#cc6644',
+      fontSize: '16px', fontFamily: 'monospace', color: '#cc6644',
     }).setOrigin(0.5).setScrollFactor(0).setInteractive({ useHandCursor: true }).setData('isUI', true);
     this.retreatBtn.on('pointerdown', () => {
       if (!this._visible) return;
@@ -172,14 +172,7 @@ export class CombatPanel extends BasePanel {
     this.startMarker(config.timingSpeed);
 
     this.timingZone.setVisible(true);
-    this.container.setVisible(true);
-    this.container.setAlpha(0);
-    this.scene.tweens.add({
-      targets: this.container,
-      alpha: 1,
-      duration: 200,
-      ease: 'Quad.easeOut',
-    });
+    this.fadeIn(200);
   }
 
   hide(): void {
@@ -189,15 +182,13 @@ export class CombatPanel extends BasePanel {
     }
     if (this.markerTween) {
       this.markerTween.stop();
-      // this.markerTween = null;
     }
-    this._visible = false;
     this.currentEnemy = null;
     if (this.enemySprite.input) this.enemySprite.disableInteractive();
     this.timingZone.setVisible(false);
     this.enemySprite.setVisible(false);
-    this.container.setVisible(false);
     this.result = null;
+    this.fadeOut(200);
   }
 
   getResult(): CombatResult {

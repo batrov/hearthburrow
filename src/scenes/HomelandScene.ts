@@ -300,7 +300,7 @@ export class HomelandScene extends Phaser.Scene {
       if (b.id === 'gate') continue;
       const ul = unlocked(b);
       const texKey = buildingTextureKeys[b.id] ?? 'building_trading_post';
-      const alpha = ul ? 1 : 0.2;
+      const alpha = ul ? 1 : 0.5;
 
       const c = gridToIso(b.gx + b.gw / 2, b.gy + b.gh / 2);
       const cfg = getSpriteConfig(texKey);
@@ -457,10 +457,16 @@ export class HomelandScene extends Phaser.Scene {
       || this.farmPanel.isVisible();
   }
 
+  private isPointerOverUI(pointer: Phaser.Input.Pointer): boolean {
+    const hits = this.input.hitTestPointer(pointer);
+    return hits.some(obj => (obj as Phaser.GameObjects.GameObject).getData?.('isUI'));
+  }
+
   private setupPointerInput(): void {
     this.analog = new AnalogStickInput(this, {
       depth: 250,
       isModal: () => this.isModalActive,
+      isPointerOverUI: (p) => this.isPointerOverUI(p),
       onDragStart: () => { this.movePath = []; },
       onClick: (worldX, worldY) => { this.doClickToMove(worldX, worldY); },
     });

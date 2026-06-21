@@ -39,14 +39,12 @@ export class FarmPanel extends BasePanel {
   }
 
   show(): void {
-    this.setVisible(true);
-    if (this._closeBtn) this._closeBtn.setVisible(true);
+    this.fadeIn();
     this.render();
   }
 
   hide(): void {
-    this.setVisible(false);
-    if (this._closeBtn) this._closeBtn.setVisible(false);
+    this.fadeOut();
   }
 
   plant(): void {

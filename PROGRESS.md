@@ -281,6 +281,27 @@ Resolved Bugs:
 - **Un-restored alpha 0.2** (was 0.4)
 - **Building texture sizes** — 3×3 canvas 160×120 (was 160×100), gate stays 120×80; all PNGs regenerated
 
+## ✅ Mobile UI Polish (June 2026)
+- **Analog stick no longer fires on UI touches** — `onPointerDown` now checks `isPointerOverUI` (was missing), plus HomelandScene and TavernScene pass `isPointerOverUI` to AnalogStickInput config
+- **ESC closes EventPanel** — added ESC/TAB handler to the `eventActive` update block; was previously un-closable on mobile if the tiny [X] was missed
+- **FarmPanel uses fadeIn lifecycle** — replaced raw `setVisible` with `fadeIn()/fadeOut()` matching BasePanel pattern
+- **CombatPanel uses BasePanel show/hide** — migrated from manual alpha tween + `setVisible` to `fadeIn(200)/fadeOut(200)`
+- **Close buttons enlarged to 24px** — BasePanel `addCloseButton()` now uses `fontSize: '24px'` with a 48×48 invisible hit zone behind it; BuildingInfoPanel, RestorePanel close buttons moved from embedded modal positions to standard `(920, 44)`
+- **GatePanel close button enlarged** — moved from `(810, 50)` 16px to `(920, 44)` 24px with 48×48 hit zone
+- **NPCPhotobook scroll arrows** — ▲/▼ enlarged to 22px with 60×40 invisible hit zones replacing 16px text-only targets
+- **Action buttons dim during modals** — potion/bomb/escape sprites now set `alpha(0.3)` when `isModalActive`, showing they're disabled
+- **Font size bumps** — GatePanel body text 14→16px, footer 13→15px, embark 15→18px; EventPanel desc 14→16px, choices 15→17px; CombatPanel HP 12→15px, hint 12→14px, retreat 14→16px; action badge counts 10→14px, escape label 9→12px
+- **EventPanel [X] floating after close** — `selectChoice()` now hides the close button explicitly (was showing permanently after any choice selection)
+- **RestorePanel handler cleanup** — `destroy()` null-checks and removes pointerdown listener to prevent leaks on scene transitions
+- **BasePanel fadeIn consistency** — all 13 panels now use `fadeIn/fadeOut` (previously 4 panels bypassed it)
+
+## ✅ Contextual Action Button (June 2026)
+- **Center-right action button** — 72×72 rounded rect at `(920, 320)` with 28px Unicode icons: ⛏ (mine), ⚔ (attack/strike), 💬 (interact), ✨ (rescue), ↑/↓ (stairs), ↓ collect
+- **Updates every frame** — `updateActionButton()` reads `combatActive`, `interactTarget`, and facing tile to choose icon/visibility
+- **Tap dispatches SPACE logic** — `handleActionButton()` replicates the SPACE key dispatch: combat strike/collect → interact target actions → `tryMine()`
+- **Hides during modals** — shares the `isModalActive` guard so it's never shown when event panel, gamble, stair prompt, or exhaustion overlay is active
+- **No text label** — icon-only per user request, with color-coded borders (green collect, red combat, blue interact, gold mine)
+
 ## ✅ Bug Fix: Restoration Affordability Check (June 2026)
 - **SPACE keyboard shortcut** was calling `tryRestore()` without checking `canRestore()`, bypassing the RESTORE button's affordability gate
 - **Fix**: added `if (!canRestore(buildingId)) return;` at the top of `tryRestore()` so insufficient materials is a silent no-op before any animation starts

@@ -142,6 +142,8 @@ export class ExpeditionScene extends Phaser.Scene {
   private runSeed: string = '';
   private movePath: { x: number; y: number }[] = [];
   private analog!: AnalogStickInput;
+  private actionBtnBg!: Phaser.GameObjects.Graphics;
+  private actionBtnText!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: 'ExpeditionScene' });
@@ -605,7 +607,7 @@ export class ExpeditionScene extends Phaser.Scene {
       }
     });
     this.escapeLabel = this.add.text(0, 0, '', {
-      fontSize: '9px', fontFamily: 'monospace', color: '#cccccc',
+      fontSize: '12px', fontFamily: 'monospace', color: '#cccccc',
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
 
@@ -617,7 +619,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.tryUseConsumable('stamina_potion');
     });
     this.potionCountText = this.add.text(0, 0, '', {
-      fontSize: '10px', fontFamily: 'monospace', color: '#ffdd88',
+      fontSize: '14px', fontFamily: 'monospace', color: '#ffdd88',
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(DEPTH.HUD);
 
@@ -629,7 +631,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.tryUseConsumable('mining_bomb');
     });
     this.bombCountText = this.add.text(0, 0, '', {
-      fontSize: '10px', fontFamily: 'monospace', color: '#ffdd88',
+      fontSize: '14px', fontFamily: 'monospace', color: '#ffdd88',
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(DEPTH.HUD);
 
@@ -643,6 +645,114 @@ export class ExpeditionScene extends Phaser.Scene {
     }
 
     this.updateActionButtons();
+    this.createActionButton();
+  }
+
+  private createActionButton(): void {
+    const x = 920, y = 320, size = 72;
+    this.actionBtnBg = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD);
+    this.actionBtnText = this.add.text(x, y, '', {
+      fontSize: '28px', fontFamily: 'monospace',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD + 1);
+
+    const hit = this.add.rectangle(x, y, size, size, 0x000000, 0)
+      .setScrollFactor(0).setDepth(DEPTH.HUD + 2).setData('isUI', true);
+    hit.setInteractive({ useHandCursor: true });
+    hit.on('pointerdown', () => this.handleActionButton());
+  }
+
+  private updateActionButton(): void {
+    const show = (icon: string, color: string) => {
+      this.actionBtnBg.clear();
+      this.actionBtnBg.fillStyle(0x0a0a1a, 0.75);
+      this.actionBtnBg.fillRoundedRect(884, 284, 72, 72, 10);
+      this.actionBtnBg.lineStyle(2, Phaser.Display.Color.HexStringToColor(color).color, 0.6);
+      this.actionBtnBg.strokeRoundedRect(884, 284, 72, 72, 10);
+      this.actionBtnText.setText(icon).setColor(color);
+    };
+    const hide = () => {
+      this.actionBtnBg.clear();
+      this.actionBtnText.setText('');
+    };
+
+    // Combat — strike or collect (allowed even though isModalActive is true)
+    if (this.combatActive) {
+      if (this.combatPanel.getResult() === 'victory') {
+        show('↓', '#44cc66');
+      } else {
+        show('⚔', '#ff6644');
+      }
+      return;
+    }
+
+    // Other modals active — hide button
+    if (this.isModalActive) { hide(); return; }
+
+    // Interact target (stairs, enemies, events)
+    if (this.interactTarget) {
+      const floor = this.currentFloor;
+      const tile = floor?.tiles[this.interactTarget.y]?.[this.interactTarget.x];
+      if (this.interactTarget.id === 'ascend') { show('↑', '#44cc66'); return; }
+      if (this.interactTarget.id === 'descend') { show('↓', '#8866cc'); return; }
+      if (tile && (tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken) { show('⚔', '#ff6644'); return; }
+      if (tile?.type === 'event_villager') { show('✨', '#ffdd88'); return; }
+      show('💬', '#88ccff');
+      return;
+    }
+
+    // Facing mineable
+    const floor2 = this.currentFloor;
+    if (floor2) {
+      const tx = this.playerX + this.facingX;
+      const ty = this.playerY + this.facingY;
+      if (tx >= 0 && tx < floor2.cols && ty >= 0 && ty < floor2.rows) {
+        const tile = floor2.tiles[ty][tx];
+        if (tile.type === 'mineable' && !tile.broken) { show('⛏', '#ffcc44'); return; }
+      }
+    }
+
+    hide();
+  }
+
+  private handleActionButton(): void {
+    // Combat: strike or collect (allowed even though isModalActive is true)
+    if (this.combatActive) {
+      if (this.combatPanel.getResult() === 'victory') {
+        this.combatPanel.handleCollect();
+      } else {
+        const result = this.combatPanel.handleStrike();
+        if (result === 'miss') {
+          this.stamina.consume(10);
+          this.tweens.add({
+            targets: [this.staminaBg, this.portraitSprite, this.staminaBarGfx, this.staminaValueText],
+            x: { value: '+=' + 5 },
+            duration: 25, yoyo: true, repeat: 3, ease: 'Sine.easeInOut',
+          });
+        }
+      }
+      return;
+    }
+
+    // Other modals (event, gamble, stair, exhaustion) — button hidden, ignore taps
+    if (this.isModalActive) return;
+
+    // Interact target (same logic as update() lines 1118-1135)
+    if (this.interactTarget) {
+      this.movePath = [];
+      this.analog.reset();
+      if (this.interactTarget.id === 'ascend') { this.handleAscend(); return; }
+      if (this.interactTarget.id === 'descend') { this.handleDescend(); return; }
+      const tile = this.currentFloor?.tiles[this.interactTarget.y]?.[this.interactTarget.x];
+      if (tile && (tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken) {
+        if (this.stamina.remaining > 10) this.startCombat(this.interactTarget.x, this.interactTarget.y, tile);
+      } else {
+        this.triggerTileEvent(this.interactTarget.x, this.interactTarget.y, this.interactTarget.id);
+      }
+      return;
+    }
+
+    // Facing tile: try mine
+    this.tryMine();
   }
 
   private drawMinimap(): void {
@@ -800,6 +910,14 @@ export class ExpeditionScene extends Phaser.Scene {
       this.escapeLabel.setText('Give Up');
       this.escapeLabel.setColor('#cc6666');
     }
+
+    const dimmed = this.isModalActive ? 0.3 : 1;
+    this.potionImg.setAlpha(dimmed);
+    this.bombImg.setAlpha(dimmed);
+    this.escapeSprite.setAlpha(dimmed);
+    this.potionCountText.setAlpha(dimmed);
+    this.bombCountText.setAlpha(dimmed);
+    this.escapeLabel.setAlpha(dimmed);
   }
 
   private repositionActionButtons(): void {
@@ -1065,6 +1183,10 @@ export class ExpeditionScene extends Phaser.Scene {
       if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
         this.eventPanel.confirm();
       }
+      if (Phaser.Input.Keyboard.JustDown(this.keys.ESC) || Phaser.Input.Keyboard.JustDown(this.keys.TAB)) {
+        this.eventPanel.hide();
+        this.eventActive = false;
+      }
       return;
     }
 
@@ -1215,8 +1337,9 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.drawStaminaBar();
     this.drawInventoryButton();
-    this.drawPickaxeRing();
     this.updateActionButtons();
+    this.updateActionButton();
+    this.drawPickaxeRing();
     this.updateDarkness();
   }
 

@@ -28,6 +28,6 @@
   "decoration_flower_*":   { "offsetY": -2,  "originY": 1 },
   "decoration_fence":      { "offsetY": -2,  "originY": 1 },
   "decoration_lantern_post": { "offsetY": 0, "originY": 1 },
-  "decoration_well":       { "offsetY": -18, "originY": 1 },
+  "decoration_well":       { "offsetY": 0, "originY": 1 },
   "decoration_signpost":   { "offsetY": -28, "originY": 1 }
 }
