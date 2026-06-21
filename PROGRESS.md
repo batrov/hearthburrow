@@ -319,3 +319,18 @@ Resolved Bugs:
 - **Dialog click-to-dismiss** — clicking anywhere closes NPC greeting (same as SPACE/ESC), deferred register to avoid same-click auto-close
 - **NPC click fix** — expanded hit area (70×60) covers full tile, explicit Phaser.Geom.Rectangle hit area ensures reliable interactivity
 - **Photobook entry selection** — clicking on any NPC entry line sets focus; uses localY calculation (22px line height) with scroll offset to determine the clicked entry
+
+## ✅ Expedition Loadout Revamp (June 2026)
+- **Icon-driven layout** — GatePanel rewritten with stats column (left), 5 equipment slots, 3 consumable slots, settings (text), bottom embark button, and a 2-line description panel below embark
+- **Equipment picker** — `EquipmentPicker` popup with scrollable list, W/S keyboard navigation, SPACE confirm, click support. "(none)" option for rings/boots/lantern unequip
+- **Consumable picker** — `ConsumablePicker` with icon, description, stash count, −/+ quantity controls (← → and click), SPACE confirm, ESC/click-outside cancel
+- **Floor/Seed pickers** — `FloorPicker` (elevator floor list) and `SeedEntryPopup` (text input with blinking cursor)
+- **ConfirmPopup** — yes/no dialog for reset game
+- **Placeholder sprites** — empty equipment slots show dimmed (alpha 0.15) slot-appropriate base icon instead of blank frame
+- **All inline text removed** — equipment/consumable names moved to dedicated bottom description panel
+- **Phaser 4 Container Input fix** — interactive children of Container do not reliably fire pointerdown events; all click handling uses scene-level `pointerdown` with manual hit-testing and a transparent Rectangle blocker inside the container to prevent click-through
+
+## Resolved Bugs
+- **Click-outside-to-close broken in consumable popup** — Graphics.setInteractive() and container-child Rectangle.setInteractive() both unreliable in Phaser 4. Fixed with scene-level pointerdown handler + transparent Rectangle blocker
+- **Placeholder sprites showing pickaxe** — scene.textures.exists() guard in else-branch skipped setTexture() when texture was generated (not PNG-loaded). Removed guard
+- **GatePanel click-through during consumable picker** — added transparent interactive Rectangle blocker in container with empty pointerdown handler to consume clicks

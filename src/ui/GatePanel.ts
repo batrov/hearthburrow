@@ -58,6 +58,7 @@ export class GatePanel extends BasePanel {
 
   // Visual elements
   private bg!: Phaser.GameObjects.Graphics;
+  private panelBlocker!: Phaser.GameObjects.Rectangle;
   private title!: Phaser.GameObjects.Text;
 
   // Stats column
@@ -115,6 +116,11 @@ export class GatePanel extends BasePanel {
     this.bg = this.scene.add.graphics();
     this.container.add(this.bg);
 
+    this.panelBlocker = this.scene.add.rectangle(480, 320, 960, 640, 0x000000, 0)
+      .setScrollFactor(0).setData('isUI', true).setInteractive();
+    this.panelBlocker.on('pointerdown', () => {});
+    this.container.add(this.panelBlocker);
+
     this.title = this.scene.add.text(CX, 58, 'Expedition Loadout', {
       fontSize: '20px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
@@ -134,8 +140,8 @@ export class GatePanel extends BasePanel {
 
     // Equipment slots (5)
     const equipYX = [0, 1, 2, 3, 4].map(i => ({
-      x: 348 + i * 68,
-      y: 108,
+      x: 368 + i * 68,
+      y: 128,
     }));
     for (let i = 0; i < 5; i++) {
       const bg = this.scene.add.graphics();
@@ -163,15 +169,15 @@ export class GatePanel extends BasePanel {
     }
 
     // "EQUIPMENT" label
-    const equipLabel = this.scene.add.text(348, 80, 'EQUIPMENT', {
+    const equipLabel = this.scene.add.text(338, 88, 'EQUIPMENT', {
       fontSize: '12px', fontFamily: 'monospace', color: '#6a5a8a',
     });
     this.container.add(equipLabel);
 
     // Consumable slots (3)
     const consYX = [0, 1, 2].map(i => ({
-      x: 348 + i * 68,
-      y: 188,
+      x: 368 + i * 68,
+      y: 208,
     }));
     for (let i = 0; i < 3; i++) {
       const bg = this.scene.add.graphics();
@@ -198,20 +204,20 @@ export class GatePanel extends BasePanel {
       this.consSlots.push({ bg, icon, badge, zone });
     }
 
-    const consLabel = this.scene.add.text(348, 160, 'CONSUMABLES', {
+    const consLabel = this.scene.add.text(338, 168, 'CONSUMABLES', {
       fontSize: '12px', fontFamily: 'monospace', color: '#6a5a8a',
     });
     this.container.add(consLabel);
 
     // Settings row
     for (let i = 0; i < 4; i++) {
-      const t = this.scene.add.text(348, 228 + i * 24, '', {
+      const t = this.scene.add.text(338, 258 + i * 24, '', {
         fontSize: '14px', fontFamily: 'monospace', color: '#b8a898',
       });
       this.container.add(t);
       this.settingsTexts.push(t);
 
-      const zone = this.scene.add.rectangle(580, 238 + i * 24, 300, 22, 0xffffff, 0)
+      const zone = this.scene.add.rectangle(518, 268 + i * 24, 300, 22, 0xffffff, 0)
         .setScrollFactor(0).setDepth(220).setInteractive({ useHandCursor: true }).setData('isUI', true);
       const idx = i;
       zone.on('pointerdown', () => this.onSettingsClick(idx));
@@ -220,7 +226,7 @@ export class GatePanel extends BasePanel {
       this.settingsZones.push(zone);
     }
 
-    const setLabel = this.scene.add.text(348, 214, 'SETTINGS', {
+    const setLabel = this.scene.add.text(338, 240, 'SETTINGS', {
       fontSize: '12px', fontFamily: 'monospace', color: '#6a5a8a',
     });
     this.container.add(setLabel);
@@ -401,18 +407,29 @@ export class GatePanel extends BasePanel {
 
         if (isSelected) {
           slot.bg.fillStyle(0x3a3a5a, 0.6);
-          slot.bg.fillRoundedRect(312 + i * 68, 85, 68, 48, 6);
+          slot.bg.fillRoundedRect(332 + i * 68, 105, 68, 48, 6);
           slot.bg.lineStyle(1, 0x8a7aaa);
-          slot.bg.strokeRoundedRect(312 + i * 68, 85, 68, 48, 6);
+          slot.bg.strokeRoundedRect(332 + i * 68, 105, 68, 48, 6);
+        } else {
+          slot.bg.fillStyle(0x1a1a2a, 0.3);
+          slot.bg.lineStyle(1, 0x3a3a4a);
+          slot.bg.strokeRoundedRect(332 + i * 68, 105, 68, 48, 6);
         }
       } else {
         const placeholderKey = ['item_pickaxe_1', 'item_ring_critical', 'item_ring_critical', 'item_boots_stamina_bronze', 'item_lantern_bronze'][i];
         slot.icon.setTexture(placeholderKey).setAlpha(0.15);
         slot.icon.setVisible(true);
         slot.badge.setVisible(false);
-        slot.bg.fillStyle(0x1a1a2a, 0.3);
-        slot.bg.lineStyle(1, 0x3a3a4a);
-        slot.bg.strokeRoundedRect(312 + i * 68, 85, 68, 48, 6);
+        if (isSelected) {
+          slot.bg.fillStyle(0x3a3a5a, 0.6);
+          slot.bg.fillRoundedRect(332 + i * 68, 105, 68, 48, 6);
+          slot.bg.lineStyle(1, 0x8a7aaa);
+          slot.bg.strokeRoundedRect(332 + i * 68, 105, 68, 48, 6);
+        } else {
+          slot.bg.fillStyle(0x1a1a2a, 0.3);
+          slot.bg.lineStyle(1, 0x3a3a4a);
+          slot.bg.strokeRoundedRect(332 + i * 68, 105, 68, 48, 6);
+        }
       }
     }
   }
@@ -438,9 +455,13 @@ export class GatePanel extends BasePanel {
       slot.bg.clear();
       if (isSelected) {
         slot.bg.fillStyle(0x3a3a5a, 0.6);
-        slot.bg.fillRoundedRect(312 + i * 68, 165, 68, 48, 6);
+        slot.bg.fillRoundedRect(332 + i * 68, 185, 68, 48, 6);
         slot.bg.lineStyle(1, 0x8a7aaa);
-        slot.bg.strokeRoundedRect(312 + i * 68, 165, 68, 48, 6);
+        slot.bg.strokeRoundedRect(332 + i * 68, 185, 68, 48, 6);
+      } else {
+        slot.bg.fillStyle(0x1a1a2a, 0.3);
+        slot.bg.lineStyle(1, 0x3a3a4a);
+        slot.bg.strokeRoundedRect(332 + i * 68, 185, 68, 48, 6);
       }
     }
   }

@@ -9,12 +9,15 @@ export class SeedEntryPopup {
   private onCancelCb: (() => void) | null = null;
 
   private overlay: Phaser.GameObjects.Graphics;
+  private blocker: Phaser.GameObjects.Rectangle;
   private popupBg: Phaser.GameObjects.Graphics;
   private titleText: Phaser.GameObjects.Text;
   private seedText: Phaser.GameObjects.Text;
   private cursorText: Phaser.GameObjects.Text;
   private hintText: Phaser.GameObjects.Text;
+  private randomizeBtn: Phaser.GameObjects.Text;
   private keyHandler: ((e: KeyboardEvent) => void) | null = null;
+  private clickHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
   private destroyed = false;
 
   private cursorInterval: number | null = null;
@@ -26,9 +29,14 @@ export class SeedEntryPopup {
     this.overlay = scene.add.graphics();
     this.overlay.fillStyle(0x000000, 0.55);
     this.overlay.fillRect(0, 0, 960, 640);
-    this.overlay.setInteractive(new Phaser.Geom.Rectangle(0, 0, 960, 640), Phaser.Geom.Rectangle.Contains);
-    this.overlay.on('pointerdown', () => this.hide());
     this.container.add(this.overlay);
+
+    this.blocker = scene.add.rectangle(480, 320, 960, 640, 0x000000, 0)
+      .setScrollFactor(0)
+      .setInteractive()
+      .setData('isUI', true);
+    this.blocker.on('pointerdown', () => {});
+    this.container.add(this.blocker);
 
     this.popupBg = scene.add.graphics();
     this.container.add(this.popupBg);
@@ -38,18 +46,23 @@ export class SeedEntryPopup {
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
-    this.seedText = scene.add.text(480, 250, '', {
+    this.seedText = scene.add.text(480, 225, '', {
       fontSize: '22px', fontFamily: 'monospace', color: '#88cc88',
     }).setOrigin(0.5);
     this.container.add(this.seedText);
 
-    this.cursorText = scene.add.text(480, 250, '|', {
+    this.cursorText = scene.add.text(480, 225, '|', {
       fontSize: '22px', fontFamily: 'monospace', color: '#88cc88',
     }).setOrigin(0.5);
     this.cursorText.setVisible(false);
     this.container.add(this.cursorText);
 
-    this.hintText = scene.add.text(480, 300, '', {
+    this.randomizeBtn = scene.add.text(480, 270, '[ RANDOMIZE ]', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#88aa88',
+    }).setOrigin(0.5);
+    this.container.add(this.randomizeBtn);
+
+    this.hintText = scene.add.text(480, 308, '', {
       fontSize: '14px', fontFamily: 'monospace', color: '#8a7a9a', align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
@@ -81,7 +94,7 @@ export class SeedEntryPopup {
         e.preventDefault();
         this.confirm();
       } else if (e.key === 'Escape') {
-        this.hide();
+        this.confirm();
       } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
         if (this.currentSeed.length < 24) {
           this.currentSeed += e.key;
@@ -90,6 +103,18 @@ export class SeedEntryPopup {
       }
     };
     this.scene.input.keyboard!.on('keydown', this.keyHandler);
+
+    this.clickHandler = (p: Phaser.Input.Pointer) => {
+      const insidePopup = p.x >= 300 && p.x <= 660 && p.y >= 140 && p.y <= 340;
+      if (!insidePopup) {
+        this.confirm();
+        return;
+      }
+      if (p.x >= 410 && p.x <= 550 && p.y >= 261 && p.y <= 279) {
+        this.randomize();
+      }
+    };
+    this.scene.input.on('pointerdown', this.clickHandler);
 
     this.updateDisplay();
 
@@ -112,8 +137,13 @@ export class SeedEntryPopup {
     this.seedText.setColor(this.currentSeed ? '#88cc88' : '#666666');
 
     const seedW = this.seedText.width;
-    this.cursorText.setPosition(480 + seedW / 2 + 4, 250);
+    this.cursorText.setPosition(480 + seedW / 2 + 4, 225);
     this.cursorText.setVisible(true);
+  }
+
+  private randomize(): void {
+    this.currentSeed = Math.random().toString(36).substring(2, 10);
+    this.updateDisplay();
   }
 
   private confirm(): void {
@@ -130,6 +160,10 @@ export class SeedEntryPopup {
     if (this.keyHandler) {
       this.scene.input.keyboard!.off('keydown', this.keyHandler);
       this.keyHandler = null;
+    }
+    if (this.clickHandler) {
+      this.scene.input.off('pointerdown', this.clickHandler);
+      this.clickHandler = null;
     }
     this.scene.tweens.add({
       targets: this.container,
