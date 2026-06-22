@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { InventorySystem } from '../systems/InventorySystem';
 import { itemDisplayName, itemIconKey } from '../systems/GameState';
 import { BasePanel } from './BasePanel';
+import { isConsumable } from '../systems/DataRegistry';
 
 const ITEM_INFO: Record<string, { desc: string }> = {
   stone: { desc: 'Common stone. Used for building and basic crafting.' },
@@ -47,6 +48,10 @@ export class InventoryPanel extends BasePanel {
   private onUse: ((itemId: string) => void) | null = null;
   private onTrash: ((itemId: string) => void) | null = null;
   private clickZones: Phaser.GameObjects.Zone[] = [];
+  private useBtn: Phaser.GameObjects.Text;
+  private trashBtn: Phaser.GameObjects.Text;
+  private useBtnZone: Phaser.GameObjects.Rectangle;
+  private trashBtnZone: Phaser.GameObjects.Rectangle;
   private dirty: boolean = true;
 
   constructor(
@@ -76,16 +81,48 @@ export class InventoryPanel extends BasePanel {
     this.itemRows = scene.add.container(0, 0);
     this.container.add(this.itemRows);
 
-    this.hintText = scene.add.text(960 / 2, 620, '', {
+    this.hintText = scene.add.text(960 / 2, 612, '', {
       fontSize: '11px', fontFamily: 'monospace', color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
-    this.descriptionText = scene.add.text(960 / 2, 595, '', {
+    this.descriptionText = scene.add.text(960 / 2, 555, '', {
       fontSize: '12px', fontFamily: 'monospace', color: '#8a8a9a',
       align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.descriptionText);
+
+    this.useBtn = scene.add.text(412, 580, '[ USE ]', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#b8a888',
+    }).setOrigin(0.5).setVisible(false);
+    this.container.add(this.useBtn);
+
+    this.trashBtn = scene.add.text(548, 580, '[ TRASH ]', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#b8a888',
+    }).setOrigin(0.5).setVisible(false);
+    this.container.add(this.trashBtn);
+
+    this.useBtnZone = scene.add.rectangle(412, 580, 100, 28, 0xffffff, 0)
+      .setDepth(210).setScrollFactor(0).setInteractive().setVisible(false);
+    this.useBtnZone.on('pointerdown', () => {
+      const item = this.items[this.selectionIndex];
+      if (item) {
+        this.onUse?.(item.id);
+        this.refresh();
+      }
+    });
+    this.container.add(this.useBtnZone);
+
+    this.trashBtnZone = scene.add.rectangle(548, 580, 110, 28, 0xffffff, 0)
+      .setDepth(210).setScrollFactor(0).setInteractive().setVisible(false);
+    this.trashBtnZone.on('pointerdown', () => {
+      const item = this.items[this.selectionIndex];
+      if (item) {
+        this.onTrash?.(item.id);
+        this.refresh();
+      }
+    });
+    this.container.add(this.trashBtnZone);
 
     this.addCloseButton();
   }
@@ -216,6 +253,14 @@ export class InventoryPanel extends BasePanel {
     const info = selectedItem ? ITEM_INFO[selectedItem.id] : null;
     this.descriptionText.setText(info?.desc ?? '');
     this.descriptionText.setColor(info ? '#8a8a9a' : '#3a3a4a');
+
+    const canUse = selectedItem && this.onUse && isConsumable(selectedItem.id);
+    this.useBtn.setVisible(!!canUse);
+    this.useBtnZone.setVisible(!!canUse);
+
+    const canTrash = selectedItem && this.onTrash;
+    this.trashBtn.setVisible(!!canTrash);
+    this.trashBtnZone.setVisible(!!canTrash);
   }
 
   draw(): void {

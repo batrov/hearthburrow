@@ -104,3 +104,7 @@ export function getRelic(id: string): RelicData | undefined {
 export function getAllRelics(): RelicData[] {
   return Array.from(relics.values());
 }
+
+export function isConsumable(id: string): boolean {
+  return consumables.has(id);
+}

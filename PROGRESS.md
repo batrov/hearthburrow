@@ -338,6 +338,9 @@ Resolved Bugs:
 - **Clean build** — `tsc` + `vite build` pass with zero errors
 
 ## Resolved Bugs
+- **Particles rendering twice** — `createMiningParticles` (14 circles) and shockwave ring in `executeMine` were missing `hudCam.ignore()`, rendering on both main + HUD cameras. Added the missing ignore calls.
+- **Analog stick visible/stuck after panel opens** — `onPointerUp` returns early when `isModal()` is true, skipping `reset()` → gfx persists forever. Added `this.analog.reset()` before inventory/event/gamble panel shows, matching the existing pattern in `startCombat()`.
+- **Item fly sprite invisible** — `spawnItemSprite` sets `hudCam.ignore()` (renders on main cam), then `flySpriteToBackpack` adds `main.ignore()` without clearing `hudCam.ignore()` → excluded from both cameras. Fixed by clearing HUD cam bit via `sprite.cameraFilter &= ~this.hudCam.id` before adding main cam ignore.
 - **Click-outside-to-close broken in consumable popup** — Graphics.setInteractive() and container-child Rectangle.setInteractive() both unreliable in Phaser 4. Fixed with scene-level pointerdown handler + transparent Rectangle blocker
 - **Placeholder sprites showing pickaxe** — scene.textures.exists() guard in else-branch skipped setTexture() when texture was generated (not PNG-loaded). Removed guard
 - **GatePanel click-through during consumable picker** — added transparent interactive Rectangle blocker in container with empty pointerdown handler to consume clicks

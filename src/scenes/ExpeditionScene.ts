@@ -537,7 +537,7 @@ export class ExpeditionScene extends Phaser.Scene {
     if (!floor) return;
     const depth = this.expeditionState.depth;
     const isDarkFloor = depth > 0 && depth % 5 === 3;
-    let radius = 10;
+    let radius = 8;
     if (isDarkFloor) {
       const px = gameState.getLanternRange(depth);
       radius = Math.floor(px / 45) || 1;
@@ -626,6 +626,7 @@ export class ExpeditionScene extends Phaser.Scene {
     invZone.on('pointerdown', () => {
       if (this.isModalActive) return;
       this.inventoryPanel.refresh();
+      this.analog.reset();
       this.inventoryPanel.toggle();
     });
 
@@ -1159,6 +1160,7 @@ export class ExpeditionScene extends Phaser.Scene {
       if (this.inventoryPanel.isVisible()) {
         this.inventoryPanel.hide();
       } else {
+        this.analog.reset();
         this.inventoryPanel.show();
       }
       return;
@@ -1185,6 +1187,7 @@ export class ExpeditionScene extends Phaser.Scene {
     if (this.inventory.overCapacity()) {
       if (!this.inventoryPanel.isVisible()) {
         this.inventoryPanel.refresh();
+        this.analog.reset();
         this.inventoryPanel.show();
       }
       return;
@@ -1491,6 +1494,7 @@ export class ExpeditionScene extends Phaser.Scene {
       return;
     }
 
+    this.analog.reset();
     this.eventPanel.show(config, () => {
       this.eventActive = false;
       tile.broken = true;
@@ -1634,6 +1638,7 @@ export class ExpeditionScene extends Phaser.Scene {
               action: () => {
                 if (stone() >= cost) {
                   removeStone(cost);
+                  this.analog.reset();
                   this.gamblePanel.show(segments, cost, (reward) => {
                     if (reward) {
                       this.giveItem(reward.id, reward.quantity);
@@ -2106,6 +2111,7 @@ export class ExpeditionScene extends Phaser.Scene {
       // Shockwave ring
       const pp = gridToIso(tx, ty);
       const ring = this.add.circle(pp.x, pp.y, 5, 0xffffff, 0.4).setDepth(DEPTH.EFFECTS);
+      this.hudCam.ignore(ring);
       this.tweens.add({
         targets: ring,
         radius: HALF_W * 1.5,
@@ -2157,6 +2163,7 @@ export class ExpeditionScene extends Phaser.Scene {
     for (let i = 0; i < 4; i++) {
       const radius = Phaser.Math.FloatBetween(4, 7);
       const p = this.add.circle(cx, cy, radius, color, 0.9).setDepth(DEPTH.PARTICLES);
+      this.hudCam.ignore(p);
 
       this.tweens.add({
         targets: p,
@@ -2174,6 +2181,7 @@ export class ExpeditionScene extends Phaser.Scene {
     for (let i = 0; i < 10; i++) {
       const radius = Phaser.Math.FloatBetween(1.5, 3.5);
       const p = this.add.circle(cx, cy, radius, color, 0.7).setDepth(DEPTH.PARTICLES);
+      this.hudCam.ignore(p);
 
       this.tweens.add({
         targets: p,
@@ -2824,6 +2832,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const screenX = sprite.x - cam.scrollX;
     const screenY = sprite.y - cam.scrollY;
     sprite.setScrollFactor(0).setPosition(screenX, screenY);
+    sprite.cameraFilter &= ~this.hudCam.id;
     this.cameras.main.ignore(sprite);
     const targetX = 48;
     const targetY = this.cameras.main.height - 44;
