@@ -17,6 +17,7 @@ import {
   gridToIso, isoToGrid, findPath,
   HALF_W, HALF_H, worldWidth, worldHeight,
 } from '../systems/IsoUtils';
+import { VW, VH, CX, CY } from '../systems/Viewport';
 
 interface HubBuildingDef {
   id: string;
@@ -57,7 +58,6 @@ const HUB_BUILDINGS: HubBuildingDef[] = [
     description: 'Descend into the procedural dungeon to mine resources.', solid: false },
 ];
 
-// Branch path coordinates (main path cols 12-13 + connections to each building)
 function buildPathSet(): Set<string> {
   const s = new Set<string>();
   for (let y = 0; y < HUB_ROWS; y++) {
@@ -177,6 +177,8 @@ const HUB_DECORATIONS: HubDecoration[] = [
   { key: 'decoration_flower_yellow', gx: 17, gy: 4, solid: false },
   { key: 'decoration_flower_red', gx: 4, gy: 11, solid: false },
   { key: 'decoration_flower_yellow', gx: 21, gy: 11, solid: false },
+  { key: 'decoration_flower_red', gx: 4, gy: 12, solid: false },
+  { key: 'decoration_flower_yellow', gx: 21, gy: 12, solid: false },
   { key: 'decoration_fence', gx: 11, gy: 5, solid: true },
   { key: 'decoration_fence', gx: 14, gy: 5, solid: true },
   { key: 'decoration_fence', gx: 11, gy: 8, solid: true },
@@ -196,6 +198,8 @@ export class HomelandScene extends Phaser.Scene {
   private promptText!: Phaser.GameObjects.Text;
   private restoreBuildingId: string = '';
   private currentBuilding: HubBuildingDef | null = null;
+  private pendingBuilding: HubBuildingDef | null = null;
+  private facingOutlineImages: Phaser.GameObjects.Image[] = [];
   private moveTimer: number = 0;
   private moveDelay: number = 150;
   private isMoving: boolean = false;
@@ -226,10 +230,11 @@ export class HomelandScene extends Phaser.Scene {
     this.cameras.main.fadeIn(400, 0, 0, 0);
     this.cameras.main.setBackgroundColor('#0a0a0a');
 
-    this.hudCam = this.cameras.add(0, 0, 960, 640, false, 'hud');
+    this.hudCam = this.cameras.add(0, 0, VW, VH, false, 'hud');
     this.hudCam.setZoom(1);
 
     this.currentBuilding = null;
+    this.pendingBuilding = null;
     this.moveTimer = 0;
     this.animFrame = 0;
     this.animTimer = 0;
@@ -250,7 +255,7 @@ export class HomelandScene extends Phaser.Scene {
     const yMin = -HALF_H * 3;
     this.cameras.main.startFollow(this.player, true, 0.5, 0.5);
     this.cameras.main.setBounds(xMin, yMin, worldWidth(HUB_COLS, HUB_ROWS) + HALF_W * 4, worldHeight(HUB_COLS, HUB_ROWS) + HALF_H * 4);
-    this.cameras.main.setZoom(1);
+    this.cameras.main.setZoom(0.85);
 
     this.buildingInfoPanel = new BuildingInfoPanel(this);
     this.restorePanel = new RestorePanel(this, () => { this.restoreBuildingId = ''; }, (id) => this.tryRestore(id));
@@ -295,6 +300,8 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private drawHubBuildings(): void {
+    this.facingOutlineImages.forEach(img => img.destroy());
+    this.facingOutlineImages = [];
     this.buildingImages.forEach(img => img.destroy());
     this.buildingImages.clear();
     this.buildingLabels.forEach(l => l.destroy());
@@ -340,7 +347,7 @@ export class HomelandScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true }).setData('isUI', true)
         .setDepth(6);
       this.hudCam.ignore(zone);
-      zone.on('pointerdown', () => this.activateBuilding(bRef));
+      zone.on('pointerdown', () => this.handleBuildingClick(bRef));
       zone.on('pointerover', () => { if (ul) zone.setFillStyle(0xffffff, 0.15); });
       zone.on('pointerout', () => { if (ul) zone.setFillStyle(0xffffff, 0.08); });
       this.buildingZones.push(zone);
@@ -381,12 +388,13 @@ export class HomelandScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(7);
     this.hudCam.ignore(descendText);
     descendText.setInteractive({ useHandCursor: true }).setData('isUI', true);
-    descendText.on('pointerdown', () => this.showGatePanel());
+    const gateDef = HUB_BUILDINGS.find(b => b.id === 'gate')!;
+    descendText.on('pointerdown', () => this.handleBuildingClick(gateDef));
 
     const gateZone = this.add.rectangle(c.x, c.y, 140, 84, 0xffffff, 0.06)
       .setInteractive({ useHandCursor: true }).setData('isUI', true).setDepth(6);
     this.hudCam.ignore(gateZone);
-    gateZone.on('pointerdown', () => this.showGatePanel());
+    gateZone.on('pointerdown', () => this.handleBuildingClick(gateDef));
     gateZone.on('pointerover', () => gateZone.setFillStyle(0xffffff, 0.12));
     gateZone.on('pointerout', () => gateZone.setFillStyle(0xffffff, 0.06));
   }
@@ -677,6 +685,28 @@ export class HomelandScene extends Phaser.Scene {
     return false;
   }
 
+  private findAdjacentTile(b: HubBuildingDef): { x: number; y: number } | null {
+    const left = b.gx - 1;
+    const right = b.gx + b.gw;
+    const top = b.gy - 1;
+    const bottom = b.gy + b.gh;
+    let best: { x: number; y: number } | null = null;
+    let bestDist = Infinity;
+    for (let y = top; y <= bottom; y++) {
+      for (let x = left; x <= right; x++) {
+        if (x >= b.gx && x < b.gx + b.gw && y >= b.gy && y < b.gy + b.gh) continue;
+        if (x < 0 || x >= HUB_COLS || y < 0 || y >= HUB_ROWS) continue;
+        if (this.isSolid(x, y)) continue;
+        const dist = Math.abs(x - this.playerGx) + Math.abs(y - this.playerGy);
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = { x, y };
+        }
+      }
+    }
+    return best;
+  }
+
   private tryMove(dx: number, dy: number): void {
     if (this.isMoving) return;
 
@@ -785,9 +815,79 @@ export class HomelandScene extends Phaser.Scene {
 
       this.promptText.setText(`[SPACE] ${action}`);
       this.promptText.setAlpha(1);
+
+      if (this.pendingBuilding === closest) {
+        this.pendingBuilding = null;
+        this.activateBuilding(closest);
+      }
     } else {
       this.currentBuilding = null;
       this.promptText.setAlpha(0);
+    }
+    this.updateFacingHighlight();
+  }
+
+  private updateFacingHighlight(): void {
+    this.facingOutlineImages.forEach(img => img.destroy());
+    this.facingOutlineImages = [];
+    const b = this.currentBuilding;
+    if (!b) return;
+    const buildingTextureKeys: Record<string, string> = {
+      trading_post: 'building_trading_post',
+      crafting: 'building_crafting',
+      farm: 'building_farm',
+      tavern: 'building_tavern',
+      storage: 'building_storage',
+      laboratory: 'building_laboratory',
+      gate: 'building_gate',
+    };
+    const texKey = buildingTextureKeys[b.id];
+    if (!texKey || !this.textures.exists(texKey)) return;
+    const c = gridToIso(b.gx + b.gw / 2, b.gy + b.gh / 2);
+    const cfg = getSpriteConfig(texKey);
+    const px = c.x + (cfg.offsetX ?? 0);
+    const py = c.y + (cfg.offsetY ?? 0);
+    const depth = 6 + b.gy * 0.002 + (b.gx + b.gw - 1) * 0.001 - 0.005;
+    const dirs: [number, number][] = [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
+    for (let t = 1; t <= 3; t++) {
+      const alpha = t === 1 ? 0.85 : t === 2 ? 0.4 : 0.12;
+      for (const [dx, dy] of dirs) {
+        const img = this.add.image(px + dx * t, py + dy * t, texKey)
+          .setDepth(depth)
+          .setTint(0xffffff).setTintMode(Phaser.TintModes.FILL)
+          .setAlpha(alpha);
+        this.hudCam.ignore(img);
+        this.facingOutlineImages.push(img);
+      }
+    }
+  }
+
+  private handleBuildingClick(b: HubBuildingDef): void {
+    if (this.isModalActive) return;
+    const bLeft = b.gx - 1, bRight = b.gx + b.gw;
+    const bTop = b.gy - 1, bBottom = b.gy + b.gh;
+    if (this.playerGx >= bLeft && this.playerGx <= bRight &&
+        this.playerGy >= bTop && this.playerGy <= bBottom) {
+      this.activateBuilding(b);
+    } else {
+      this.movePath = [];
+      this.analog.reset();
+      const dst = this.findAdjacentTile(b);
+      if (dst) {
+        const path = findPath(
+          this.playerGx, this.playerGy,
+          dst.x, dst.y,
+          HUB_COLS, HUB_ROWS,
+          (x, y) => {
+            if (x === this.playerGx && y === this.playerGy) return true;
+            return !this.isSolid(x, y);
+          },
+        );
+        if (path && path.length > 0) {
+          this.movePath = path;
+          this.pendingBuilding = b;
+        }
+      }
     }
   }
 
@@ -839,7 +939,7 @@ export class HomelandScene extends Phaser.Scene {
     const building = getBuilding(buildingId);
     this.closePanel();
 
-    const container = this.add.container(960 / 2, 640 / 2).setScrollFactor(0).setDepth(250);
+    const container = this.add.container(CX, CY).setScrollFactor(0).setDepth(250);
     this.cameras.main.ignore(container);
 
     const bg = this.add.graphics();
@@ -905,7 +1005,7 @@ export class HomelandScene extends Phaser.Scene {
           audio.playBuildComplete();
 
           const name = building?.name ?? buildingId.replace(/_/g, ' ');
-          const popup = this.add.text(960 / 2, 640 / 2, `${name} Restored!`, {
+          const popup = this.add.text(CX, CY, `${name} Restored!`, {
             fontSize: '18px', fontFamily: 'monospace', color: '#44cc66', fontStyle: 'bold', align: 'center',
           }).setOrigin(0.5).setScrollFactor(0).setDepth(250);
           this.cameras.main.ignore(popup);

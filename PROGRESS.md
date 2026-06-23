@@ -385,3 +385,14 @@ Resolved Bugs:
 - **Skill-based critical**: gold 40%-width center zone inside the green hit zone on the timing bar; landing marker there deals 2× damage
 - **Stacking**: skill crit (2×) × RNG crit from rings/research (2×) = up to 4× damage
 - **Damage popup**: floating number at marker position arcs in a parabola (60px up, 15px past marker) with random horizontal drift (±50px), grows 1×→2× scale over 900ms, fades out at end
+
+## ✅ Homeland Building Interaction Improvements (June 2026)
+- **White glow outline**: facing a building now shows a 3-layer white `setTint(0xffffff).setTintMode(FILL)` ghost outline (8 directions × 3 distances, alphas 0.85→0.40→0.12) behind the building sprite — matching the ExpeditionScene facing highlight pattern
+- **Click-to-move-then-interact**: clicking a non-adjacent building now pathfinds the player to the nearest walkable tile beside it, then auto-triggers the building's action (open panel / show gate / restore prompt)
+- **`handleBuildingClick()`** — checks adjacency; pathfinds if far, sets `pendingBuilding`, executed on proximity arrival via `checkProximity()`
+- **`findAdjacentTile()`** — scans perimeter tiles for the closest non-solid walkable tile to the player
+- **Retreat confirmation**: tapping the retreat button in combat shows a `ConfirmPopup` ("Retreat?" / "Leave the dungeon?") — keyboard ESC still bypasses confirmation
+- **Combat click routing**: replaced broken container-child `setInteractive()` with blocker + scene-level `pointerdown` handler for strike/retreat/collect
+- **Run inventory panel depth**: bumped `BasePanel.container` depth from 200→210 so panels render above HUD elements (stamina bar at 201)
+- **Combat retreat button hidden on victory**: `retreatBtn.setVisible(false)` in the kill path, restored on `show()` and `hide()`
+- **Combat confirm popup guard**: `confirmPopup.isVisible()` check added to combat click handler — prevents combat actions while confirm dialog is open

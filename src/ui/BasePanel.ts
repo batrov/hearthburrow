@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { VW, VH, CX, PANEL_PAD, OVERLAY_W, OVERLAY_H } from '../systems/Viewport';
 
 export class BasePanel {
   protected scene: Phaser.Scene;
@@ -11,7 +12,7 @@ export class BasePanel {
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
-    this.container = scene.add.container(0, 0).setDepth(200).setScrollFactor(0);
+    this.container = scene.add.container(0, 0).setDepth(210).setScrollFactor(0);
     this.container.setVisible(false);
   }
 
@@ -53,14 +54,14 @@ export class BasePanel {
   protected createOverlay(): Phaser.GameObjects.Graphics {
     this.overlay = this.scene.add.graphics();
     this.overlay.fillStyle(0x0a0a1a, 0.92);
-    this.overlay.fillRect(0, 0, 960, 640);
+    this.overlay.fillRect(0, 0, VW, VH);
     this.overlay.lineStyle(1, 0x3a3a4a, 0.5);
-    this.overlay.strokeRect(40, 40, 880, 560);
+    this.overlay.strokeRect(PANEL_PAD, PANEL_PAD, OVERLAY_W, OVERLAY_H);
     this.container.add(this.overlay);
     return this.overlay;
   }
 
-  protected addCloseButton(x = 920, y = 44): Phaser.GameObjects.Text {
+  protected addCloseButton(x = VW - 40, y = 44): Phaser.GameObjects.Text {
     const btn = this.scene.add.text(x, y, '[X]', {
       fontSize: '24px', fontFamily: 'monospace', color: '#886666',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(220).setData('isUI', true);
