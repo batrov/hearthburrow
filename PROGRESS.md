@@ -380,3 +380,8 @@ Resolved Bugs:
 - **Pickaxe moved**: from top-right `(VW-76, 72×62)` → compact 160×42 block at `(4, 78)`, below stamina HUD left
 - **Minimap moved**: from bottom-right → top-right at y=80, below stamina HUD
 - **Potion/Bomb/Escape**: decoupled from minimap, now vertical stack at x=VW-40 (potion VH-130, bomb VH-88, escape VH-46)
+
+## ✅ Combat Critical Mechanic & Damage Popup (June 2026)
+- **Skill-based critical**: gold 40%-width center zone inside the green hit zone on the timing bar; landing marker there deals 2× damage
+- **Stacking**: skill crit (2×) × RNG crit from rings/research (2×) = up to 4× damage
+- **Damage popup**: floating number at marker position arcs in a parabola (60px up, 15px past marker) with random horizontal drift (±50px), grows 1×→2× scale over 900ms, fades out at end
