@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { audio } from '../systems/AudioSystem';
 import { BasePanel } from './BasePanel';
+import { VW, VH, CX } from '../systems/Viewport';
 
 export interface EventChoice {
   label: string;
@@ -29,25 +30,25 @@ export class EventPanel extends BasePanel {
     this.overlay!.setData('isUI', true);
     this.addTouchZones();
 
-    this.titleText = scene.add.text(960 / 2, 160, '', {
-      fontSize: '22px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
+    this.titleText = scene.add.text(CX, 120, '', {
+      fontSize: '18px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
-    this.descText = scene.add.text(960 / 2, 210, '', {
-      fontSize: '16px', fontFamily: 'monospace', color: '#b8a898',
-      align: 'center', wordWrap: { width: 500 }, lineSpacing: 4,
+    this.descText = scene.add.text(CX, 160, '', {
+      fontSize: '13px', fontFamily: 'monospace', color: '#b8a898',
+      align: 'center', wordWrap: { width: 320 }, lineSpacing: 4,
     }).setOrigin(0.5, 0);
     this.container.add(this.descText);
 
-    this.choicesText = scene.add.text(960 / 2, 310, '', {
-      fontSize: '17px', fontFamily: 'monospace', color: '#c8b898',
-      align: 'left', lineSpacing: 14,
+    this.choicesText = scene.add.text(CX, 260, '', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#c8b898',
+      align: 'left', lineSpacing: 10,
     }).setOrigin(0.5, 0);
     this.container.add(this.choicesText);
 
-    this.hintText = scene.add.text(960 / 2, 520, '', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#5a4a6a',
+    this.hintText = scene.add.text(CX, VH - 60, '', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
@@ -56,10 +57,10 @@ export class EventPanel extends BasePanel {
 
   addTouchZones(): void {
     if (this.choiceZones.length > 0) return;
-    const startY = 290;
-    const lineH = 36;
+    const startY = 250;
+    const lineH = 44;
     for (let i = 0; i < 6; i++) {
-      const zone = this.scene.add.rectangle(960 / 2, startY + i * lineH, 400, lineH, 0xffffff, 0)
+      const zone = this.scene.add.rectangle(CX, startY + i * lineH, 320, lineH, 0xffffff, 0)
         .setInteractive({ useHandCursor: true })
         .setDepth(210);
       const idx = i;
@@ -102,10 +103,10 @@ export class EventPanel extends BasePanel {
 
     this.overlay!.clear();
     this.overlay!.fillStyle(0x0a0a1a, 0.9);
-    this.overlay!.fillRect(0, 0, 960, 640);
+    this.overlay!.fillRect(0, 0, VW, VH);
 
     this.overlay!.lineStyle(2, 0x5a4a7a, 0.6);
-    this.overlay!.strokeRoundedRect(960 / 2 - 260, 120, 520, 420, 10);
+    this.overlay!.strokeRoundedRect(CX - 170, 80, 340, VH - 160, 10);
 
     this.titleText.setText(config.title);
     this.descText.setText(config.description);

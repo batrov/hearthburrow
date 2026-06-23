@@ -3,6 +3,7 @@ import { gameState, itemDisplayName, itemIconKey } from '../systems/GameState';
 import { getRecipe } from '../systems/DataRegistry';
 import { audio } from '../systems/AudioSystem';
 import { BasePanel } from './BasePanel';
+import { VW, VH, CX } from '../systems/Viewport';
 
 const RECIPE_INFO: Record<string, { desc: string; unlock?: string }> = {
   pickaxe_2: { desc: 'Bronze Pickaxe — 5 runs, mines bronze ore' },
@@ -42,22 +43,22 @@ export class CraftingPanel extends BasePanel {
 
     this.createOverlay();
 
-    this.titleText = scene.add.text(960 / 2, 40, 'Crafting Station', {
-      fontSize: '22px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
+    this.titleText = scene.add.text(CX, 36, 'Crafting Station', {
+      fontSize: '18px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
     this.recipeLines = scene.add.container(0, 0);
     this.container.add(this.recipeLines);
 
-    this.descriptionText = scene.add.text(960 / 2, 585, '', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#b8a898',
+    this.descriptionText = scene.add.text(CX, VH - 70, '', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#b8a898',
       align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.descriptionText);
 
-    this.hintText = scene.add.text(960 / 2, 610, '[W/S] Select  [SPACE] Craft  [ESC] Close', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#5a4a6a',
+    this.hintText = scene.add.text(CX, VH - 44, '[W/S] Select  [SPACE] Craft  [ESC] Close', {
+      fontSize: '10px', fontFamily: 'monospace', color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
@@ -113,7 +114,7 @@ export class CraftingPanel extends BasePanel {
     this.clickZones = [];
 
     const lineSpacing = 20;
-    const startY = 80;
+    const startY = 72;
 
     for (let i = 0; i < this.recipes.length; i++) {
       const r = this.recipes[i];
@@ -134,7 +135,7 @@ export class CraftingPanel extends BasePanel {
           })
           .join(', ') : '';
 
-        text = `  ${marker} ${r.name.padEnd(20)} ${ings}${canCraft ? '  ✓' : ''}`;
+        text = `  ${marker} ${r.name.padEnd(16)} ${ings}${canCraft ? '  ✓' : ''}`;
 
         if (canCraft) {
           color = craftedBefore ? '#8ab0d0' : '#e8d080';
@@ -154,18 +155,18 @@ export class CraftingPanel extends BasePanel {
       let iconKey: string | null = null;
       if (discovered && recipe) iconKey = itemIconKey(recipe.result);
       if (iconKey && this.scene.textures.exists(iconKey)) {
-        row.add(this.scene.add.image(420, ry, iconKey).setScale(0.7));
-        row.add(this.scene.add.text(435, ry, text, {
-          fontSize: '13px', fontFamily: 'monospace', color, align: 'left',
+        row.add(this.scene.add.image(80, ry, iconKey).setScale(0.65));
+        row.add(this.scene.add.text(94, ry, text, {
+          fontSize: '11px', fontFamily: 'monospace', color, align: 'left',
         }).setOrigin(0, 0.5));
       } else {
-        row.add(this.scene.add.text(420, ry, text, {
-          fontSize: '13px', fontFamily: 'monospace', color, align: 'left',
+        row.add(this.scene.add.text(80, ry, text, {
+          fontSize: '11px', fontFamily: 'monospace', color, align: 'left',
         }).setOrigin(0, 0.5));
       }
       this.recipeLines.add(row);
 
-      const zone = this.scene.add.zone(960 / 2, startY + i * lineSpacing + 10, 860, 20)
+      const zone = this.scene.add.zone(CX, startY + i * lineSpacing + 10, VW - 32, 40)
         .setDepth(210)
         .setScrollFactor(0)
         .setInteractive();
@@ -179,8 +180,8 @@ export class CraftingPanel extends BasePanel {
     }
 
     if (this.recipes.length === 0) {
-      const line = this.scene.add.text(960 / 2, startY, '  (no recipes)', {
-        fontSize: '13px', fontFamily: 'monospace', color: '#6a7a9a',
+      const line = this.scene.add.text(CX, startY, '  (no recipes)', {
+        fontSize: '12px', fontFamily: 'monospace', color: '#6a7a9a',
         align: 'left',
       }).setOrigin(0.5, 0);
       this.recipeLines.add(line);
@@ -207,11 +208,12 @@ export class CraftingPanel extends BasePanel {
   }
 
   refresh(): void {
+    const pad = 16;
     this.overlay.clear();
     this.overlay.fillStyle(0x0a0a1a, 0.88);
-    this.overlay.fillRect(0, 0, 960, 640);
+    this.overlay.fillRect(0, 0, VW, VH);
     this.overlay.lineStyle(1, 0x3a3a4a, 0.5);
-    this.overlay.strokeRect(40, 65, 880, 530);
+    this.overlay.strokeRect(pad, 60, VW - pad * 2, VH - 60 - pad);
 
     const discovered = gameState.crafting.getDiscoveredRecipes();
     const undiscovered = gameState.crafting.getUndiscoveredRecipes();
@@ -229,9 +231,9 @@ export class CraftingPanel extends BasePanel {
 
   private showCraftSuccess(itemId: string): void {
     const popup = this.scene.add.text(
-      960 / 2, 640 / 2,
+      CX, VH / 2,
       `Crafted: ${itemDisplayName(itemId)}`,
-      { fontSize: '20px', fontFamily: 'monospace', color: '#44cc66', fontStyle: 'bold' }
+      { fontSize: '16px', fontFamily: 'monospace', color: '#44cc66', fontStyle: 'bold' }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(250);
 
     this.scene.tweens.add({
@@ -247,9 +249,9 @@ export class CraftingPanel extends BasePanel {
 
   private showNoCraft(): void {
     const popup = this.scene.add.text(
-      960 / 2, 640 / 2,
+      CX, VH / 2,
       'No craftable recipe — need more materials!',
-      { fontSize: '16px', fontFamily: 'monospace', color: '#cc6644' }
+      { fontSize: '14px', fontFamily: 'monospace', color: '#cc6644' }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(250);
 
     this.scene.tweens.add({
@@ -264,9 +266,9 @@ export class CraftingPanel extends BasePanel {
 
   private showHowToUnlock(hint: string): void {
     const popup = this.scene.add.text(
-      960 / 2, 640 / 2,
+      CX, VH / 2,
       `??? — ${hint}`,
-      { fontSize: '16px', fontFamily: 'monospace', color: '#aa8844' }
+      { fontSize: '14px', fontFamily: 'monospace', color: '#aa8844' }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(250);
 
     this.scene.tweens.add({

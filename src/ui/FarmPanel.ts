@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { gameState } from '../systems/GameState';
 import { audio } from '../systems/AudioSystem';
 import { BasePanel } from './BasePanel';
+import { VW, VH, CX } from '../systems/Viewport';
 
 export class FarmPanel extends BasePanel {
   private bg: Phaser.GameObjects.Graphics;
@@ -15,27 +16,33 @@ export class FarmPanel extends BasePanel {
     this.bg = scene.add.graphics();
     this.container.add(this.bg);
 
-    this.text = scene.add.text(960 / 2, 50, '', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#e8d5b7',
-      align: 'center', lineSpacing: 6,
+    this.text = scene.add.text(CX, 44, '', {
+      fontSize: '13px', fontFamily: 'monospace', color: '#e8d5b7',
+      align: 'center', lineSpacing: 4,
     }).setOrigin(0.5, 0);
     this.container.add(this.text);
 
-    this.plantBtn = scene.add.text(960 / 2 - 80, 570, '[PLANT]', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#44cc66',
-      backgroundColor: '#1a2a1a', padding: { x: 16, y: 8 },
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(210).setScrollFactor(0);
-    this.plantBtn.on('pointerdown', () => this.plant());
+    this.plantBtn = scene.add.text(CX - 80, VH - 80, '[PLANT]', {
+      fontSize: '12px', fontFamily: 'monospace', color: '#44cc66',
+      backgroundColor: '#1a2a1a', padding: { x: 12, y: 6 },
+    }).setOrigin(0.5).setDepth(210).setScrollFactor(0);
     this.container.add(this.plantBtn);
+    const plantZone = scene.add.rectangle(CX - 80, VH - 80, 80, 44, 0xffffff, 0)
+      .setScrollFactor(0).setInteractive({ useHandCursor: true }).setDepth(210);
+    plantZone.on('pointerdown', () => this.plant());
+    this.container.add(plantZone);
 
-    this.harvestBtn = scene.add.text(960 / 2 + 80, 570, '[HARVEST]', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#ccaa44',
-      backgroundColor: '#2a1a0a', padding: { x: 16, y: 8 },
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(210).setScrollFactor(0);
-    this.harvestBtn.on('pointerdown', () => this.harvest());
+    this.harvestBtn = scene.add.text(CX + 80, VH - 80, '[HARVEST]', {
+      fontSize: '12px', fontFamily: 'monospace', color: '#ccaa44',
+      backgroundColor: '#2a1a0a', padding: { x: 12, y: 6 },
+    }).setOrigin(0.5).setDepth(210).setScrollFactor(0);
     this.container.add(this.harvestBtn);
+    const harvestZone = scene.add.rectangle(CX + 80, VH - 80, 100, 44, 0xffffff, 0)
+      .setScrollFactor(0).setInteractive({ useHandCursor: true }).setDepth(210);
+    harvestZone.on('pointerdown', () => this.harvest());
+    this.container.add(harvestZone);
 
-    this.addCloseButton(920, 40);
+    this.addCloseButton(VW - 40, 40);
   }
 
   show(): void {
@@ -71,9 +78,10 @@ export class FarmPanel extends BasePanel {
   private render(): void {
     this.bg.clear();
     this.bg.fillStyle(0x0a0a1a, 0.92);
-    this.bg.fillRect(0, 0, 960, 640);
+    this.bg.fillRect(0, 0, VW, VH);
+    const pad = 16;
     this.bg.lineStyle(1, 0x3a3a4a, 0.5);
-    this.bg.strokeRect(40, 40, 880, 560);
+    this.bg.strokeRect(pad, pad, VW - pad * 2, VH - pad * 2);
 
     const carrots = gameState.inventory.count('carrot');
     const yieldPerExpedition = Math.max(1, Math.floor(gameState.farmPlanted / 2));

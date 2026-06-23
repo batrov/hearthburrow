@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { itemIconKey } from '../systems/GameState';
+import { VW, VH, CX, CY } from '../systems/Viewport';
 
 export interface PickerOption {
   id: string;
@@ -42,10 +43,10 @@ export class EquipmentPicker {
 
     this.overlay = scene.add.graphics();
     this.overlay.fillStyle(0x000000, 0.55);
-    this.overlay.fillRect(0, 0, 960, 640);
+    this.overlay.fillRect(0, 0, VW, VH);
     this.container.add(this.overlay);
 
-    this.blocker = scene.add.rectangle(480, 320, 960, 640, 0x000000, 0)
+    this.blocker = scene.add.rectangle(CX, CY, VW, VH, 0x000000, 0)
       .setScrollFactor(0)
       .setInteractive()
       .setData('isUI', true);
@@ -55,7 +56,7 @@ export class EquipmentPicker {
     this.popupBg = scene.add.graphics();
     this.container.add(this.popupBg);
 
-    this.titleText = scene.add.text(480, 170, '', {
+    this.titleText = scene.add.text(CX, 170, '', {
       fontSize: '20px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
@@ -69,18 +70,18 @@ export class EquipmentPicker {
       this.container.add(icon);
 
       const nameText = scene.add.text(0, 0, '', {
-        fontSize: '14px', fontFamily: 'monospace', color: '#c8b898',
+        fontSize: '11px', fontFamily: 'monospace', color: '#c8b898',
       });
       nameText.setVisible(false);
       this.container.add(nameText);
 
       const descText = scene.add.text(0, 0, '', {
-        fontSize: '12px', fontFamily: 'monospace', color: '#888888',
+        fontSize: '10px', fontFamily: 'monospace', color: '#888888',
       });
       descText.setVisible(false);
       this.container.add(descText);
 
-      const zone = scene.add.rectangle(0, 0, 420, 44, 0xffffff, 0)
+      const zone = scene.add.rectangle(0, 0, 340, 44, 0xffffff, 0)
         .setScrollFactor(0);
       zone.setVisible(false);
       this.container.add(zone);
@@ -88,8 +89,8 @@ export class EquipmentPicker {
       this.rows.push({ bg, icon, nameText, descText, zone });
     }
 
-    this.footerText = scene.add.text(480, 520, '[W/S] select  [SPACE] equip  [ESC] cancel', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#8a7a9a',
+    this.footerText = scene.add.text(CX, 520, '[W/S] select  [SPACE] equip  [ESC] cancel', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#8a7a9a',
     }).setOrigin(0.5);
     this.container.add(this.footerText);
   }
@@ -121,17 +122,17 @@ export class EquipmentPicker {
 
     this.clickHandler = (p: Phaser.Input.Pointer) => {
       const count = Math.min(this.options.length, 7);
-      const popH = 70 + count * 48 + 30;
-      const popY = Math.floor((640 - popH) / 2);
-      const popX = 220, popW = 520;
+      const popH = 60 + count * 40 + 24;
+      const popY = Math.floor((VH - popH) / 2);
+      const popX = 20, popW = VW - 40;
       if (p.x < popX || p.x > popX + popW || p.y < popY || p.y > popY + popH) {
         this.hide();
         return;
       }
-      const startY = popY + 55;
+      const startY = popY + 48;
       for (let i = 0; i < count; i++) {
-        const rowY = startY + i * 48;
-        if (p.y >= rowY && p.y < rowY + 44) {
+        const rowY = startY + i * 40;
+        if (p.y >= rowY && p.y < rowY + 36) {
           this.selectItem(i);
           return;
         }
@@ -152,10 +153,10 @@ export class EquipmentPicker {
 
   private render(): void {
     const count = Math.min(this.options.length, 7);
-    const popH = 70 + count * 48 + 30;
-    const popY = Math.floor((640 - popH) / 2);
-    const popX = 220;
-    const popW = 520;
+    const popH = 60 + count * 40 + 24;
+    const popY = Math.floor((VH - popH) / 2);
+    const popX = 20;
+    const popW = VW - 40;
 
     this.popupBg.clear();
     this.popupBg.fillStyle(0x0a0a1a, 0.95);
@@ -163,14 +164,14 @@ export class EquipmentPicker {
     this.popupBg.lineStyle(2, 0x6a5a8a);
     this.popupBg.strokeRoundedRect(popX, popY, popW, popH, 10);
 
-    this.titleText.setPosition(480, popY + 25);
-    this.footerText.setPosition(480, popY + popH - 18);
+    this.titleText.setPosition(CX, popY + 22);
+    this.footerText.setPosition(CX, popY + popH - 14);
 
-    const startY = popY + 55;
+    const startY = popY + 48;
     for (let i = 0; i < this.rows.length; i++) {
       const row = this.rows[i];
       const opt = this.options[i];
-      const y = startY + i * 48;
+      const y = startY + i * 40;
 
       row.bg.clear();
 
@@ -184,7 +185,7 @@ export class EquipmentPicker {
 
       const isSelected = i === this.selectedIdx;
       row.bg.fillStyle(isSelected ? 0x3a3a5a : 0x1a1a2a, 0.8);
-      row.bg.fillRoundedRect(popX + 12, y, popW - 24, 44, 4);
+      row.bg.fillRoundedRect(popX + 8, y, popW - 16, 36, 4);
 
       if (!opt.id) {
         row.icon.setVisible(false);
@@ -193,22 +194,22 @@ export class EquipmentPicker {
         if (this.scene.textures.exists(iconKey)) {
           row.icon.setTexture(iconKey);
         }
-        row.icon.setPosition(popX + 38, y + 22);
+        row.icon.setPosition(popX + 28, y + 18);
         row.icon.setVisible(true);
       }
 
       row.nameText.setText(opt.name);
-      row.nameText.setPosition(popX + 62, y + 6);
+      row.nameText.setPosition(popX + 48, y + 4);
       row.nameText.setColor(isSelected ? '#ffddaa' : (opt.disabled ? '#666666' : '#c8b898'));
       row.nameText.setVisible(true);
 
       const descLine = opt.disabled ? 'Not owned' : (opt.desc1 ?? '');
       row.descText.setText(descLine);
-      row.descText.setPosition(popX + 62, y + 24);
+      row.descText.setPosition(popX + 48, y + 20);
       row.descText.setColor(opt.disabled ? '#555555' : '#999999');
       row.descText.setVisible(true);
 
-      row.zone.setPosition(popX + popW / 2, y + 22);
+      row.zone.setPosition(popX + popW / 2, y + 18);
       row.zone.setVisible(true);
     }
   }

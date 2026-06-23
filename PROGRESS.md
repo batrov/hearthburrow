@@ -396,3 +396,12 @@ Resolved Bugs:
 - **Run inventory panel depth**: bumped `BasePanel.container` depth from 200→210 so panels render above HUD elements (stamina bar at 201)
 - **Combat retreat button hidden on victory**: `retreatBtn.setVisible(false)` in the kill path, restored on `show()` and `hide()`
 - **Combat confirm popup guard**: `confirmPopup.isVisible()` check added to combat click handler — prevents combat actions while confirm dialog is open
+
+## ✅ Tavern NPC & Camera Polish (June 2026)
+- **Camera follows player**: `startFollow` with X lerp 0.09 provides smooth horizontal tracking; `setBounds` constrains to the tavern interior (`-400,-100,900,1000`)
+- **Click NPC to approach**: clicking an NPC container or tile pathfinds the player to an adjacent walkable tile, faces the NPC, then auto-greets — no more instant conversation from across the room
+- **Facing required for interaction**: highlight glow, action button, prompt, and SPACE dialogue only work when player faces the adjacent NPC — `relX === facingX && relY === facingY` check in adjacency scan
+- **Blocked facing works**: pressing WASD into a wall/NPC now correctly rotates the player sprite to face that direction (matching ExpeditionScene pattern — facing set before `isSolid` check in `tryMove`)
+- **Camera coordinate fix**: removed `OFFSET_X` from `gridToScreen` — world renders at pure isometric positions, camera scroll handles centering. `doClickToMove` uses `pointer.worldX` directly (Phaser already accounts for camera scroll+zoom)
+- **Action button faces NPC**: clicking the 💬 action button now sets `facingX/Y` before greeting
+- **`updateFacingHighlight()` / `updateActionButton()`**: extracted into dedicated methods for clean per-frame updates

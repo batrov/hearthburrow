@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { VW, VH, CX } from '../systems/Viewport';
 
 export class SeedEntryPopup {
   private scene: Phaser.Scene;
@@ -16,6 +17,7 @@ export class SeedEntryPopup {
   private cursorText: Phaser.GameObjects.Text;
   private hintText: Phaser.GameObjects.Text;
   private randomizeBtn: Phaser.GameObjects.Text;
+  private randomizeZone: Phaser.GameObjects.Rectangle;
   private keyHandler: ((e: KeyboardEvent) => void) | null = null;
   private clickHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
   private destroyed = false;
@@ -28,10 +30,10 @@ export class SeedEntryPopup {
 
     this.overlay = scene.add.graphics();
     this.overlay.fillStyle(0x000000, 0.55);
-    this.overlay.fillRect(0, 0, 960, 640);
+    this.overlay.fillRect(0, 0, VW, VH);
     this.container.add(this.overlay);
 
-    this.blocker = scene.add.rectangle(480, 320, 960, 640, 0x000000, 0)
+    this.blocker = scene.add.rectangle(CX, VH / 2, VW, VH, 0x000000, 0)
       .setScrollFactor(0)
       .setInteractive()
       .setData('isUI', true);
@@ -41,29 +43,33 @@ export class SeedEntryPopup {
     this.popupBg = scene.add.graphics();
     this.container.add(this.popupBg);
 
-    this.titleText = scene.add.text(480, 170, 'Enter Run Seed', {
-      fontSize: '20px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
+    this.titleText = scene.add.text(CX, 170, 'Enter Run Seed', {
+      fontSize: '18px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
-    this.seedText = scene.add.text(480, 225, '', {
-      fontSize: '22px', fontFamily: 'monospace', color: '#88cc88',
+    this.seedText = scene.add.text(CX, 225, '', {
+      fontSize: '18px', fontFamily: 'monospace', color: '#88cc88',
     }).setOrigin(0.5);
     this.container.add(this.seedText);
 
-    this.cursorText = scene.add.text(480, 225, '|', {
-      fontSize: '22px', fontFamily: 'monospace', color: '#88cc88',
+    this.cursorText = scene.add.text(CX, 225, '|', {
+      fontSize: '18px', fontFamily: 'monospace', color: '#88cc88',
     }).setOrigin(0.5);
     this.cursorText.setVisible(false);
     this.container.add(this.cursorText);
 
-    this.randomizeBtn = scene.add.text(480, 270, '[ RANDOMIZE ]', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#88aa88',
+    this.randomizeBtn = scene.add.text(CX, 270, '[ RANDOMIZE ]', {
+      fontSize: '13px', fontFamily: 'monospace', color: '#88aa88',
     }).setOrigin(0.5);
     this.container.add(this.randomizeBtn);
+    const randZone = scene.add.rectangle(CX, 270, 130, 44, 0xffffff, 0)
+      .setScrollFactor(0).setDepth(251);
+    this.container.add(randZone);
+    this.randomizeZone = randZone;
 
-    this.hintText = scene.add.text(480, 308, '', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#8a7a9a', align: 'center',
+    this.hintText = scene.add.text(CX, 308, '', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#8a7a9a', align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
   }
@@ -79,9 +85,9 @@ export class SeedEntryPopup {
 
     this.popupBg.clear();
     this.popupBg.fillStyle(0x0a0a1a, 0.95);
-    this.popupBg.fillRoundedRect(300, 140, 360, 200, 10);
+    this.popupBg.fillRoundedRect(CX - 160, 140, 320, 200, 10);
     this.popupBg.lineStyle(2, 0x6a5a8a);
-    this.popupBg.strokeRoundedRect(300, 140, 360, 200, 10);
+    this.popupBg.strokeRoundedRect(CX - 160, 140, 320, 200, 10);
 
     this.hintText.setText('Type to edit  [SPACE] done  [ESC] cancel');
 
@@ -105,12 +111,14 @@ export class SeedEntryPopup {
     this.scene.input.keyboard!.on('keydown', this.keyHandler);
 
     this.clickHandler = (p: Phaser.Input.Pointer) => {
-      const insidePopup = p.x >= 300 && p.x <= 660 && p.y >= 140 && p.y <= 340;
+      const insidePopup = p.x >= CX - 160 && p.x <= CX + 160 && p.y >= 140 && p.y <= 340;
       if (!insidePopup) {
         this.confirm();
         return;
       }
-      if (p.x >= 410 && p.x <= 550 && p.y >= 261 && p.y <= 279) {
+      const randBounds = this.randomizeZone.getBounds();
+      if (p.x >= randBounds.x && p.x <= randBounds.x + randBounds.width &&
+          p.y >= randBounds.y && p.y <= randBounds.y + randBounds.height) {
         this.randomize();
       }
     };
@@ -137,7 +145,7 @@ export class SeedEntryPopup {
     this.seedText.setColor(this.currentSeed ? '#88cc88' : '#666666');
 
     const seedW = this.seedText.width;
-    this.cursorText.setPosition(480 + seedW / 2 + 4, 225);
+    this.cursorText.setPosition(CX + seedW / 2 + 4, 225);
     this.cursorText.setVisible(true);
   }
 

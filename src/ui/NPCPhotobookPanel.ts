@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { gameState, NPC_PERSONALITIES } from '../systems/GameState';
 import { BasePanel } from './BasePanel';
+import { VW, VH, CX } from '../systems/Viewport';
 
 export class NPCPhotobookPanel extends BasePanel {
   private titleText: Phaser.GameObjects.Text;
@@ -16,14 +17,14 @@ export class NPCPhotobookPanel extends BasePanel {
     this.createOverlay();
     this.overlay.setData('isUI', true);
 
-    this.titleText = scene.add.text(960 / 2, 30, 'NPC Photobook', {
-      fontSize: '22px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
+    this.titleText = scene.add.text(CX, 28, 'NPC Photobook', {
+      fontSize: '18px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
-    this.contentText = scene.add.text(960 / 2, 75, '', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#c8b898',
-      align: 'center', lineSpacing: 8,
+    this.contentText = scene.add.text(CX, 68, '', {
+      fontSize: '12px', fontFamily: 'monospace', color: '#c8b898',
+      align: 'center', lineSpacing: 6,
     }).setOrigin(0.5, 0);
     this.contentText.setInteractive();
     this.contentText.on('pointerdown', (_p: any, localX: number, localY: number) => {
@@ -38,30 +39,30 @@ export class NPCPhotobookPanel extends BasePanel {
     });
     this.container.add(this.contentText);
 
-    this.hintText = scene.add.text(960 / 2, 610, '', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#5a4a6a',
+    this.hintText = scene.add.text(CX, VH - 38, '', {
+      fontSize: '10px', fontFamily: 'monospace', color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
-    const upBtn = scene.add.text(960 / 2, 68, '▲', {
-      fontSize: '22px', fontFamily: 'monospace', color: '#886644',
+    const upBtn = scene.add.text(CX, 62, '▲', {
+      fontSize: '18px', fontFamily: 'monospace', color: '#886644',
     }).setOrigin(0.5).setDepth(210).setScrollFactor(0);
     this.container.add(upBtn);
-    const upHit = scene.add.rectangle(960 / 2, 68, 60, 40, 0xffffff, 0)
+    const upHit = scene.add.rectangle(CX, 62, 60, 44, 0xffffff, 0)
       .setInteractive({ useHandCursor: true }).setDepth(211).setScrollFactor(0);
     upHit.on('pointerdown', () => { this.handleInput('W'); this.dirty = true; });
     this.container.add(upHit);
 
-    const downBtn = scene.add.text(960 / 2, 580, '▼', {
-      fontSize: '22px', fontFamily: 'monospace', color: '#886644',
+    const downBtn = scene.add.text(CX, VH - 56, '▼', {
+      fontSize: '18px', fontFamily: 'monospace', color: '#886644',
     }).setOrigin(0.5).setDepth(210).setScrollFactor(0);
     this.container.add(downBtn);
-    const downHit = scene.add.rectangle(960 / 2, 580, 60, 40, 0xffffff, 0)
+    const downHit = scene.add.rectangle(CX, VH - 56, 60, 44, 0xffffff, 0)
       .setInteractive({ useHandCursor: true }).setDepth(211).setScrollFactor(0);
     downHit.on('pointerdown', () => { this.handleInput('S'); this.dirty = true; });
     this.container.add(downHit);
 
-    this.addCloseButton(920, 30);
+    this.addCloseButton(VW - 40, 28);
   }
 
   handleInput(key: string): void {
@@ -97,9 +98,10 @@ export class NPCPhotobookPanel extends BasePanel {
 
     this.overlay.clear();
     this.overlay.fillStyle(0x0a0a1a, 0.92);
-    this.overlay.fillRect(0, 0, 960, 640);
+    this.overlay.fillRect(0, 0, VW, VH);
+    const pad = 16;
     this.overlay.lineStyle(1, 0x3a3a4a, 0.5);
-    this.overlay.strokeRect(40, 65, 880, 540);
+    this.overlay.strokeRect(pad, 56, VW - pad * 2, VH - 56 - pad);
 
     const rescued = gameState.rescuedVillagers;
     this.entries = rescued.map((r) => {
@@ -126,7 +128,7 @@ export class NPCPhotobookPanel extends BasePanel {
       const texKey = 'npc_' + entry.variant;
       const hasPortrait = this.scene.textures.exists(texKey);
       const portrait = hasPortrait ? '[♦]' : '[ ]';
-      lines.push(`${cursor} ${portrait} ${entry.name.padEnd(20)} Depth ${entry.depth}`);
+      lines.push(`${cursor} ${portrait} ${entry.name.padEnd(16)} Depth ${entry.depth}`);
     }
 
     const selected = this.entries[this.selectionIndex];

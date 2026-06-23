@@ -110,12 +110,12 @@ export class GatePanel extends BasePanel {
     }).setOrigin(0.5);
     this.container.add(this.title);
 
-    this.portraitSprite = this.scene.add.image(20, 80, 'portrait')
-      .setDisplaySize(76, 76).setFlipX(true);
+    this.portraitSprite = this.scene.add.image(100, 150, 'portrait')
+      .setDisplaySize(256, 256).setFlipX(false);
     this.container.add(this.portraitSprite);
 
     for (let i = 0; i < 5; i++) {
-      const t = this.scene.add.text(110, 48 + i * 14, '', {
+      const t = this.scene.add.text(200, 48 + i * 14, '', {
         fontSize: '10px', fontFamily: 'monospace', color: '#b8a898',
       });
       this.container.add(t);
@@ -123,10 +123,10 @@ export class GatePanel extends BasePanel {
     }
 
     const equipYX: { x: number; y: number }[] = [
-      { x: 70, y: 205 },
-      { x: 185, y: 179 },
-      { x: 252, y: 179 },
-      { x: 185, y: 231 },
+      { x: 190, y: 205 },
+      { x: 285, y: 179 },
+      { x: 352, y: 179 },
+      { x: 285, y: 231 },
       { x: 252, y: 231 },
     ];
     for (let i = 0; i < 5; i++) {
@@ -154,9 +154,9 @@ export class GatePanel extends BasePanel {
     }).setOrigin(0.5));
 
     const consYX = [
-      { x: CX - 76, y: 292 },
-      { x: CX, y: 292 },
-      { x: CX + 76, y: 292 },
+      { x: CX - 76, y: 302 },
+      { x: CX, y: 302 },
+      { x: CX + 76, y: 302 },
     ];
     for (let i = 0; i < 3; i++) {
       const bg = this.scene.add.graphics();
@@ -181,7 +181,7 @@ export class GatePanel extends BasePanel {
     }).setOrigin(0.5));
 
     for (let i = 0; i < 4; i++) {
-      const t = this.scene.add.text(CX, 342 + i * 22, '', {
+      const t = this.scene.add.text(CX, 362 + i * 22, '', {
         fontSize: '11px', fontFamily: 'monospace', color: '#b8a898',
       }).setOrigin(0.5);
       this.container.add(t);
@@ -193,13 +193,13 @@ export class GatePanel extends BasePanel {
       this.settingsZones.push(zone);
     }
 
-    this.container.add(this.scene.add.text(CX, 324, 'SETTINGS', {
+    this.container.add(this.scene.add.text(CX, 344, 'SETTINGS', {
       fontSize: '10px', fontFamily: 'monospace', color: '#6a5a8a',
     }).setOrigin(0.5));
 
-    this.embarkBtn = this.scene.add.text(CX, 442, '[  EMBARK  ]', {
+    this.embarkBtn = this.scene.add.text(CX, 462, '[  EMBARK  ]', {
       fontSize: '14px', fontFamily: 'monospace', color: '#ffcc44',
-      backgroundColor: '#442a1acc', padding: { x: 12, y: 4 },
+      backgroundColor: '#442a1acc', padding: { x: 16, y: 4 },
     }).setOrigin(0.5).setScrollFactor(0);
     this.embarkBtn.setVisible(false);
     this.container.add(this.embarkBtn);
@@ -364,11 +364,11 @@ export class GatePanel extends BasePanel {
 
   private renderEquipmentSlots(): void {
     const equipYX: { x: number; y: number }[] = [
-      { x: 70, y: 205 },
-      { x: 185, y: 179 },
-      { x: 252, y: 179 },
-      { x: 185, y: 231 },
-      { x: 252, y: 231 },
+      { x: 190, y: 205 },
+      { x: 285, y: 179 },
+      { x: 352, y: 179 },
+      { x: 285, y: 231 },
+      { x: 352, y: 231 },
     ];
     for (let i = 0; i < 5; i++) {
       const slot = this.equipSlots[i];
@@ -454,9 +454,9 @@ export class GatePanel extends BasePanel {
 
   private renderConsumableSlots(): void {
     const consYX = [
-      { x: CX - 76, y: 292 },
-      { x: CX, y: 292 },
-      { x: CX + 76, y: 292 },
+      { x: CX - 76, y: 302 },
+      { x: CX, y: 302 },
+      { x: CX + 76, y: 302 },
     ];
     for (let i = 0; i < 3; i++) {
       const slot = this.consSlots[i];

@@ -3,6 +3,7 @@ import { BasePanel } from './BasePanel';
 import { gameState, itemDisplayName, itemIconKey } from '../systems/GameState';
 import { canRestore } from '../systems/BuildingSystem';
 import { getBuilding } from '../systems/DataRegistry';
+import { CX, CY } from '../systems/Viewport';
 
 export class RestorePanel extends BasePanel {
   private contentContainer: Phaser.GameObjects.Container;
@@ -43,35 +44,35 @@ export class RestorePanel extends BasePanel {
 
     this.overlay.clear();
     this.overlay.fillStyle(0x0a0a1a, 0.85);
-    this.overlay.fillRoundedRect(480 - 200, 320 - 110, 400, 220, 10);
+    this.overlay.fillRoundedRect(CX - 180, CY - 110, 360, 220, 10);
     this.overlay.lineStyle(2, 0x6a5a8a, 1);
-    this.overlay.strokeRoundedRect(480 - 200, 320 - 110, 400, 220, 10);
+    this.overlay.strokeRoundedRect(CX - 180, CY - 110, 360, 220, 10);
 
-    const lineH = 28;
+    const lineH = 26;
     const totalLines = 5 + costEntries.length;
     const totalTextH = totalLines * lineH;
-    const textTop = 320 - totalTextH / 2;
+    const textTop = CY - totalTextH / 2;
 
     this.contentContainer.add(
-      this.scene.add.text(480, textTop + 0 * lineH + lineH / 2, building.name, {
-        fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7',
+      this.scene.add.text(CX, textTop + 0 * lineH + lineH / 2, building.name, {
+        fontSize: '14px', fontFamily: 'monospace', color: '#e8d5b7',
       }).setOrigin(0.5)
     );
 
     this.contentContainer.add(
-      this.scene.add.text(480, textTop + 1 * lineH + lineH / 2, building.description, {
-        fontSize: '12px', fontFamily: 'monospace', color: '#a08559',
+      this.scene.add.text(CX, textTop + 1 * lineH + lineH / 2, building.description, {
+        fontSize: '11px', fontFamily: 'monospace', color: '#a08559',
       }).setOrigin(0.5)
     );
 
     this.contentContainer.add(
-      this.scene.add.text(480, textTop + 2 * lineH + lineH / 2, 'Required Materials:', {
-        fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7',
+      this.scene.add.text(CX, textTop + 2 * lineH + lineH / 2, 'Required Materials:', {
+        fontSize: '14px', fontFamily: 'monospace', color: '#e8d5b7',
       }).setOrigin(0.5)
     );
 
-    const spriteX = 420;
-    const textX = 435;
+    const spriteX = CX - 60;
+    const textX = CX - 46;
 
     for (let i = 0; i < costEntries.length; i++) {
       const [id, qty] = costEntries[i];
@@ -82,13 +83,13 @@ export class RestorePanel extends BasePanel {
       const iconKey = itemIconKey(id);
       if (this.scene.textures.exists(iconKey)) {
         this.contentContainer.add(
-          this.scene.add.image(spriteX, y, iconKey).setScale(0.7)
+          this.scene.add.image(spriteX, y, iconKey).setScale(0.65)
         );
       }
 
       this.contentContainer.add(
         this.scene.add.text(textX, y, `${itemDisplayName(id)}: ${have}/${qty}`, {
-          fontSize: '16px', fontFamily: 'monospace', color,
+          fontSize: '14px', fontFamily: 'monospace', color,
         }).setOrigin(0, 0.5)
       );
     }
@@ -98,25 +99,25 @@ export class RestorePanel extends BasePanel {
     if (canAfford) {
       const restoreBg = this.scene.add.graphics();
       restoreBg.fillStyle(0x1a3a1a, 0.9);
-      restoreBg.fillRoundedRect(360, btnY - 14, 100, 28, 6);
+      restoreBg.fillRoundedRect(CX - 90, btnY - 12, 80, 24, 4);
       restoreBg.lineStyle(1, 0x44aa44, 0.6);
-      restoreBg.strokeRoundedRect(360, btnY - 14, 100, 28, 6);
+      restoreBg.strokeRoundedRect(CX - 90, btnY - 12, 80, 24, 4);
       this.contentContainer.add(restoreBg);
 
-      const restoreText = this.scene.add.text(410, btnY, 'RESTORE', {
-        fontSize: '13px', fontFamily: 'monospace', color: '#88ff88',
+      const restoreText = this.scene.add.text(CX - 50, btnY, 'RESTORE', {
+        fontSize: '11px', fontFamily: 'monospace', color: '#88ff88',
       }).setOrigin(0.5).setInteractive({ useHandCursor: true });
       this.contentContainer.add(restoreText);
 
       const cancelBg = this.scene.add.graphics();
       cancelBg.fillStyle(0x1a1a2e, 0.9);
-      cancelBg.fillRoundedRect(500, btnY - 14, 100, 28, 6);
+      cancelBg.fillRoundedRect(CX + 10, btnY - 12, 80, 24, 4);
       cancelBg.lineStyle(1, 0x5a4a7a, 0.6);
-      cancelBg.strokeRoundedRect(500, btnY - 14, 100, 28, 6);
+      cancelBg.strokeRoundedRect(CX + 10, btnY - 12, 80, 24, 4);
       this.contentContainer.add(cancelBg);
 
-      const cancelText = this.scene.add.text(550, btnY, 'CANCEL', {
-        fontSize: '13px', fontFamily: 'monospace', color: '#b8a8d8',
+      const cancelText = this.scene.add.text(CX + 50, btnY, 'CANCEL', {
+        fontSize: '11px', fontFamily: 'monospace', color: '#b8a8d8',
       }).setOrigin(0.5).setInteractive({ useHandCursor: true });
       this.contentContainer.add(cancelText);
 
@@ -131,13 +132,13 @@ export class RestorePanel extends BasePanel {
     } else {
       const cancelBg = this.scene.add.graphics();
       cancelBg.fillStyle(0x1a1a2e, 0.9);
-      cancelBg.fillRoundedRect(430, btnY - 14, 100, 28, 6);
+      cancelBg.fillRoundedRect(CX - 50, btnY - 12, 100, 24, 4);
       cancelBg.lineStyle(1, 0x5a4a7a, 0.6);
-      cancelBg.strokeRoundedRect(430, btnY - 14, 100, 28, 6);
+      cancelBg.strokeRoundedRect(CX - 50, btnY - 12, 100, 24, 4);
       this.contentContainer.add(cancelBg);
 
-      const cancelText = this.scene.add.text(480, btnY, 'CANCEL', {
-        fontSize: '13px', fontFamily: 'monospace', color: '#b8a8d8',
+      const cancelText = this.scene.add.text(CX, btnY, 'CANCEL', {
+        fontSize: '11px', fontFamily: 'monospace', color: '#b8a8d8',
       }).setOrigin(0.5).setInteractive({ useHandCursor: true });
       this.contentContainer.add(cancelText);
 

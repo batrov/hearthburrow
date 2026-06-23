@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { itemIconKey, itemDisplayName } from '../systems/GameState';
+import { VW, VH, CX } from '../systems/Viewport';
 
 export class ConsumablePicker {
   private scene: Phaser.Scene;
@@ -38,10 +39,10 @@ export class ConsumablePicker {
 
     this.overlay = scene.add.graphics();
     this.overlay.fillStyle(0x000000, 0.55);
-    this.overlay.fillRect(0, 0, 960, 640);
+    this.overlay.fillRect(0, 0, VW, VH);
     this.container.add(this.overlay);
 
-    this.blocker = scene.add.rectangle(480, 320, 960, 640, 0x000000, 0)
+    this.blocker = scene.add.rectangle(CX, VH / 2, VW, VH, 0x000000, 0)
       .setScrollFactor(0)
       .setInteractive();
     this.blocker.on('pointerdown', () => {});
@@ -50,41 +51,41 @@ export class ConsumablePicker {
     this.popupBg = scene.add.graphics();
     this.container.add(this.popupBg);
 
-    this.icon = scene.add.image(480, 220, 'item_stamina_potion').setScale(2.5);
+    this.icon = scene.add.image(CX, 220, 'item_stamina_potion').setScale(2);
     this.container.add(this.icon);
 
-    this.nameText = scene.add.text(480, 268, '', {
-      fontSize: '20px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
+    this.nameText = scene.add.text(CX, 268, '', {
+      fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.nameText);
 
-    this.descText = scene.add.text(480, 296, '', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#b8a898',
+    this.descText = scene.add.text(CX, 296, '', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#b8a898',
     }).setOrigin(0.5);
     this.container.add(this.descText);
 
-    this.stashText = scene.add.text(480, 326, '', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#888888',
+    this.stashText = scene.add.text(CX, 326, '', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#888888',
     }).setOrigin(0.5);
     this.container.add(this.stashText);
 
-    this.qtyText = scene.add.text(480, 370, '', {
-      fontSize: '28px', fontFamily: 'monospace', color: '#ffddaa',
+    this.qtyText = scene.add.text(CX, 370, '', {
+      fontSize: '24px', fontFamily: 'monospace', color: '#ffddaa',
     }).setOrigin(0.5);
     this.container.add(this.qtyText);
 
-    this.minusBtn = scene.add.text(400, 370, '[−]', {
-      fontSize: '24px', fontFamily: 'monospace', color: '#cc8888',
+    this.minusBtn = scene.add.text(CX - 60, 370, '[−]', {
+      fontSize: '22px', fontFamily: 'monospace', color: '#cc8888',
     }).setOrigin(0.5);
     this.container.add(this.minusBtn);
 
-    this.plusBtn = scene.add.text(560, 370, '[+]', {
-      fontSize: '24px', fontFamily: 'monospace', color: '#88cc88',
+    this.plusBtn = scene.add.text(CX + 60, 370, '[+]', {
+      fontSize: '22px', fontFamily: 'monospace', color: '#88cc88',
     }).setOrigin(0.5);
     this.container.add(this.plusBtn);
 
-    this.footerText = scene.add.text(480, 440, '[← →] adjust  [SPACE] confirm  [ESC] cancel', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#8a7a9a',
+    this.footerText = scene.add.text(CX, 440, '[← →] adjust  [SPACE] confirm  [ESC] cancel', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#8a7a9a',
     }).setOrigin(0.5);
     this.container.add(this.footerText);
   }
@@ -114,17 +115,17 @@ export class ConsumablePicker {
 
     this.clickHandler = (p: Phaser.Input.Pointer) => {
       const popH = 310;
-      const popY = Math.floor((640 - popH) / 2);
-      const insidePopup = p.x >= 300 && p.x <= 660 && p.y >= popY && p.y <= popY + popH;
+      const popY = Math.floor((VH - popH) / 2);
+      const insidePopup = p.x >= CX - 150 && p.x <= CX + 150 && p.y >= popY && p.y <= popY + popH;
       if (!insidePopup) {
         this.hide();
         return;
       }
       const btnY = popY + 198;
-      const hw = 24, hh = 18;
-      if (p.x >= 390 - hw && p.x <= 390 + hw && p.y >= btnY - hh && p.y <= btnY + hh) {
+      const hw = 22, hh = 22;
+      if (p.x >= CX - 60 - hw && p.x <= CX - 60 + hw && p.y >= btnY - hh && p.y <= btnY + hh) {
         this.adjustQty(-1);
-      } else if (p.x >= 570 - hw && p.x <= 570 + hw && p.y >= btnY - hh && p.y <= btnY + hh) {
+      } else if (p.x >= CX + 60 - hw && p.x <= CX + 60 + hw && p.y >= btnY - hh && p.y <= btnY + hh) {
         this.adjustQty(1);
       }
     };
@@ -143,39 +144,39 @@ export class ConsumablePicker {
 
   private render(): void {
     const popH = 310;
-    const popY = Math.floor((640 - popH) / 2);
+    const popY = Math.floor((VH - popH) / 2);
 
     this.popupBg.clear();
     this.popupBg.fillStyle(0x0a0a1a, 0.95);
-    this.popupBg.fillRoundedRect(300, popY, 360, popH, 10);
+    this.popupBg.fillRoundedRect(CX - 160, popY, 320, popH, 10);
     this.popupBg.lineStyle(2, 0x6a5a8a);
-    this.popupBg.strokeRoundedRect(300, popY, 360, popH, 10);
+    this.popupBg.strokeRoundedRect(CX - 160, popY, 320, popH, 10);
 
     const iconKey = itemIconKey(this.consumableId);
     if (this.scene.textures.exists(iconKey)) {
       this.icon.setTexture(iconKey);
     }
-    this.icon.setPosition(480, popY + 55);
+    this.icon.setPosition(CX, popY + 55);
 
     this.nameText.setText(itemDisplayName(this.consumableId));
-    this.nameText.setPosition(480, popY + 100);
+    this.nameText.setPosition(CX, popY + 100);
 
     this.descText.setText(this.DESC_MAP[this.consumableId] ?? '');
-    this.descText.setPosition(480, popY + 128);
+    this.descText.setPosition(CX, popY + 128);
 
     this.stashText.setText(`In stash: ${this.maxQty}`);
-    this.stashText.setPosition(480, popY + 155);
+    this.stashText.setPosition(CX, popY + 155);
 
     this.qtyText.setText(`${this.currentQty}`);
-    this.qtyText.setPosition(480, popY + 198);
+    this.qtyText.setPosition(CX, popY + 198);
 
-    this.minusBtn.setPosition(390, popY + 198);
+    this.minusBtn.setPosition(CX - 60, popY + 198);
     this.minusBtn.setAlpha(this.currentQty <= 0 ? 0.3 : 1);
 
-    this.plusBtn.setPosition(570, popY + 198);
+    this.plusBtn.setPosition(CX + 60, popY + 198);
     this.plusBtn.setAlpha(this.currentQty >= this.maxQty ? 0.3 : 1);
 
-    this.footerText.setPosition(480, popY + popH - 18);
+    this.footerText.setPosition(CX, popY + popH - 18);
   }
 
   private adjustQty(delta: number): void {

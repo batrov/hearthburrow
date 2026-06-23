@@ -170,7 +170,7 @@ export class BootScene extends Phaser.Scene {
     const cx = this.cameras.main.centerX;
     const cy = this.cameras.main.centerY;
 
-    this.add.image(cx, cy - 80, 'title_img').setOrigin(0.5).setScale(1);
+    this.add.image(cx, cy - 80, 'title_img').setOrigin(0.5).setScale(0.7);
 
     generateAll(this);
 

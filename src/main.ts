@@ -8,8 +8,8 @@ import { TavernScene } from './scenes/TavernScene';
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: 'game-container',
-  width: 960,
-  height: 640,
+  width: 390,
+  height: 844,
   backgroundColor: '#1a1a2e',
   pixelArt: true,
   input: {

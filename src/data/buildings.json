@@ -4,7 +4,7 @@
     { "id": "storage", "name": "Storage", "description": "Expand inventory capacity. +8 inventory capacity.", "cost": { "stone": 15, "bronze_ore": 5 }, "unlocked": true },
     { "id": "housing", "name": "Tavern", "description": "A warm gathering place for rescued villagers.\nVillagers will start spawning in The Depths. +20 max stamina.", "cost": { "stone": 10, "bronze_ore": 2 }, "unlocked": false },
     { "id": "laboratory", "name": "Laboratory", "description": "Unlock upgrades", "cost": { "stone": 15, "bronze_ore": 5, "silver_ore": 2 }, "unlocked": true },
-    { "id": "trading_post", "name": "Trading Post", "description": "Trade carrots for items. Unlock the merchant NPC in The Depths.", "cost": { "stone": 25, "silver_ore": 10, "gold_ore": 5 }, "unlocked": false },
+    { "id": "trading_post", "name": "Trading Post", "description": "Trade carrots for items.\nUnlock the merchant NPC in The Depths.", "cost": { "stone": 25, "silver_ore": 10, "gold_ore": 5 }, "unlocked": false },
     { "id": "farm", "name": "Farm", "description": "Plant and grow carrots", "cost": { "stone": 50, "silver_ore": 20, "bronze_ore": 40, "gold_ore": 10 }, "unlocked": false }
   ]
 }

@@ -3,6 +3,7 @@ import { InventorySystem } from '../systems/InventorySystem';
 import { itemDisplayName, itemIconKey } from '../systems/GameState';
 import { BasePanel } from './BasePanel';
 import { isConsumable } from '../systems/DataRegistry';
+import { VW, VH, CX } from '../systems/Viewport';
 
 const ITEM_INFO: Record<string, { desc: string }> = {
   stone: { desc: 'Common stone. Used for building and basic crafting.' },
@@ -68,41 +69,41 @@ export class InventoryPanel extends BasePanel {
 
     this.createOverlay();
 
-    this.titleText = scene.add.text(960 / 2, 30, title, {
-      fontSize: '22px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
+    this.titleText = scene.add.text(CX, 28, title, {
+      fontSize: '18px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
-    this.warnText = scene.add.text(960 / 2, 55, '', {
-      fontSize: '13px', fontFamily: 'monospace', color: '#ff6644', fontStyle: 'bold',
+    this.warnText = scene.add.text(CX, 50, '', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#ff6644', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.warnText);
 
     this.itemRows = scene.add.container(0, 0);
     this.container.add(this.itemRows);
 
-    this.hintText = scene.add.text(960 / 2, 612, '', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#5a4a6a',
+    this.hintText = scene.add.text(CX, VH - 40, '', {
+      fontSize: '10px', fontFamily: 'monospace', color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
-    this.descriptionText = scene.add.text(960 / 2, 555, '', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#8a8a9a',
+    this.descriptionText = scene.add.text(CX, VH - 100, '', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#8a8a9a',
       align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.descriptionText);
 
-    this.useBtn = scene.add.text(412, 580, '[ USE ]', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#b8a888',
+    this.useBtn = scene.add.text(CX - 50, VH - 70, '[ USE ]', {
+      fontSize: '12px', fontFamily: 'monospace', color: '#b8a888',
     }).setOrigin(0.5).setVisible(false);
     this.container.add(this.useBtn);
 
-    this.trashBtn = scene.add.text(548, 580, '[ TRASH ]', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#b8a888',
+    this.trashBtn = scene.add.text(CX + 50, VH - 70, '[ TRASH ]', {
+      fontSize: '12px', fontFamily: 'monospace', color: '#b8a888',
     }).setOrigin(0.5).setVisible(false);
     this.container.add(this.trashBtn);
 
-    this.useBtnZone = scene.add.rectangle(412, 580, 100, 28, 0xffffff, 0)
+    this.useBtnZone = scene.add.rectangle(CX - 50, VH - 70, 80, 44, 0xffffff, 0)
       .setDepth(210).setScrollFactor(0).setInteractive().setVisible(false);
     this.useBtnZone.on('pointerdown', () => {
       const item = this.items[this.selectionIndex];
@@ -113,7 +114,7 @@ export class InventoryPanel extends BasePanel {
     });
     this.container.add(this.useBtnZone);
 
-    this.trashBtnZone = scene.add.rectangle(548, 580, 110, 28, 0xffffff, 0)
+    this.trashBtnZone = scene.add.rectangle(CX + 50, VH - 70, 90, 44, 0xffffff, 0)
       .setDepth(210).setScrollFactor(0).setInteractive().setVisible(false);
     this.trashBtnZone.on('pointerdown', () => {
       const item = this.items[this.selectionIndex];
@@ -194,29 +195,29 @@ export class InventoryPanel extends BasePanel {
     );
 
     this.itemRows.removeAll(true);
-    const startY = 80;
+    const startY = 72;
     for (let i = 0; i < this.items.length; i++) {
       const item = this.items[i];
       const cursor = i === this.selectionIndex ? '▸' : ' ';
       const y = startY + i * 20;
       const row = this.scene.add.container(0, 0);
-      const icon = this.scene.add.image(452, y, itemIconKey(item.id)).setScale(0.8);
+      const icon = this.scene.add.image(CX - 28, y, itemIconKey(item.id)).setScale(0.7);
       row.add(icon);
       if (item.qty > 1) {
-        row.add(this.scene.add.text(462, y + 10, `${item.qty}`, {
+        row.add(this.scene.add.text(CX - 18, y + 10, `${item.qty}`, {
           fontSize: '9px', fontFamily: 'monospace', color: '#ffffff',
           stroke: '#000000', strokeThickness: 2,
         }).setOrigin(1, 1));
       }
-      const text = this.scene.add.text(466, y, `${cursor} ${item.name.padEnd(18)} ${item.qty}`, {
-        fontSize: '14px', fontFamily: 'monospace', color: '#c8b898',
+      const text = this.scene.add.text(CX - 14, y, `${cursor} ${item.name.padEnd(16)} ${item.qty}`, {
+        fontSize: '12px', fontFamily: 'monospace', color: '#c8b898',
       }).setOrigin(0, 0.5);
       row.add([icon, text]);
       this.itemRows.add(row);
     }
     if (this.items.length === 0) {
-      const emptyText = this.scene.add.text(480, startY, '  (empty)', {
-        fontSize: '14px', fontFamily: 'monospace', color: '#6a7a9a',
+      const emptyText = this.scene.add.text(CX, startY, '  (empty)', {
+        fontSize: '12px', fontFamily: 'monospace', color: '#6a7a9a',
       });
       this.itemRows.add(emptyText);
     }
@@ -224,7 +225,7 @@ export class InventoryPanel extends BasePanel {
     this.clickZones.forEach(z => z.destroy());
     this.clickZones = [];
     for (let i = 0; i < this.items.length; i++) {
-      const zone = this.scene.add.zone(480, 80 + i * 20, 860, 20)
+      const zone = this.scene.add.zone(CX, 72 + i * 20, VW - 40, 40)
         .setDepth(210)
         .setScrollFactor(0)
         .setInteractive();
@@ -236,7 +237,6 @@ export class InventoryPanel extends BasePanel {
       this.container.add(zone);
       this.clickZones.push(zone);
     }
-
 
     const hints: string[] = [];
     if (this.items.length > 0 && (this.onUse || this.onTrash)) {
@@ -270,10 +270,11 @@ export class InventoryPanel extends BasePanel {
 
     this.overlay.clear();
     this.overlay.fillStyle(0x0a0a1a, 0.92);
-    this.overlay.fillRect(0, 0, 960, 640);
+    this.overlay.fillRect(0, 0, VW, VH);
 
+    const pad = 16;
     this.overlay.lineStyle(1, 0x3a3a4a, 0.5);
-    this.overlay.strokeRect(40, 65, 880, 540);
+    this.overlay.strokeRect(pad, 60, VW - pad * 2, VH - 60 - pad);
 
     this.buildItemList();
   }

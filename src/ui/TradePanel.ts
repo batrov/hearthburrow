@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { gameState, itemDisplayName, itemIconKey } from '../systems/GameState';
 import { audio } from '../systems/AudioSystem';
 import { BasePanel } from './BasePanel';
+import { VW, VH, CX } from '../systems/Viewport';
 
 interface TradeItem {
   id: string;
@@ -32,9 +33,9 @@ export class TradePanel extends BasePanel {
 
     this.createOverlay();
 
-    this.text = scene.add.text(960 / 2, 50, '', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#e8d5b7',
-      align: 'center', lineSpacing: 6,
+    this.text = scene.add.text(CX, 44, '', {
+      fontSize: '13px', fontFamily: 'monospace', color: '#e8d5b7',
+      align: 'center', lineSpacing: 4,
     }).setOrigin(0.5, 0);
     this.container.add(this.text);
 
@@ -95,9 +96,10 @@ export class TradePanel extends BasePanel {
   private render(): void {
     this.overlay!.clear();
     this.overlay!.fillStyle(0x0a0a1a, 0.92);
-    this.overlay!.fillRect(0, 0, 960, 640);
+    this.overlay!.fillRect(0, 0, VW, VH);
+    const pad = 16;
     this.overlay!.lineStyle(1, 0x3a3a4a, 0.5);
-    this.overlay!.strokeRect(40, 40, 880, 560);
+    this.overlay!.strokeRect(pad, pad, VW - pad * 2, VH - pad * 2);
 
     this.clickZones.forEach(z => z.destroy());
     this.clickZones = [];
@@ -114,12 +116,12 @@ export class TradePanel extends BasePanel {
     this.text.setText(lines.join('\n'));
 
     this.itemRows.removeAll(true);
-    const baseY = 50 + 5 * 20;
+    const baseY = 44 + 5 * 18;
     for (let i = 0; i < TRADE_ITEMS.length; i++) {
       const item = TRADE_ITEMS[i];
       const cursor = i === this.selectionIndex ? '▸' : ' ';
       const tag = item.type === 'buy' ? 'BUY ' : 'SELL';
-      const label = `${tag} ${item.label.padEnd(18)}`;
+      const label = `${tag} ${item.label.padEnd(14)}`;
       const price = `${item.priceQty} ${itemDisplayName(item.priceId)}`;
       const have = gameState.inventory.count(item.id);
       const haveText = item.type === 'buy' ? '' : `  (have ${have})`;
@@ -128,25 +130,17 @@ export class TradePanel extends BasePanel {
       const row = this.scene.add.container(0, 0);
       const iconKey = itemIconKey(item.id);
       if (this.scene.textures.exists(iconKey)) {
-        row.add(this.scene.add.image(380, y, iconKey).setScale(0.7));
+        row.add(this.scene.add.image(30, y, iconKey).setScale(0.6));
       }
-      const priceIconKey = itemIconKey(item.priceId);
-      if (this.scene.textures.exists(priceIconKey)) {
-        row.add(this.scene.add.image(590, y, priceIconKey).setScale(0.6));
-        row.add(this.scene.add.text(395, y, `${cursor} ${label}`, {
-          fontSize: '14px', fontFamily: 'monospace', color: '#e8d5b7',
-        }).setOrigin(0, 0.5));
-        row.add(this.scene.add.text(602, y, `${item.priceQty}${haveText}`, {
-          fontSize: '14px', fontFamily: 'monospace', color: '#e8d5b7',
-        }).setOrigin(0, 0.5));
-      } else {
-        row.add(this.scene.add.text(395, y, `${cursor} ${label} ${price}${haveText}`, {
-          fontSize: '14px', fontFamily: 'monospace', color: '#e8d5b7',
-        }).setOrigin(0, 0.5));
-      }
+      row.add(this.scene.add.text(46, y, `${cursor} ${label}`, {
+        fontSize: '12px', fontFamily: 'monospace', color: '#e8d5b7',
+      }).setOrigin(0, 0.5));
+      row.add(this.scene.add.text(CX + 20, y, `${item.priceQty}${haveText}`, {
+        fontSize: '12px', fontFamily: 'monospace', color: '#e8d5b7',
+      }).setOrigin(0, 0.5));
       this.itemRows.add(row);
 
-      const zone = this.scene.add.zone(480, y, 860, 20)
+      const zone = this.scene.add.zone(CX, y, VW - 32, 40)
         .setDepth(210)
         .setScrollFactor(0)
         .setInteractive();

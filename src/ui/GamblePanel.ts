@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { BasePanel } from './BasePanel';
 import { audio } from '../systems/AudioSystem';
 import { itemIconKey } from '../systems/GameState';
+import { VW, VH, CX, CY } from '../systems/Viewport';
 
 export interface RouletteSegment {
   label: string;
@@ -29,9 +30,7 @@ export class GamblePanel extends BasePanel {
   private resultReward: { id: string; quantity: number } | null = null;
   private onResult: ((reward: { id: string; quantity: number } | null) => void) | null = null;
 
-  private readonly CX = 480;
-  private readonly CY = 290;
-  private readonly RADIUS = 110;
+  private readonly RADIUS = 70;
 
   constructor(scene: Phaser.Scene) {
     super(scene);
@@ -39,27 +38,27 @@ export class GamblePanel extends BasePanel {
     this.createOverlay();
 
     this.wheelGfx = scene.add.graphics();
-    this.wheelContainer = scene.add.container(this.CX, this.CY, [this.wheelGfx]);
+    this.wheelContainer = scene.add.container(CX, CY, [this.wheelGfx]);
     this.container.add(this.wheelContainer);
 
     this.pointerGfx = scene.add.graphics();
     this.container.add(this.pointerGfx);
 
-    this.titleText = scene.add.text(this.CX, this.CY - this.RADIUS - 50, '', {
-      fontSize: '20px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
+    this.titleText = scene.add.text(CX, CY - this.RADIUS - 40, '', {
+      fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
-    this.hintText = scene.add.text(this.CX, this.CY + this.RADIUS + 40, '', {
-      fontSize: '13px', fontFamily: 'monospace', color: '#6a5a8a',
+    this.hintText = scene.add.text(CX, CY + this.RADIUS + 60, '', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#6a5a8a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
     this.resultBg = scene.add.graphics();
     this.container.add(this.resultBg);
 
-    this.resultText = scene.add.text(this.CX, this.CY, '', {
-      fontSize: '22px', fontFamily: 'monospace', color: '#ffffff', fontStyle: 'bold',
+    this.resultText = scene.add.text(CX, CY, '', {
+      fontSize: '18px', fontFamily: 'monospace', color: '#ffffff', fontStyle: 'bold',
       align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.resultText);
@@ -92,9 +91,9 @@ export class GamblePanel extends BasePanel {
 
     this.overlay!.clear();
     this.overlay!.fillStyle(0x0a0a1a, 0.85);
-    this.overlay!.fillRect(0, 0, 960, 640);
+    this.overlay!.fillRect(0, 0, VW, VH);
     this.overlay!.lineStyle(2, 0x5a4a7a, 0.6);
-    this.overlay!.strokeRoundedRect(this.CX - 200, this.CY - this.RADIUS - 70, 400, this.RADIUS * 2 + 130, 12);
+    this.overlay!.strokeRoundedRect(CX - 150, CY - this.RADIUS - 55, 300, this.RADIUS * 2 + 120, 12);
 
     this.titleText.setText(`Roulette! (Cost: ${cost} Stone)`);
     this.hintText.setText('[SPACE] Stop the wheel!');
@@ -179,7 +178,7 @@ export class GamblePanel extends BasePanel {
           Math.cos(midAngle) * iconDist,
           Math.sin(midAngle) * iconDist,
           itemIconKey(seg.reward.id),
-        ).setScale(0.55).setDepth(1);
+        ).setScale(0.5).setDepth(1);
         this.wheelContainer.add(img);
         this.wheelSprites.push(img);
       }
@@ -197,15 +196,15 @@ export class GamblePanel extends BasePanel {
     this.pointerGfx.clear();
     this.pointerGfx.fillStyle(0xffdd88, 1);
     this.pointerGfx.fillTriangle(
-      this.CX - 10, this.CY - this.RADIUS - 24,
-      this.CX + 10, this.CY - this.RADIUS - 24,
-      this.CX, this.CY - this.RADIUS - 8,
+      CX - 8, CY - this.RADIUS - 18,
+      CX + 8, CY - this.RADIUS - 18,
+      CX, CY - this.RADIUS - 6,
     );
     this.pointerGfx.fillStyle(0xffaa44, 1);
     this.pointerGfx.fillTriangle(
-      this.CX - 6, this.CY - this.RADIUS - 22,
-      this.CX + 6, this.CY - this.RADIUS - 22,
-      this.CX, this.CY - this.RADIUS - 10,
+      CX - 5, CY - this.RADIUS - 16,
+      CX + 5, CY - this.RADIUS - 16,
+      CX, CY - this.RADIUS - 8,
     );
   }
 
@@ -234,18 +233,18 @@ export class GamblePanel extends BasePanel {
     if (seg.reward) {
       this.resultBg.clear();
       this.resultBg.fillStyle(0x224422, 0.9);
-      this.resultBg.fillRoundedRect(this.CX - 140, this.CY - 30, 280, 60, 8);
+      this.resultBg.fillRoundedRect(CX - 110, CY - 24, 220, 48, 8);
       this.resultBg.lineStyle(2, 0x44cc66, 0.8);
-      this.resultBg.strokeRoundedRect(this.CX - 140, this.CY - 30, 280, 60, 8);
+      this.resultBg.strokeRoundedRect(CX - 110, CY - 24, 220, 48, 8);
       this.resultText.setText(`You won!\n${seg.reward.quantity}x ${seg.label}`);
       this.resultText.setColor('#66ee66');
       audio.playBingo();
     } else {
       this.resultBg.clear();
       this.resultBg.fillStyle(0x442222, 0.9);
-      this.resultBg.fillRoundedRect(this.CX - 100, this.CY - 20, 200, 40, 8);
+      this.resultBg.fillRoundedRect(CX - 80, CY - 16, 160, 32, 8);
       this.resultBg.lineStyle(2, 0xcc4444, 0.6);
-      this.resultBg.strokeRoundedRect(this.CX - 100, this.CY - 20, 200, 40, 8);
+      this.resultBg.strokeRoundedRect(CX - 80, CY - 16, 160, 32, 8);
       this.resultText.setText(`${seg.label}!`);
       this.resultText.setColor('#cc6666');
       audio.playError();

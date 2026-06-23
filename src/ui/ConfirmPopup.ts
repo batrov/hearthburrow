@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { VW, VH, CX } from '../systems/Viewport';
 
 export class ConfirmPopup {
   private scene: Phaser.Scene;
@@ -13,6 +14,8 @@ export class ConfirmPopup {
   private subText: Phaser.GameObjects.Text;
   private yesBtn: Phaser.GameObjects.Text;
   private noBtn: Phaser.GameObjects.Text;
+  private yesBtnZone: Phaser.GameObjects.Rectangle;
+  private noBtnZone: Phaser.GameObjects.Rectangle;
   private footerText: Phaser.GameObjects.Text;
   private keyHandler: ((e: KeyboardEvent) => void) | null = null;
   private blocker: Phaser.GameObjects.Rectangle;
@@ -27,10 +30,10 @@ export class ConfirmPopup {
 
     this.overlay = scene.add.graphics();
     this.overlay.fillStyle(0x000000, 0.55);
-    this.overlay.fillRect(0, 0, 960, 640);
+    this.overlay.fillRect(0, 0, VW, VH);
     this.container.add(this.overlay);
 
-    this.blocker = scene.add.rectangle(480, 320, 960, 640, 0x000000, 0)
+    this.blocker = scene.add.rectangle(CX, VH / 2, VW, VH, 0x000000, 0)
       .setScrollFactor(0)
       .setInteractive()
       .setData('isUI', true);
@@ -40,30 +43,36 @@ export class ConfirmPopup {
     this.popupBg = scene.add.graphics();
     this.container.add(this.popupBg);
 
-    this.messageText = scene.add.text(480, 200, '', {
-      fontSize: '20px', fontFamily: 'monospace', color: '#ff8844', fontStyle: 'bold',
+    this.messageText = scene.add.text(CX, 200, '', {
+      fontSize: '18px', fontFamily: 'monospace', color: '#ff8844', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.messageText);
 
-    this.subText = scene.add.text(480, 230, '', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#b8a898',
+    this.subText = scene.add.text(CX, 230, '', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#b8a898',
     }).setOrigin(0.5);
     this.container.add(this.subText);
 
-    this.yesBtn = scene.add.text(420, 280, '[  YES  ]', {
-      fontSize: '18px', fontFamily: 'monospace', color: '#cc6666',
-      backgroundColor: '#3a1a1acc', padding: { x: 16, y: 6 },
+    this.yesBtn = scene.add.text(CX - 60, 280, '[ YES ]', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#cc6666',
+      backgroundColor: '#3a1a1acc', padding: { x: 12, y: 4 },
     }).setOrigin(0.5);
     this.container.add(this.yesBtn);
+    const yesZone = scene.add.rectangle(CX - 60, 280, 80, 44, 0xffffff, 0).setScrollFactor(0).setDepth(251);
+    this.container.add(yesZone);
+    this.yesBtnZone = yesZone;
 
-    this.noBtn = scene.add.text(540, 280, '[ Cancel ]', {
-      fontSize: '18px', fontFamily: 'monospace', color: '#aaaacc',
-      backgroundColor: '#1a1a3acc', padding: { x: 12, y: 6 },
+    this.noBtn = scene.add.text(CX + 60, 280, '[Cancel]', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#aaaacc',
+      backgroundColor: '#1a1a3acc', padding: { x: 10, y: 4 },
     }).setOrigin(0.5);
     this.container.add(this.noBtn);
+    const noZone = scene.add.rectangle(CX + 60, 280, 90, 44, 0xffffff, 0).setScrollFactor(0).setDepth(251);
+    this.container.add(noZone);
+    this.noBtnZone = noZone;
 
-    this.footerText = scene.add.text(480, 340, '[← →] switch  [SPACE] confirm  [ESC] cancel', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#8a7a9a',
+    this.footerText = scene.add.text(CX, 340, '[← →] switch  [SPACE] confirm  [ESC] cancel', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#8a7a9a',
     }).setOrigin(0.5);
     this.container.add(this.footerText);
   }
@@ -82,9 +91,9 @@ export class ConfirmPopup {
 
     this.popupBg.clear();
     this.popupBg.fillStyle(0x0a0a1a, 0.95);
-    this.popupBg.fillRoundedRect(300, 150, 360, 230, 10);
+    this.popupBg.fillRoundedRect(CX - 160, 150, 320, 220, 10);
     this.popupBg.lineStyle(2, 0x6a5a8a);
-    this.popupBg.strokeRoundedRect(300, 150, 360, 230, 10);
+    this.popupBg.strokeRoundedRect(CX - 160, 150, 320, 220, 10);
 
     this.keyHandler = (e: KeyboardEvent) => {
       switch (e.key) {
@@ -97,19 +106,19 @@ export class ConfirmPopup {
     this.scene.input.keyboard!.on('keydown', this.keyHandler);
 
     this.clickHandler = (p: Phaser.Input.Pointer) => {
-      const popX = 300, popY = 150, popW = 360, popH = 230;
+      const popX = CX - 160, popY = 150, popW = 320, popH = 220;
       if (p.x < popX || p.x > popX + popW || p.y < popY || p.y > popY + popH) {
         this.hide();
         return;
       }
-      const yesBounds = this.yesBtn.getBounds();
+      const yesBounds = this.yesBtnZone.getBounds();
       if (p.x >= yesBounds.x && p.x <= yesBounds.x + yesBounds.width &&
           p.y >= yesBounds.y && p.y <= yesBounds.y + yesBounds.height) {
         this.selectedYes = true;
         this.confirm();
         return;
       }
-      const noBounds = this.noBtn.getBounds();
+      const noBounds = this.noBtnZone.getBounds();
       if (p.x >= noBounds.x && p.x <= noBounds.x + noBounds.width &&
           p.y >= noBounds.y && p.y <= noBounds.y + noBounds.height) {
         this.selectedYes = false;

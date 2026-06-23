@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { BasePanel } from './BasePanel';
+import { VW, VH, CX, CY } from '../systems/Viewport';
 
 export class BuildingInfoPanel extends BasePanel {
   private titleText: Phaser.GameObjects.Text;
@@ -11,17 +12,17 @@ export class BuildingInfoPanel extends BasePanel {
     this.createOverlay();
     this.overlay.clear();
     this.overlay.fillStyle(0x0a0a1a, 0.85);
-    this.overlay.fillRoundedRect(480 - 200, 320 - 90, 400, 180, 10);
+    this.overlay.fillRoundedRect(CX - 160, CY - 80, 320, 160, 10);
     this.overlay.lineStyle(2, 0x6a5a8a, 1);
-    this.overlay.strokeRoundedRect(480 - 200, 320 - 90, 400, 180, 10);
+    this.overlay.strokeRoundedRect(CX - 160, CY - 80, 320, 160, 10);
 
-    this.titleText = scene.add.text(480, 290, '', {
-      fontSize: '18px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
+    this.titleText = scene.add.text(CX, CY - 50, '', {
+      fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
-    this.descText = scene.add.text(480, 340, '', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#b8a898', align: 'center',
+    this.descText = scene.add.text(CX, CY, '', {
+      fontSize: '13px', fontFamily: 'monospace', color: '#b8a898', align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.descText);
 

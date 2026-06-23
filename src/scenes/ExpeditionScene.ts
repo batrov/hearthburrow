@@ -556,12 +556,12 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.ignore(this.staminaBg);
 
     this.portraitSprite = this.add.image(42, VH, 'portrait')
-      .setScrollFactor(0).setDepth(201);
+      .setScrollFactor(0).setDepth(211);
     this.cameras.main.ignore(this.portraitSprite);
     this.portraitSprite.setCrop(54, 0, 108, 108);
-    this.portraitSprite.setDisplaySize(76, 76);
+    this.portraitSprite.setDisplaySize(200, 200);
     this.portraitSprite.setFlipX(true);
-    this.portraitSprite.setY(38);
+    this.portraitSprite.setY(88);
 
     this.staminaBarGfx = this.add.graphics().setScrollFactor(0).setDepth(201);
     this.cameras.main.ignore(this.staminaBarGfx);
@@ -582,7 +582,7 @@ export class ExpeditionScene extends Phaser.Scene {
     // === LEFT-TOP: Pickaxe Block (below stamina) ===
     const pickBg = this.add.graphics();
     pickBg.fillStyle(0x0a0a1a, 0.75);
-    pickBg.fillRoundedRect(4, 78, 160, 42, 4);
+    pickBg.fillRoundedRect(4, 78, 80, 42, 4);
     pickBg.setScrollFactor(0).setDepth(DEPTH.HUD_BG);
     this.cameras.main.ignore(pickBg);
 
@@ -593,7 +593,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.pickaxeRing = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD + 1);
     this.cameras.main.ignore(this.pickaxeRing);
     this.pickaxeUsesText = this.add.text(66, 99, '', {
-      fontSize: '9px', fontFamily: 'monospace', color: '#cccccc', align: 'center',
+      fontSize: '12px', fontFamily: 'monospace', color: '#cccccc', align: 'center',
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.pickaxeUsesText);
 
@@ -882,10 +882,10 @@ export class ExpeditionScene extends Phaser.Scene {
   private drawStaminaBar(): void {
     this.staminaBarGfx.clear();
 
-    const x = 48;
-    const y = 12;
-    const w = VW - 60;
-    const h = 12;
+    const x = 80;
+    const y = 32;
+    const w = VW - 100;
+    const h = 24;
     const ratio = this.stamina.ratio;
 
     this.staminaBarGfx.fillStyle(0x2a1a1a, 1);
