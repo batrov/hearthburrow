@@ -6,6 +6,7 @@ import { ConsumablePicker } from './ConsumablePicker';
 import { FloorPicker } from './FloorPicker';
 import { SeedEntryPopup } from './SeedEntryPopup';
 import { ConfirmPopup } from './ConfirmPopup';
+import { VW, VH, CX } from '../systems/Viewport';
 
 const NAMES: Record<number, string> = {
   1: 'Common Pickaxe', 2: 'Bronze Pickaxe', 3: 'Silver Pickaxe', 4: 'Gold Pickaxe',
@@ -31,11 +32,9 @@ export class GatePanel extends BasePanel {
   }) => void;
   onCloseCb!: () => void;
 
-  // Slot selection
   gateTab = 0;
   maxTab = 12;
 
-  // Equipment state
   private pickaxeOptions: { id: string; tier: number }[] = [];
   private selectedPickaxeIdx = -1;
   private ringOptions: { id: string; name: string }[] = [];
@@ -45,27 +44,19 @@ export class GatePanel extends BasePanel {
   private selectedBootsIdx = -1;
   private lanternOptions: { id: string; name: string; runs: number }[] = [];
   private selectedLanternIdx = -1;
-
-  // Consumable state
   private consumableLoadout: Record<string, number> = {};
-
-  // Settings state
   private debugMode = false;
   private selectedElevatorFloor = 0;
   private elevatorFloorOptions: number[] = [];
   private gateSeed = '';
   private resetConfirm = false;
 
-  // Visual elements
   private bg!: Phaser.GameObjects.Graphics;
   private panelBlocker!: Phaser.GameObjects.Rectangle;
   private title!: Phaser.GameObjects.Text;
-
-  // Stats column
-  private portrait!: Phaser.GameObjects.Image;
+  private portraitSprite!: Phaser.GameObjects.Image;
   private statTexts: Phaser.GameObjects.Text[] = [];
 
-  // Equipment slots
   private equipSlots: {
     bg: Phaser.GameObjects.Graphics;
     icon: Phaser.GameObjects.Image;
@@ -73,7 +64,6 @@ export class GatePanel extends BasePanel {
     zone: Phaser.GameObjects.Rectangle;
   }[] = [];
 
-  // Consumable slots
   private consSlots: {
     bg: Phaser.GameObjects.Graphics;
     icon: Phaser.GameObjects.Image;
@@ -81,25 +71,19 @@ export class GatePanel extends BasePanel {
     zone: Phaser.GameObjects.Rectangle;
   }[] = [];
 
-  // Settings
   private settingsTexts: Phaser.GameObjects.Text[] = [];
   private settingsZones: Phaser.GameObjects.Rectangle[] = [];
-
-  // Description panel
   private descBg!: Phaser.GameObjects.Graphics;
   private descLines: Phaser.GameObjects.Text[] = [];
-
-  // Footer
   private footerText!: Phaser.GameObjects.Text;
   private embarkBtn!: Phaser.GameObjects.Text;
+  private embarkBtnZone!: Phaser.GameObjects.Rectangle;
 
-  // Pickers
   private equipPicker: EquipmentPicker;
   private consumablePicker: ConsumablePicker;
   private floorPicker: FloorPicker;
   private seedPopup: SeedEntryPopup;
   private confirmPopup: ConfirmPopup;
-
   private clickHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
 
   constructor(scene: Phaser.Scene) {
@@ -113,147 +97,134 @@ export class GatePanel extends BasePanel {
   }
 
   private buildUI(): void {
-    const CX = 480;
-
     this.bg = this.scene.add.graphics();
     this.container.add(this.bg);
 
-    this.panelBlocker = this.scene.add.rectangle(480, 320, 960, 640, 0x000000, 0)
+    this.panelBlocker = this.scene.add.rectangle(CX, VH / 2, VW, VH, 0x000000, 0)
       .setScrollFactor(0).setData('isUI', true).setInteractive();
     this.panelBlocker.on('pointerdown', () => {});
     this.container.add(this.panelBlocker);
 
-    this.title = this.scene.add.text(CX, 58, 'Expedition Loadout', {
-      fontSize: '20px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
+    this.title = this.scene.add.text(CX, 20, 'Expedition Loadout', {
+      fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.title);
 
-    // Stats column
-    this.portrait = this.scene.add.image(225, 170, 'portrait').setScale(1);
-    this.container.add(this.portrait);
+    this.portraitSprite = this.scene.add.image(20, 80, 'portrait')
+      .setDisplaySize(76, 76).setFlipX(true);
+    this.container.add(this.portraitSprite);
 
     for (let i = 0; i < 5; i++) {
-      const t = this.scene.add.text(150, 300 + i * 28, '', {
-        fontSize: '15px', fontFamily: 'monospace', color: '#b8a898',
+      const t = this.scene.add.text(110, 48 + i * 14, '', {
+        fontSize: '10px', fontFamily: 'monospace', color: '#b8a898',
       });
       this.container.add(t);
       this.statTexts.push(t);
     }
 
-    // Equipment slots (5)
-    const equipYX = [0, 1, 2, 3, 4].map(i => ({
-      x: 368 + i * 68,
-      y: 128,
-    }));
+    const equipYX: { x: number; y: number }[] = [
+      { x: 70, y: 205 },
+      { x: 185, y: 179 },
+      { x: 252, y: 179 },
+      { x: 185, y: 231 },
+      { x: 252, y: 231 },
+    ];
     for (let i = 0; i < 5; i++) {
       const bg = this.scene.add.graphics();
       this.container.add(bg);
-
-      const icon = this.scene.add.image(equipYX[i].x, equipYX[i].y, 'item_pickaxe_1').setScale(1);
+      const iconScale = i === 0 ? 1.6 : 0.8;
+      const icon = this.scene.add.image(equipYX[i].x, equipYX[i].y, 'item_pickaxe_1').setScale(iconScale);
       icon.setVisible(false);
       this.container.add(icon);
-
-      const badge = this.scene.add.text(equipYX[i].x, equipYX[i].y + 20, '', {
-        fontSize: '11px', fontFamily: 'monospace', color: '#999999',
+      const badge = this.scene.add.text(equipYX[i].x, equipYX[i].y + 26, '', {
+        fontSize: '9px', fontFamily: 'monospace', color: '#999999',
       }).setOrigin(0.5);
       badge.setVisible(false);
       this.container.add(badge);
-
-      const zoneW = 62;
-      const zone = this.scene.add.rectangle(equipYX[i].x, equipYX[i].y, zoneW, 48, 0xffffff, 0)
+      const zoneSize = i === 0 ? 104 : 52;
+      const zone = this.scene.add.rectangle(equipYX[i].x, equipYX[i].y, zoneSize, zoneSize, 0xffffff, 0)
         .setScrollFactor(0);
       zone.setVisible(false);
       this.container.add(zone);
-
       this.equipSlots.push({ bg, icon, badge, zone });
     }
 
-    // "EQUIPMENT" label
-    const equipLabel = this.scene.add.text(338, 88, 'EQUIPMENT', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#6a5a8a',
-    });
-    this.container.add(equipLabel);
+    this.container.add(this.scene.add.text(CX, 138, 'EQUIPMENT', {
+      fontSize: '10px', fontFamily: 'monospace', color: '#6a5a8a',
+    }).setOrigin(0.5));
 
-    // Consumable slots (3)
-    const consYX = [0, 1, 2].map(i => ({
-      x: 368 + i * 68,
-      y: 208,
-    }));
+    const consYX = [
+      { x: CX - 76, y: 292 },
+      { x: CX, y: 292 },
+      { x: CX + 76, y: 292 },
+    ];
     for (let i = 0; i < 3; i++) {
       const bg = this.scene.add.graphics();
       this.container.add(bg);
-
-      const icon = this.scene.add.image(consYX[i].x, consYX[i].y, 'item_stamina_potion').setScale(1);
+      const icon = this.scene.add.image(consYX[i].x, consYX[i].y, 'item_stamina_potion').setScale(0.8);
       icon.setVisible(false);
       this.container.add(icon);
-
-      const badge = this.scene.add.text(consYX[i].x, consYX[i].y + 20, '', {
-        fontSize: '11px', fontFamily: 'monospace', color: '#88cc88',
+      const badge = this.scene.add.text(consYX[i].x, consYX[i].y + 16, '', {
+        fontSize: '9px', fontFamily: 'monospace', color: '#88cc88',
       }).setOrigin(0.5);
       badge.setVisible(false);
       this.container.add(badge);
-
-      const zoneW = 62;
-      const zone = this.scene.add.rectangle(consYX[i].x, consYX[i].y, zoneW, 48, 0xffffff, 0)
+      const zone = this.scene.add.rectangle(consYX[i].x, consYX[i].y, 64, 44, 0xffffff, 0)
         .setScrollFactor(0);
       zone.setVisible(false);
       this.container.add(zone);
-
       this.consSlots.push({ bg, icon, badge, zone });
     }
 
-    const consLabel = this.scene.add.text(338, 168, 'CONSUMABLES', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#6a5a8a',
-    });
-    this.container.add(consLabel);
+    this.container.add(this.scene.add.text(CX, 270, 'CONSUMABLES', {
+      fontSize: '10px', fontFamily: 'monospace', color: '#6a5a8a',
+    }).setOrigin(0.5));
 
-    // Settings row
     for (let i = 0; i < 4; i++) {
-      const t = this.scene.add.text(338, 258 + i * 24, '', {
-        fontSize: '14px', fontFamily: 'monospace', color: '#b8a898',
-      });
+      const t = this.scene.add.text(CX, 342 + i * 22, '', {
+        fontSize: '11px', fontFamily: 'monospace', color: '#b8a898',
+      }).setOrigin(0.5);
       this.container.add(t);
       this.settingsTexts.push(t);
-
-      const zone = this.scene.add.rectangle(518, 268 + i * 24, 300, 22, 0xffffff, 0)
+      const zone = this.scene.add.rectangle(CX, 350 + i * 22, 260, 44, 0xffffff, 0)
         .setScrollFactor(0);
       zone.setVisible(false);
       this.container.add(zone);
       this.settingsZones.push(zone);
     }
 
-    const setLabel = this.scene.add.text(338, 240, 'SETTINGS', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#6a5a8a',
-    });
-    this.container.add(setLabel);
+    this.container.add(this.scene.add.text(CX, 324, 'SETTINGS', {
+      fontSize: '10px', fontFamily: 'monospace', color: '#6a5a8a',
+    }).setOrigin(0.5));
 
-    // Embark button
-    this.embarkBtn = this.scene.add.text(480, 435, '[  EMBARK  ]', {
-      fontSize: '18px', fontFamily: 'monospace', color: '#ffcc44',
-      backgroundColor: '#442a1acc', padding: { x: 16, y: 6 },
+    this.embarkBtn = this.scene.add.text(CX, 442, '[  EMBARK  ]', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#ffcc44',
+      backgroundColor: '#442a1acc', padding: { x: 12, y: 4 },
     }).setOrigin(0.5).setScrollFactor(0);
     this.embarkBtn.setVisible(false);
     this.container.add(this.embarkBtn);
+    this.embarkBtnZone = this.scene.add.rectangle(CX, 442, 140, 44, 0xffffff, 0)
+      .setScrollFactor(0).setInteractive({ useHandCursor: true });
+    this.embarkBtnZone.on('pointerdown', () => this.embark());
+    this.embarkBtnZone.setVisible(false);
+    this.container.add(this.embarkBtnZone);
 
-    // Description panel (below embark)
     this.descBg = this.scene.add.graphics();
     this.container.add(this.descBg);
 
     for (let i = 0; i < 2; i++) {
-      const t = this.scene.add.text(480, 486 + i * 20, '', {
-        fontSize: '14px', fontFamily: 'monospace', color: '#c8b898',
+      const t = this.scene.add.text(CX, 472 + i * 16, '', {
+        fontSize: '10px', fontFamily: 'monospace', color: '#c8b898',
       }).setOrigin(0.5);
       this.container.add(t);
       this.descLines.push(t);
     }
 
-    // Footer
-    this.footerText = this.scene.add.text(480, 556, '', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#8a7a9a', align: 'center',
+    this.footerText = this.scene.add.text(CX, VH - 30, '', {
+      fontSize: '10px', fontFamily: 'monospace', color: '#8a7a9a', align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.footerText);
 
-    // Close button (from BasePanel)
     this.addCloseButton();
   }
 
@@ -286,6 +257,7 @@ export class GatePanel extends BasePanel {
 
     this.render();
     this.embarkBtn.setVisible(true);
+    this.embarkBtnZone.setVisible(true);
     this.equipSlots.forEach(s => s.zone.setVisible(true));
     this.consSlots.forEach(s => s.zone.setVisible(true));
     this.settingsZones.forEach(z => z.setVisible(true));
@@ -340,6 +312,7 @@ export class GatePanel extends BasePanel {
   hide(): void {
     this.resetConfirm = false;
     this.embarkBtn.setVisible(false);
+    this.embarkBtnZone.setVisible(false);
     this.equipSlots.forEach(s => s.zone.setVisible(false));
     this.consSlots.forEach(s => s.zone.setVisible(false));
     this.settingsZones.forEach(z => z.setVisible(false));
@@ -363,13 +336,12 @@ export class GatePanel extends BasePanel {
 
   private renderBackground(): void {
     this.bg.clear();
-    this.bg.fillStyle(0x0a0a1a, 0.85);
-    this.bg.fillRoundedRect(130, 40, 700, 540, 12);
-    this.bg.lineStyle(2, 0x6a5a8a, 1);
-    this.bg.strokeRoundedRect(130, 40, 700, 540, 12);
+    this.bg.fillStyle(0x0a0a1a, 0.88);
+    this.bg.fillRect(0, 0, VW, VH);
+    this.bg.lineStyle(1, 0x3a3a4a, 0.4);
+    this.bg.strokeRect(4, 4, VW - 8, VH - 8);
   }
 
-  // ── Stats Column ──
   private renderStats(): void {
     const bootEffects = this.selectedBootsIdx >= 0
       ? gameState.getBootEffectsById(this.bootOptions[this.selectedBootsIdx]?.id ?? null)
@@ -383,18 +355,27 @@ export class GatePanel extends BasePanel {
     const light = gameState.getLanternRangeForPreview(lanternId) || 0;
     const relicCount = gameState.getFoundRelics().length;
 
-    this.statTexts[0].setText(`\u2665 Max Stamina: ${maxStamina}`);
-    this.statTexts[1].setText(`\u25a0 Inventory: ${invSlots}`);
+    this.statTexts[0].setText(`\u2665 Stamina: ${maxStamina}`);
+    this.statTexts[1].setText(`\u25a0 Slots: ${invSlots}`);
     this.statTexts[2].setText(`\u2726 Luck: ${Math.round(luck * 100)}%`);
     this.statTexts[3].setText(`\u2600 Light: ${light > 0 ? light + 'px' : 'none'}`);
     this.statTexts[4].setText(`\u26b6 Relics: ${relicCount}`);
   }
 
-  // ── Equipment Slots ──
   private renderEquipmentSlots(): void {
+    const equipYX: { x: number; y: number }[] = [
+      { x: 70, y: 205 },
+      { x: 185, y: 179 },
+      { x: 252, y: 179 },
+      { x: 185, y: 231 },
+      { x: 252, y: 231 },
+    ];
     for (let i = 0; i < 5; i++) {
       const slot = this.equipSlots[i];
       const isSelected = this.gateTab === i;
+      const baseX = equipYX[i].x;
+      const baseY = equipYX[i].y;
+      const half = i === 0 ? 52 : 26;
 
       slot.bg.clear();
 
@@ -449,40 +430,41 @@ export class GatePanel extends BasePanel {
 
         if (isSelected) {
           slot.bg.fillStyle(0x3a3a5a, 0.6);
-          slot.bg.fillRoundedRect(332 + i * 68, 105, 68, 48, 6);
+          slot.bg.fillRoundedRect(baseX - half, baseY - half, half * 2, half * 2, 5);
           slot.bg.lineStyle(1, 0x8a7aaa);
-          slot.bg.strokeRoundedRect(332 + i * 68, 105, 68, 48, 6);
+          slot.bg.strokeRoundedRect(baseX - half, baseY - half, half * 2, half * 2, 5);
         } else {
           slot.bg.fillStyle(0x1a1a2a, 0.3);
           slot.bg.lineStyle(1, 0x3a3a4a);
-          slot.bg.strokeRoundedRect(332 + i * 68, 105, 68, 48, 6);
+          slot.bg.fillRoundedRect(baseX - half, baseY - half, half * 2, half * 2, 5);
+          slot.bg.strokeRoundedRect(baseX - half, baseY - half, half * 2, half * 2, 5);
         }
       } else {
         const placeholderKey = ['item_pickaxe_1', 'item_ring_critical', 'item_ring_critical', 'item_boots_stamina_bronze', 'item_lantern_bronze'][i];
         slot.icon.setTexture(placeholderKey).setAlpha(0.15);
         slot.icon.setVisible(true);
         slot.badge.setVisible(false);
-        if (isSelected) {
-          slot.bg.fillStyle(0x3a3a5a, 0.6);
-          slot.bg.fillRoundedRect(332 + i * 68, 105, 68, 48, 6);
-          slot.bg.lineStyle(1, 0x8a7aaa);
-          slot.bg.strokeRoundedRect(332 + i * 68, 105, 68, 48, 6);
-        } else {
-          slot.bg.fillStyle(0x1a1a2a, 0.3);
-          slot.bg.lineStyle(1, 0x3a3a4a);
-          slot.bg.strokeRoundedRect(332 + i * 68, 105, 68, 48, 6);
-        }
+        slot.bg.fillStyle(0x1a1a2a, 0.3);
+        slot.bg.lineStyle(1, 0x3a3a4a);
+        slot.bg.fillRoundedRect(baseX - half, baseY - half, half * 2, half * 2, 5);
+        slot.bg.strokeRoundedRect(baseX - half, baseY - half, half * 2, half * 2, 5);
       }
     }
   }
 
-  // ── Consumable Slots ──
   private renderConsumableSlots(): void {
+    const consYX = [
+      { x: CX - 76, y: 292 },
+      { x: CX, y: 292 },
+      { x: CX + 76, y: 292 },
+    ];
     for (let i = 0; i < 3; i++) {
       const slot = this.consSlots[i];
       const ct = CONSUMABLE_TYPES[i];
       const qty = this.consumableLoadout[ct.id] ?? 0;
       const isSelected = this.gateTab === 5 + i;
+      const baseX = consYX[i].x;
+      const baseY = consYX[i].y;
 
       const iconKey = `item_${ct.id}`;
       if (this.scene.textures.exists(iconKey)) {
@@ -497,18 +479,18 @@ export class GatePanel extends BasePanel {
       slot.bg.clear();
       if (isSelected) {
         slot.bg.fillStyle(0x3a3a5a, 0.6);
-        slot.bg.fillRoundedRect(332 + i * 68, 185, 68, 48, 6);
+        slot.bg.fillRoundedRect(baseX - 32, baseY - 21, 64, 42, 5);
         slot.bg.lineStyle(1, 0x8a7aaa);
-        slot.bg.strokeRoundedRect(332 + i * 68, 185, 68, 48, 6);
+        slot.bg.strokeRoundedRect(baseX - 32, baseY - 21, 64, 42, 5);
       } else {
         slot.bg.fillStyle(0x1a1a2a, 0.3);
         slot.bg.lineStyle(1, 0x3a3a4a);
-        slot.bg.strokeRoundedRect(332 + i * 68, 185, 68, 48, 6);
+        slot.bg.fillRoundedRect(baseX - 32, baseY - 21, 64, 42, 5);
+        slot.bg.strokeRoundedRect(baseX - 32, baseY - 21, 64, 42, 5);
       }
     }
   }
 
-  // ── Settings ──
   private renderSettings(): void {
     const elevStr = this.selectedElevatorFloor === 0
       ? '0'
@@ -531,19 +513,18 @@ export class GatePanel extends BasePanel {
     }
   }
 
-  // ── Description Panel ──
   private renderDescription(): void {
     this.descBg.clear();
     this.descBg.fillStyle(0x1a1a2a, 0.7);
-    this.descBg.fillRoundedRect(150, 475, 660, 48, 6);
+    this.descBg.fillRoundedRect(CX - 170, 494, 340, 34, 5);
     this.descBg.lineStyle(1, 0x3a3a5a);
-    this.descBg.strokeRoundedRect(150, 475, 660, 48, 6);
+    this.descBg.strokeRoundedRect(CX - 170, 494, 340, 34, 5);
 
     const lines = this.getDescriptionLines();
     for (let i = 0; i < 2; i++) {
       this.descLines[i].setText(lines[i] ?? '');
       this.descLines[i].setColor(i === 0 ? '#e8d5b7' : '#999999');
-      this.descLines[i].setPosition(480, 486 + i * 20);
+      this.descLines[i].setPosition(CX, 502 + i * 16);
     }
   }
 
@@ -573,7 +554,7 @@ export class GatePanel extends BasePanel {
     const runs = gameState.remainingPickaxeRuns(opt.tier);
     const runsStr = opt.tier === 1 ? '\u221e' : `${runs}/5`;
     const ores = opt.tier >= 4 ? 'Gold/Silver/Bronze' : opt.tier >= 3 ? 'Silver/Bronze' : opt.tier >= 2 ? 'Bronze' : 'Stone';
-    return [`${name} [Tier ${opt.tier}]`, `Mining dmg: ${opt.tier} | Unlocks: ${ores} | Durability: ${runsStr}`];
+    return [`${name} [Tier ${opt.tier}]`, `Dmg: ${opt.tier} | ${ores} | ${runsStr}`];
   }
 
   private descRing(idx: number, label: string): [string, string] {
@@ -591,7 +572,7 @@ export class GatePanel extends BasePanel {
     if (eff.maxStaminaBonus > 0) parts.push(`+${eff.maxStaminaBonus} stamina`);
     if (eff.luckBonus > 0) parts.push(`${Math.round(eff.luckBonus * 100)}% luck`);
     if (eff.stairMultiplier > 1) parts.push(`${eff.stairMultiplier}x stair loot`);
-    parts.push(`Durability: ${opt.runs === Infinity ? '\u221e' : opt.runs + '/5'}`);
+    parts.push(`Dur: ${opt.runs === Infinity ? '\u221e' : opt.runs + '/5'}`);
     return [opt.name, parts.join(' | ')];
   }
 
@@ -600,7 +581,7 @@ export class GatePanel extends BasePanel {
     if (!opt) return ['Lantern', 'No lantern equipped'];
     const range = gameState.getLanternRangeForPreview(opt.id);
     const darkRange = range + 90;
-    return [opt.name, `Light: +${range}px (+${darkRange}px dark) | Durability: ${opt.runs === Infinity ? '\u221e' : opt.runs + '/5'}`];
+    return [opt.name, `Light: +${range}px (+${darkRange}px dark) | Dur: ${opt.runs === Infinity ? '\u221e' : opt.runs + '/5'}`];
   }
 
   private descConsumable(idx: number): [string, string] {
@@ -610,12 +591,10 @@ export class GatePanel extends BasePanel {
     return [ct.name, `Loadout: ${qty} | Stash: ${stash}`];
   }
 
-  // ── Footer ──
   private renderFooter(): void {
-    this.footerText.setText('[W/S] navigate  [SPACE] open picker  [\u2190 \u2192] cycle  [ESC] cancel');
+    this.footerText.setText('[W/S] nav  [SPACE] pick  [\u2190\u2192] cycle  [ESC] cancel');
   }
 
-  // ── Click Handlers ──
   private onEquipClick(idx: number): void {
     if (!this.isVisible()) return;
     this.gateTab = idx;
@@ -649,12 +628,10 @@ export class GatePanel extends BasePanel {
     }
   }
 
-  // ── Picker: Equipment ──
   private openEquipPicker(slotIdx: number): void {
     const slotNames = ['Pickaxe', 'Ring 1', 'Ring 2', 'Boots', 'Lantern'];
     let options: PickerOption[] = [];
     let currentId: string | null = null;
-    let currentIdx = -1;
 
     switch (slotIdx) {
       case 0: {
@@ -666,7 +643,7 @@ export class GatePanel extends BasePanel {
             id: o.id,
             name: NAMES[o.tier] ?? `Pickaxe T${o.tier}`,
             desc1: `Dmg: ${o.tier} | ${ores}`,
-            desc2: `Durability: ${runsStr}`,
+            desc2: `Dur: ${runsStr}`,
             disabled: o.tier > 1 && gameState.inventory.count(o.id) <= 0 && gameState.currentPickaxeTier !== o.tier,
           } as PickerOption;
         });
@@ -763,7 +740,6 @@ export class GatePanel extends BasePanel {
     this.render();
   }
 
-  // ── Picker: Consumable ──
   private openConsumablePicker(idx: number): void {
     const ct = CONSUMABLE_TYPES[idx];
     const currentQty = this.consumableLoadout[ct.id] ?? 0;
@@ -775,7 +751,6 @@ export class GatePanel extends BasePanel {
     });
   }
 
-  // ── Picker: Floor ──
   private openFloorPicker(): void {
     this.floorPicker.show(this.elevatorFloorOptions, this.selectedElevatorFloor, (floor) => {
       this.selectedElevatorFloor = floor;
@@ -783,7 +758,6 @@ export class GatePanel extends BasePanel {
     });
   }
 
-  // ── Picker: Seed ──
   private openSeedPopup(): void {
     this.seedPopup.show(this.gateSeed, (seed) => {
       this.gateSeed = seed;
@@ -791,7 +765,6 @@ export class GatePanel extends BasePanel {
     });
   }
 
-  // ── Confirm: Reset ──
   private openResetConfirm(): void {
     this.confirmPopup.show(
       'Reset all progress?',
@@ -815,7 +788,6 @@ export class GatePanel extends BasePanel {
       || this.confirmPopup.isVisible();
   }
 
-  // ── Keyboard Navigation ──
   handleUp(): void {
     this.gateTab--;
     if (this.gateTab < 0) this.gateTab = this.maxTab;
@@ -884,7 +856,6 @@ export class GatePanel extends BasePanel {
     }
   }
 
-  // ── Embark ──
   private embark(): void {
     this.resetConfirm = false;
     const selected = this.pickaxeOptions[this.selectedPickaxeIdx] ?? this.pickaxeOptions[0];

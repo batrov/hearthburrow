@@ -17,6 +17,7 @@ import {
   tileSortKey, drawDiamondAt,
   HALF_W, HALF_H, worldWidth, worldHeight,
 } from '../systems/IsoUtils';
+import { VW, VH, CX, CY } from '../systems/Viewport';
 
 const BIOMES = ['FOREST', 'CAVE', 'ICE', 'LAVA', 'RUINS'];
 
@@ -191,7 +192,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.fadeIn(500, 0, 0, 0);
     this.cameras.main.setBackgroundColor('#0a0a0a');
 
-    this.hudCam = this.cameras.add(0, 0, 960, 640, false, 'hud');
+    this.hudCam = this.cameras.add(0, 0, VW, VH, false, 'hud');
     this.hudCam.setZoom(1);
 
     this.exhausted = false;
@@ -270,7 +271,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const yMin = -HALF_H;
     this.cameras.main.startFollow(this.player, true, 0.5, 0.5);
     this.cameras.main.setBounds(xMin, yMin, worldWidth(floor.cols, floor.rows), worldHeight(floor.cols, floor.rows));
-    this.cameras.main.setZoom(1.5);
+    this.cameras.main.setZoom(1.2);
 
     this.expeditionState.initExplored(floor.cols, floor.rows);
     this.revealSurroundings();
@@ -547,56 +548,53 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private createHUD(): void {
-    const camW = this.cameras.main.width;
-    const camH = this.cameras.main.height;
-
     // === TOP-LEFT: Stamina Block (portrait + bar + value) ===
     this.staminaBg = this.add.graphics();
     this.staminaBg.fillStyle(0x0a0a1a, 0.75);
-    this.staminaBg.fillRoundedRect(8, 8, 260, 72, 6);
+    this.staminaBg.fillRoundedRect(4, 4, VW - 8, 68, 6);
     this.staminaBg.setScrollFactor(0).setDepth(201);
     this.cameras.main.ignore(this.staminaBg);
 
-    this.portraitSprite = this.add.image(30, 84, 'portrait')
+    this.portraitSprite = this.add.image(42, VH, 'portrait')
       .setScrollFactor(0).setDepth(201);
     this.cameras.main.ignore(this.portraitSprite);
     this.portraitSprite.setCrop(54, 0, 108, 108);
-    this.portraitSprite.setDisplaySize(160, 160);
+    this.portraitSprite.setDisplaySize(76, 76);
     this.portraitSprite.setFlipX(true);
+    this.portraitSprite.setY(38);
 
     this.staminaBarGfx = this.add.graphics().setScrollFactor(0).setDepth(201);
     this.cameras.main.ignore(this.staminaBarGfx);
 
-    this.staminaValueText = this.add.text(82, 44, '', {
-      fontSize: '13px', fontFamily: 'monospace', color: '#ffffff',
-    }).setScrollFactor(0).setDepth(201);
+    this.staminaValueText = this.add.text(VW - 8, 10, '', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#ffffff',
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(201);
     this.cameras.main.ignore(this.staminaValueText);
 
     this.drawStaminaBar();
 
-    // === CENTER-TOP: Depth ===
-    this.depthTextCentered = this.add.text(camW / 2, 12, `Depth: ${this.expeditionState.depth}`, {
-      fontSize: '16px', fontFamily: 'monospace', color: '#ffffff', fontStyle: 'bold',
-    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(DEPTH.HUD);
+    // === BOTTOM-CENTER: Depth ===
+    this.depthTextCentered = this.add.text(CX, VH - 36, `Depth: ${this.expeditionState.depth}`, {
+      fontSize: '14px', fontFamily: 'monospace', color: '#ffffff', fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.depthTextCentered);
 
-    // === TOP-RIGHT: Pickaxe Block ===
+    // === LEFT-TOP: Pickaxe Block (below stamina) ===
     const pickBg = this.add.graphics();
     pickBg.fillStyle(0x0a0a1a, 0.75);
-    pickBg.fillRoundedRect(camW - 100, 8, 92, 72, 6);
+    pickBg.fillRoundedRect(4, 78, 160, 42, 4);
     pickBg.setScrollFactor(0).setDepth(DEPTH.HUD_BG);
     this.cameras.main.ignore(pickBg);
 
-    const pickCx = camW - 54;
     const tier = gameState.currentPickaxeTier;
-    this.pickaxeSprite = this.add.image(pickCx, 34, `item_pickaxe_${tier}`)
+    this.pickaxeSprite = this.add.image(30, 99, `item_pickaxe_${tier}`)
       .setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.pickaxeSprite);
     this.pickaxeRing = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD + 1);
     this.cameras.main.ignore(this.pickaxeRing);
-    this.pickaxeUsesText = this.add.text(pickCx, 56, '', {
-      fontSize: '10px', fontFamily: 'monospace', color: '#cccccc', align: 'center',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
+    this.pickaxeUsesText = this.add.text(66, 99, '', {
+      fontSize: '9px', fontFamily: 'monospace', color: '#cccccc', align: 'center',
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.pickaxeUsesText);
 
     this.drawPickaxeRing();
@@ -604,23 +602,23 @@ export class ExpeditionScene extends Phaser.Scene {
     // === BOTTOM-LEFT: Inventory Button ===
     const invBg = this.add.graphics();
     invBg.fillStyle(0x0a0a1a, 0.75);
-    invBg.fillRoundedRect(8, camH - 80, 80, 72, 6);
+    invBg.fillRoundedRect(6, VH - 78, 68, 72, 6);
     invBg.setScrollFactor(0).setDepth(DEPTH.HUD_BG);
     this.cameras.main.ignore(invBg);
 
-    const invCx = 48;
-    const invCy = camH - 44;
+    const invCx = 40;
+    const invCy = VH - 42;
     this.invBtnSprite = this.add.image(invCx, invCy - 4, 'item_inventory_bag')
       .setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.invBtnSprite);
     this.invBtnRing = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD + 1);
     this.cameras.main.ignore(this.invBtnRing);
     this.invSlotText = this.add.text(invCx, invCy + 16, '', {
-      fontSize: '10px', fontFamily: 'monospace', color: '#cccccc', align: 'center',
+      fontSize: '9px', fontFamily: 'monospace', color: '#cccccc', align: 'center',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.invSlotText);
 
-    const invZone = this.add.rectangle(invCx, camH - 44, 68, 56, 0x000000, 0)
+    const invZone = this.add.rectangle(invCx, invCy, 64, 52, 0x000000, 0)
       .setScrollFactor(0).setDepth(DEPTH.CLICK_ZONES).setInteractive({ useHandCursor: true }).setData('isUI', true);
     this.cameras.main.ignore(invZone);
     invZone.on('pointerdown', () => {
@@ -647,12 +645,12 @@ export class ExpeditionScene extends Phaser.Scene {
       }
     });
     this.escapeLabel = this.add.text(0, 0, '', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#cccccc',
+      fontSize: '11px', fontFamily: 'monospace', color: '#cccccc',
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.escapeLabel);
 
-    // Potion (bottom row)
+    // Potion
     this.potionImg = this.add.image(0, 0, 'item_stamina_potion')
       .setScrollFactor(0).setDepth(DEPTH.HUD).setInteractive({ useHandCursor: true }).setData('isUI', true);
     this.cameras.main.ignore(this.potionImg);
@@ -661,12 +659,12 @@ export class ExpeditionScene extends Phaser.Scene {
       this.tryUseConsumable('stamina_potion');
     });
     this.potionCountText = this.add.text(0, 0, '', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#ffdd88',
+      fontSize: '12px', fontFamily: 'monospace', color: '#ffdd88',
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.potionCountText);
 
-    // Bomb (bottom row, left of potion)
+    // Bomb
     this.bombImg = this.add.image(0, 0, 'item_mining_bomb')
       .setScrollFactor(0).setDepth(DEPTH.HUD).setInteractive({ useHandCursor: true }).setData('isUI', true);
     this.cameras.main.ignore(this.bombImg);
@@ -675,7 +673,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.tryUseConsumable('mining_bomb');
     });
     this.bombCountText = this.add.text(0, 0, '', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#ffdd88',
+      fontSize: '12px', fontFamily: 'monospace', color: '#ffdd88',
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.bombCountText);
@@ -694,11 +692,11 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private createActionButton(): void {
-    const x = 920, y = 320, size = 72;
+    const x = CX, y = VH - 90, size = 64;
     this.actionBtnBg = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.actionBtnBg);
     this.actionBtnText = this.add.text(x, y, '', {
-      fontSize: '28px', fontFamily: 'monospace',
+      fontSize: '24px', fontFamily: 'monospace',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD + 1);
     this.cameras.main.ignore(this.actionBtnText);
 
@@ -710,12 +708,13 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private updateActionButton(): void {
+    const bx = CX - 32, by = VH - 122;
     const show = (icon: string, color: string) => {
       this.actionBtnBg.clear();
       this.actionBtnBg.fillStyle(0x0a0a1a, 0.75);
-      this.actionBtnBg.fillRoundedRect(884, 284, 72, 72, 10);
+      this.actionBtnBg.fillRoundedRect(bx, by, 64, 64, 10);
       this.actionBtnBg.lineStyle(2, Phaser.Display.Color.HexStringToColor(color).color, 0.6);
-      this.actionBtnBg.strokeRoundedRect(884, 284, 72, 72, 10);
+      this.actionBtnBg.strokeRoundedRect(bx, by, 64, 64, 10);
       this.actionBtnText.setText(icon).setColor(color);
     };
     const hide = () => {
@@ -807,11 +806,11 @@ export class ExpeditionScene extends Phaser.Scene {
     const floor = this.currentFloor;
     if (!floor) return;
 
-    const cell = 2;
+    const cell = 1.5;
     const mapW = floor.cols * cell;
     const mapH = floor.rows * cell;
-    const mapX = 960 - mapW - 8;
-    const mapY = 640 - mapH - 8;
+    const mapX = VW - mapW - 6;
+    const mapY = 80;
 
     this.minimapBg.clear();
     this.minimapGfx.clear();
@@ -872,21 +871,21 @@ export class ExpeditionScene extends Phaser.Scene {
   private updateMinimapDot(): void {
     const floor = this.currentFloor;
     if (!floor) return;
-    const cell = 2;
+    const cell = 1.5;
     const mapW = floor.cols * cell;
     const mapH = floor.rows * cell;
-    const mapX = 960 - mapW - 8;
-    const mapY = 640 - mapH - 8;
+    const mapX = VW - mapW - 6;
+    const mapY = 80;
     this.minimapDot.setPosition(mapX + this.playerX * cell + cell / 2, mapY + this.playerY * cell + cell / 2);
   }
 
   private drawStaminaBar(): void {
     this.staminaBarGfx.clear();
 
-    const x = 76;
-    const y = 18;
-    const w = 180;
-    const h = 14;
+    const x = 48;
+    const y = 12;
+    const w = VW - 60;
+    const h = 12;
     const ratio = this.stamina.ratio;
 
     this.staminaBarGfx.fillStyle(0x2a1a1a, 1);
@@ -906,9 +905,9 @@ export class ExpeditionScene extends Phaser.Scene {
     const max = this.inventory.capacityMax();
     const ratio = max > 0 ? used / max : 0;
 
-    const cx = 48;
-    const cy = this.cameras.main.height - 48;
-    const radius = 18;
+    const cx = 40;
+    const cy = VH - 42;
+    const radius = 16;
     const color = ratio <= 0.75 ? 0x44cc66 : ratio <= 0.9 ? 0xccaa44 : 0xcc4444;
 
     this.invBtnRing.lineStyle(2, color, 1);
@@ -922,9 +921,9 @@ export class ExpeditionScene extends Phaser.Scene {
   private drawPickaxeRing(): void {
     this.pickaxeRing.clear();
 
-    const pickCx = this.cameras.main.width - 54;
-    const pickCy = 34;
-    const radius = 18;
+    const pickCx = 30;
+    const pickCy = 99;
+    const radius = 14;
     const tier = gameState.currentPickaxeTier;
     const runsLeft = gameState.remainingPickaxeRuns(tier);
     const maxRuns = 5;
@@ -969,32 +968,16 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private repositionActionButtons(): void {
-    const gap = 4;
-    const half = 16;
+    // Bottom-right vertical stack: potion → bomb → escape
+    const cx = VW - 40;
+    this.potionImg.setPosition(cx, VH - 130);
+    this.potionCountText.setPosition(this.potionImg.x + 14, this.potionImg.y - 14);
 
-    // Potion: left of minimap, bottom-aligned (closest to minimap)
-    this.potionImg.setPosition(
-      this.minimapX - gap - half,
-      this.minimapY + this.minimapH - half,
-    );
-    this.potionCountText.setPosition(this.potionImg.x + 16, this.potionImg.y - 16);
+    this.bombImg.setPosition(cx, VH - 88);
+    this.bombCountText.setPosition(this.bombImg.x + 14, this.bombImg.y - 14);
 
-    // Bomb: left of potion
-    this.bombImg.setPosition(
-      this.minimapX - gap - half - 44,
-      this.minimapY + this.minimapH - half,
-    );
-    this.bombCountText.setPosition(this.bombImg.x + 16, this.bombImg.y - 16);
-
-    // Escape: centered above minimap
-    this.escapeSprite.setPosition(
-      this.minimapX + this.minimapW / 2,
-      this.minimapY - 26,
-    );
-    this.escapeLabel.setPosition(
-      this.escapeSprite.x,
-      this.escapeSprite.y + 18,
-    );
+    this.escapeSprite.setPosition(cx, VH - 46);
+    this.escapeLabel.setPosition(this.escapeSprite.x, this.escapeSprite.y + 16);
   }
 
   private setupInput(): void {
@@ -1721,13 +1704,13 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private showStairPrompt(): void {
-    const cx = this.cameras.main.width / 2;
-    const cy = this.cameras.main.height / 2;
+    const cx = CX;
+    const cy = CY;
     const action = this.stairAction === 'ascend' ? 'Ascend' : 'Descend';
 
     const bg = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.OVERLAY);
     bg.fillStyle(0x0a0a1a, 0.9);
-    bg.fillRect(0, 0, 960, 640);
+    bg.fillRect(0, 0, VW, VH);
     bg.lineStyle(2, 0x5a4a7a, 0.6);
     bg.strokeRoundedRect(cx - 180, cy - 55, 360, 145, 10);
     this.cameras.main.ignore(bg);
@@ -2726,7 +2709,7 @@ export class ExpeditionScene extends Phaser.Scene {
     if (this.activeObtainPopups.length >= 3) return;
 
     const anchorX = 18;
-    const anchorY = this.cameras.main.height - 90;
+    const anchorY = VH - 90;
     const popY = anchorY - this.activeObtainPopups.length * 36;
     const container = this.add.container(anchorX, popY).setScrollFactor(0).setDepth(DEPTH.HUD + 2);
     this.cameras.main.ignore(container);
@@ -2834,8 +2817,8 @@ export class ExpeditionScene extends Phaser.Scene {
     sprite.setScrollFactor(0).setPosition(screenX, screenY);
     sprite.cameraFilter &= ~this.hudCam.id;
     this.cameras.main.ignore(sprite);
-    const targetX = 48;
-    const targetY = this.cameras.main.height - 44;
+    const targetX = 40;
+    const targetY = VH - 42;
     this.tweens.add({
       targets: sprite,
       x: targetX,

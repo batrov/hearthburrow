@@ -348,3 +348,35 @@ Resolved Bugs:
 - **FloorPicker/ConfirmPopup clicks not registering** — overlay Graphics.setInteractive() and row Rectangles inside container all broken. Same fix: blocker + scene-level handler with manual hit-testing
 - **All remaining container-child setInteractive() instances fixed** — audit across 7 UI files: FloorPicker, ConfirmPopup, EquipmentPicker, GatePanel all migrated to blocker + scene-level handler pattern
 - **Starting floor defaults to highest unlocked** — now picks the deepest elevator floor the player has reached instead of always defaulting to floor 0
+
+## ✅ Portrait Refactor — Phase 1-3 Complete (June 2026)
+- **Resolution**: main.ts → `width: 390, height: 844` (iPhone Pro) with `Phaser.Scale.FIT` + `CENTER_BETTER`
+- **Viewport constants**: `VW=390, VH=844, CX=195, CY=422, PANEL_PAD=16, OVERLAY_W=358, OVERLAY_H=812`
+- **ExpeditionScene HUD**: full-width stamina bar, portrait left/depth/text blocks, minimap 1.5px cells, centered action button
+- **Dual-camera zooms**: Expedition 1.2×, Homeland 0.85×, Tavern 1.2× — world tiles appear same visual size across scenes
+- **All 12 panels** rewritten for 390px: GatePanel 2-row equipment, ResearchPanel 3-branch 200px span, CombatPanel 300w bar, EventPanel compact, GamblePanel 70px radius, etc.
+- **3 scenes**: Homeland hudCam + zoom 0.85, Tavern OFFSET_X=CX-40 + zoom 1.2, ExpeditionRecap single-column 358w
+- **Touch-size audit**: all interactive zones ≥40px height, standalone buttons ≥44px (FarmPanel, GatePanel embark, SeedEntryPopup randomize, ConfirmPopup yes/no, ConsumablePicker ±, NPCPhotobook ▲▼, CombatPanel timing)
+
+## ✅ Portrait Refactor — Phase 4 Touch Audit Complete (June 2026)
+- **Row zones**: InventoryPanel 20→40px, CraftingPanel 20→40px, TradePanel 20→40px, EquipmentPicker 36→44px, FloorPicker 34→44px, EventPanel 32→44px
+- **Settings zones**: GatePanel 20→44px
+- **Equip/cons slots**: GatePanel 42→44px
+- **Standalone buttons**: FarmPanel setInteractive→transparent 44px zones, GatePanel embarkBtnZone 44px, SeedEntryPopup randomizeZone 44px, ConfirmPopup yesBtnZone/noBtnZone 44px
+- **± buttons**: ConsumablePicker hw 20→22, hh 16→22
+- **Scroll arrows**: NPCPhotobook 36→44px
+- **Timing bar**: CombatPanel `BAR_HEIGHT+12=28`→44px
+- **Clean build**: `npm run build` zero errors
+
+## ✅ GatePanel Character Portrait & Equipment Layout Revamp (June 2026)
+- **Full-body portrait**: `portrait` (256×256) added to GatePanel at (20, 42), 76×76 displaySize — shows full character sprite uncropped
+- **Stats compacted**: moved from x=10 to x=110 beside portrait, 14px spacing, 10px font
+- **5-square equipment grid**: pickaxe 104×104 (left), rings/boots/lantern 52×52 each (2×2 right grid)
+- **All Y-values shifted**: cons rows→292, settings→342-408, embark→442, desc→494
+- **Uniform rendering**: conditional half-size (`i===0 ? 52 : 26`) for pickaxe vs other slot backgrounds
+
+## ✅ Expedition HUD Refresh (June 2026)
+- **Depth moved**: from center-top `(CX, 4)` → bottom-center `(CX, VH-36)`, below action button
+- **Pickaxe moved**: from top-right `(VW-76, 72×62)` → compact 160×42 block at `(4, 78)`, below stamina HUD left
+- **Minimap moved**: from bottom-right → top-right at y=80, below stamina HUD
+- **Potion/Bomb/Escape**: decoupled from minimap, now vertical stack at x=VW-40 (potion VH-130, bomb VH-88, escape VH-46)
