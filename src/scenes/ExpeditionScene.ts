@@ -76,6 +76,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private bombCountText!: Phaser.GameObjects.Text;
   private escapeSprite!: Phaser.GameObjects.Image;
   private escapeLabel!: Phaser.GameObjects.Text;
+  private carrotCountText!: Phaser.GameObjects.Text;
   private keys!: {
     W: Phaser.Input.Keyboard.Key;
     A: Phaser.Input.Keyboard.Key;
@@ -388,6 +389,9 @@ export class ExpeditionScene extends Phaser.Scene {
         case 'blocked':
           if (this.textures.exists('blocked')) makeImg('blocked');
           break;
+        case 'carrot_pickup':
+          if (!tile.broken && this.textures.exists('carrot_pickup')) makeImg('carrot_pickup');
+          break;
         default:
           if (tile.type === 'event_villager' && !tile.broken) {
             const npcKey = 'npc_' + tile.resource;
@@ -419,7 +423,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const ty = this.playerY + this.facingY;
     if (tx < 0 || tx >= floor.cols || ty < 0 || ty >= floor.rows) return;
     const tile = floor.tiles[ty][tx];
-    if (tile.type === 'floor' || tile.type === 'corridor' || tile.type === 'wall') return;
+    if (tile.type === 'floor' || tile.type === 'corridor' || tile.type === 'wall' || tile.type === 'carrot_pickup') return;
     if (tile.broken) return;
     const p = gridToIso(tx, ty);
 
@@ -570,6 +574,12 @@ export class ExpeditionScene extends Phaser.Scene {
       fontSize: '11px', fontFamily: 'monospace', color: '#ffffff',
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(211);
     this.cameras.main.ignore(this.staminaValueText);
+
+    this.carrotCountText = this.add.text(CX, 85, '', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#ff8833', fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(213);
+    this.cameras.main.ignore(this.carrotCountText);
+    this.updateCarrotCounter();
 
     this.drawStaminaBar();
 
@@ -1230,6 +1240,9 @@ export class ExpeditionScene extends Phaser.Scene {
       if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
         this.gamblePanel.onPress();
       }
+      if (Phaser.Input.Keyboard.JustDown(this.keys.ESC) || Phaser.Input.Keyboard.JustDown(this.keys.TAB)) {
+        this.gamblePanel.hide();
+      }
       return;
     }
 
@@ -1471,6 +1484,11 @@ export class ExpeditionScene extends Phaser.Scene {
     const tile = floor.tiles[ty][tx];
     if (!tile.type.startsWith('event_') || tile.broken) return;
 
+    if (eventId === 'gambling_goblin') {
+      this.triggerGamble(tx, ty, tile);
+      return;
+    }
+
     this.eventActive = true;
 
     const config = this.buildEventConfig(eventId);
@@ -1490,6 +1508,29 @@ export class ExpeditionScene extends Phaser.Scene {
         this.drawMinimap();
       });
     });
+  }
+
+  private triggerGamble(tx: number, ty: number, tile: DungeonTile): void {
+    const depth = this.expeditionState.depth;
+    const cost = 5 + Math.floor(depth / 5);
+    const segments = this.getGambleSegments(depth);
+    const canGamble = gameState.inventory.count('carrot') >= cost;
+
+    this.analog.reset();
+    this.gamblePanel.showPreview(segments, cost, canGamble,
+      () => {
+        gameState.inventory.removeItem('carrot', cost);
+        gameState.save();
+      },
+      (reward) => {
+        if (reward) this.giveItem(reward.id, reward.quantity);
+        tile.broken = true;
+        this.interactTarget = null;
+        this.interactPrompt.setAlpha(0);
+        this.drawFloor();
+        this.drawMinimap();
+      },
+    );
   }
 
   private getGambleSegments(depth: number): RouletteSegment[] {
@@ -1607,34 +1648,6 @@ export class ExpeditionScene extends Phaser.Scene {
               },
             },
             { label: 'Leave them', action: () => {} },
-          ],
-        };
-      },
-
-      gambling_goblin: () => {
-        const depth = this.expeditionState.depth;
-        const cost = 5 + Math.floor(depth / 5);
-        const canGamble = stone() >= cost;
-        const segments = this.getGambleSegments(depth);
-        return {
-          title: 'Gambling Goblin',
-          description: `A goblin challenges you to a game of chance. Risk ${cost} Stone for a spin!`,
-          choices: [
-            {
-              label: `Gamble ${cost} Stone ${canGamble ? '' : '(not enough stone)'}`,
-              action: () => {
-                if (stone() >= cost) {
-                  removeStone(cost);
-                  this.analog.reset();
-                  this.gamblePanel.show(segments, cost, (reward) => {
-                    if (reward) {
-                      this.giveItem(reward.id, reward.quantity);
-                    }
-                  });
-                }
-              },
-            },
-            { label: 'Walk away', action: () => {} },
           ],
         };
       },
@@ -1951,6 +1964,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.updateMinimapDot();
 
     this.activatePressurePlate(nx, ny);
+    this.checkCarrotPickup(nx, ny);
 
     audio.playStep();
     this.revealSurroundings();
@@ -2452,10 +2466,10 @@ export class ExpeditionScene extends Phaser.Scene {
     const enemyType = tile.eventId || 'slime';
 
     const enemyData: Record<string, { name: string; hp: number; speed: number; zoneWidth: number; rewards: { id: string; quantity: number }[] }> = {
-      slime: { name: 'Slime', hp: 1, speed: 800, zoneWidth: 80, rewards: [{ id: 'monster_drop', quantity: 1 }] },
-      rat: { name: 'Giant Rat', hp: 2, speed: 600, zoneWidth: 60, rewards: [{ id: 'monster_drop', quantity: 1 }, { id: 'stone', quantity: 1 }] },
-      bat: { name: 'Cave Bat', hp: 1, speed: 400, zoneWidth: 50, rewards: [{ id: 'monster_drop', quantity: 1 }, { id: 'crystal', quantity: 1 }] },
-      boss: { name: 'Forest Guardian', hp: 5, speed: 700, zoneWidth: 60, rewards: [{ id: 'gold_ore', quantity: 3 }, { id: 'crystal', quantity: 2 }] },
+      slime: { name: 'Slime', hp: 2, speed: 800, zoneWidth: 80, rewards: [{ id: 'monster_drop', quantity: 1 }] },
+      rat: { name: 'Giant Rat', hp: 4, speed: 600, zoneWidth: 60, rewards: [{ id: 'monster_drop', quantity: 1 }, { id: 'stone', quantity: 1 }] },
+      bat: { name: 'Cave Bat', hp: 1, speed: 450, zoneWidth: 50, rewards: [{ id: 'monster_drop', quantity: 1 }, { id: 'crystal', quantity: 1 }] },
+      boss: { name: 'Forest Guardian', hp: 25, speed: 600, zoneWidth: 60, rewards: [{ id: 'gold_ore', quantity: 3 }, { id: 'crystal', quantity: 2 }] },
     };
 
     const data = enemyData[enemyType] ?? enemyData.slime;
@@ -2812,6 +2826,64 @@ export class ExpeditionScene extends Phaser.Scene {
     this.itemFlyBusy = true;
     const { sprite, resource } = this.itemFlyQueue.shift()!;
     this.flySpriteToBackpack(sprite, resource);
+  }
+
+  private checkCarrotPickup(tx: number, ty: number): void {
+    const floor = this.currentFloor;
+    if (!floor) return;
+    const tile = floor.tiles[ty][tx];
+    if (tile.type !== 'carrot_pickup' || tile.broken) return;
+    tile.broken = true;
+    this.spawnCarrotFlyAnim(tx, ty);
+    this.drawFloor();
+  }
+
+  private spawnCarrotFlyAnim(tx: number, ty: number): void {
+    const worldPos = gridToIso(tx, ty);
+    const cam = this.cameras.main;
+    const texKey = 'item_carrot';
+    if (!this.textures.exists(texKey)) return;
+
+    const sprite = this.add.image(worldPos.x, worldPos.y, texKey)
+      .setDepth(DEPTH.INTERACT_PROMPT);
+    this.hudCam.ignore(sprite);
+
+    // Phase 1: arc upward in world space (300ms)
+    this.tweens.add({
+      targets: sprite,
+      y: worldPos.y - 50,
+      scale: { from: 1, to: 1.3 },
+      duration: 300,
+      ease: 'Quad.easeOut',
+      onComplete: () => {
+        // Phase 2: switch to screen space and fly to HUD (300ms)
+        const screenX = sprite.x - cam.scrollX;
+        const screenY = sprite.y - cam.scrollY;
+        sprite.setScrollFactor(0).setPosition(screenX, screenY);
+        sprite.cameraFilter &= ~this.hudCam.id;
+        this.cameras.main.ignore(sprite);
+        this.tweens.add({
+          targets: sprite,
+          x: CX,
+          y: 85,
+          scale: 0.4,
+          alpha: 0.7,
+          duration: 300,
+          ease: 'Quad.easeIn',
+          onComplete: () => {
+            audio.playCarrotPickup();
+            gameState.inventory.addItem('carrot', 1);
+            sprite.destroy();
+            this.updateCarrotCounter();
+          },
+        });
+      },
+    });
+  }
+
+  private updateCarrotCounter(): void {
+    const count = gameState.inventory.count('carrot');
+    this.carrotCountText.setText(`🥕 ${count}`);
   }
 
   private flySpriteToBackpack(sprite: Phaser.GameObjects.Image, resource: string): void {

@@ -62,7 +62,7 @@ export class EventPanel extends BasePanel {
     for (let i = 0; i < 6; i++) {
       const zone = this.scene.add.rectangle(CX, startY + i * lineH, 320, lineH, 0xffffff, 0)
         .setInteractive({ useHandCursor: true })
-        .setDepth(210);
+        .setDepth(210).setData('isUI', true);
       const idx = i;
       zone.on('pointerdown', () => {
         if (!this._visible || idx >= this.currentChoices.length) return;

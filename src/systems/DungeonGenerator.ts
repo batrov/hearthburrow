@@ -7,7 +7,8 @@ export type TileType = 'wall' | 'floor' | 'mineable' | 'stairs_up' | 'stairs_dow
   | 'event_treasure_vault'
   | 'event_relic'
   | 'enemy' | 'event_boss'
-  | 'pressure_plate' | 'blocked' | 'boss_body';
+  | 'pressure_plate' | 'blocked' | 'boss_body'
+  | 'carrot_pickup';
 
 export interface DungeonTile {
   type: TileType;
@@ -127,6 +128,20 @@ export class DungeonGenerator {
 
       exitX = entryX;
       exitY = entryY;
+
+      // Place 1 carrot in boss room on a non-center floor tile
+      const bossFloorCandidates: { x: number; y: number }[] = [];
+      for (let y = rooms[0].y + 1; y < rooms[0].y + rooms[0].h - 1; y++) {
+        for (let x = rooms[0].x + 1; x < rooms[0].x + rooms[0].w - 1; x++) {
+          if (tiles[y][x].type === 'floor' && !(x === centerX && y === centerY)) {
+            bossFloorCandidates.push({ x, y });
+          }
+        }
+      }
+      if (bossFloorCandidates.length > 0) {
+        const pick = bossFloorCandidates[Math.floor(this.rng.frac() * bossFloorCandidates.length)];
+        tiles[pick.y][pick.x] = this.makeTile('carrot_pickup');
+      }
     } else {
       rooms = this.placeRooms(cols, rows);
 
@@ -192,6 +207,24 @@ export class DungeonGenerator {
 
       tiles[entryY][entryX] = this.makeTile(depth % 5 === 0 ? 'stairs_up' : 'floor');
       tiles[exitY][exitX] = this.makeTile('floor');
+
+      // Place carrots on random floor tiles
+      const maxCarrots = (depth % 5) + 1;
+      const carrotCandidates: { x: number; y: number }[] = [];
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          if (tiles[y][x].type === 'floor'
+            && !(x === entryX && y === entryY)
+            && !(x === exitX && y === exitY)) {
+            carrotCandidates.push({ x, y });
+          }
+        }
+      }
+      this.rng.shuffle(carrotCandidates);
+      for (let i = 0; i < Math.min(maxCarrots, carrotCandidates.length); i++) {
+        const p = carrotCandidates[i];
+        tiles[p.y][p.x] = this.makeTile('carrot_pickup');
+      }
     }
 
     let mineableCount = 0;

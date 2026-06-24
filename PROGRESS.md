@@ -411,3 +411,21 @@ Resolved Bugs:
 - **Camera coordinate fix**: removed `OFFSET_X` from `gridToScreen` — world renders at pure isometric positions, camera scroll handles centering. `doClickToMove` uses `pointer.worldX` directly (Phaser already accounts for camera scroll+zoom)
 - **Action button faces NPC**: clicking the 💬 action button now sets `facingX/Y` before greeting
 - **`updateFacingHighlight()` / `updateActionButton()`**: extracted into dedicated methods for clean per-frame updates
+
+## ✅ Carrot Currency System (June 2026)
+- **Pickable floor tiles** — `carrot_pickup` type added to `TileType` union; `(depth % 5) + 1` carrots spawn per floor on random walkable tiles (1 on boss floors); marked `broken` on pickup
+- **Auto-pickup on step** — `tryMove()` calls `checkCarrotPickup(nx, ny)` after each move; tile broken + fly animation + `gameState.inventory.addItem('carrot', 1)` (homeland storage, not expedition pack)
+- **Two-phase fly animation** — Phase 1: 300ms `Quad.easeOut` arc upward in world space (`hudCam.ignore`). Phase 2: 300ms `Quad.easeIn` fly to CX,78 in screen space (`setScrollFactor(0)` + camera swap), scale 1→0.4
+- **Carrot pickup SFX** — `playCarrotPickup()` plays a bright descending 3-note arpeggio (sine 880→660→440 Hz)
+- **HUD counters** — ExpeditionScene at (CX, 78), HomelandScene/TavernScene at top-right (VW-12, 12); `🥕 N` format with `setScrollFactor(0)` + camera routing
+- **Persist on expedition end** — no explicit save on carrot pickup (natural death/survive flow saves inventory)
+- **Facing highlight skipped** — `updateFacingHighlight()` early-returns for `carrot_pickup` (no white outline)
+- **Gambling now uses carrots** — GamblePanel subtitle, spin button, and deduction all use 🥕 instead of stone; `gameState.inventory` with `gameState.save()` on spin
+
+## ✅ Click-Leak Prevention (June 2026)
+- **`uiHitOnDown` guard in AnalogStickInput** — `onPointerDown` sets `uiHitOnDown = true` when pointer is over any UI element or a modal is active; `onPointerUp` checks this flag first, absorbing the click even when the modal state changes between pointerdown and pointerup
+- **EventPanel choice zones tagged** — `setData('isUI', true)` added to choice zone rectangles so `isPointerOverUI` identifies them even after container visibility changes
+
+## ✅ Code Quality — Two-Phase Loading Reverted (June 2026)
+- **`generateAll()` moved to `create()`** — reverted the two-phase loading experiment; `generateAll()` now runs after PNGs are in TextureManager, preventing `File.hasCacheConflict()` from silently dropping every PNG from the load queue
+- **All assets load in `preload()`** — title sprites, all tile sprites, and audio load in a single `preload()` phase with no texture key conflicts

@@ -29,14 +29,56 @@ const RECIPE_INFO: Record<string, { desc: string; unlock?: string }> = {
   miners_potion: { desc: 'Permanently +5 max stamina (consumed on craft)', unlock: 'Rescue a villager and talk to them at the Tavern' },
 };
 
+const CARD_W = VW - 40;
+const CARD_H = 86;
+const CARD_GAP = 6;
+const CARD_X = 20;
+const LIST_TOP = 72;
+const LIST_BTM = VH - 96;
+const SCROLL_SPEED = 28;
+
+type CardState = 'canCraft' | 'craftedBefore' | 'discovered' | 'undiscovered';
+
+const CARD_FILL: Record<CardState, number> = {
+  canCraft: 0x1a2a1a,
+  craftedBefore: 0x1a222a,
+  discovered: 0x1a1a2a,
+  undiscovered: 0x0a0a1a,
+};
+
+const CARD_BORDER: Record<CardState, number> = {
+  canCraft: 0x44cc66,
+  craftedBefore: 0x4488aa,
+  discovered: 0x6a5a8a,
+  undiscovered: 0x3a3a4a,
+};
+
+const CARD_NAME_COLOR: Record<CardState, string> = {
+  canCraft: '#e8d5b7',
+  craftedBefore: '#8ab0d0',
+  discovered: '#8a9aaa',
+  undiscovered: '#6a7a9a',
+};
+
 export class CraftingPanel extends BasePanel {
   private titleText: Phaser.GameObjects.Text;
   private recipeLines: Phaser.GameObjects.Container;
   private hintText: Phaser.GameObjects.Text;
   private descriptionText: Phaser.GameObjects.Text;
+  private scrollbarGfx: Phaser.GameObjects.Graphics;
+
   private recipes: { id: string; name: string }[] = [];
   private selectedIndex: number = 0;
-  private clickZones: Phaser.GameObjects.Zone[] = [];
+  private scrollOffset: number = 0;
+  private maxScroll: number = 0;
+
+  private cardContainers: Phaser.GameObjects.Container[] = [];
+  private cardBgs: Phaser.GameObjects.Graphics[] = [];
+
+  private pointerStartY: number = 0;
+  private pointerStartScroll: number = 0;
+  private isPointerDown: boolean = false;
+  private pointerMoved: boolean = false;
 
   constructor(scene: Phaser.Scene) {
     super(scene);
@@ -50,6 +92,9 @@ export class CraftingPanel extends BasePanel {
 
     this.recipeLines = scene.add.container(0, 0);
     this.container.add(this.recipeLines);
+
+    this.scrollbarGfx = scene.add.graphics();
+    this.container.add(this.scrollbarGfx);
 
     this.descriptionText = scene.add.text(CX, VH - 70, '', {
       fontSize: '11px', fontFamily: 'monospace', color: '#b8a898',
@@ -67,20 +112,36 @@ export class CraftingPanel extends BasePanel {
 
   show(): void {
     this.selectedIndex = 0;
+    this.scrollOffset = 0;
+    this.isPointerDown = false;
     this.refresh();
     this.fadeIn();
+    this.scene.input.on('pointerdown', this.onPointerDown, this);
+    this.scene.input.on('pointermove', this.onPointerMove, this);
+    this.scene.input.on('pointerup', this.onPointerUp, this);
+    this.scene.input.on('wheel', this.onWheel, this);
+  }
+
+  hide(): void {
+    this.scene.input.off('pointerdown', this.onPointerDown, this);
+    this.scene.input.off('pointermove', this.onPointerMove, this);
+    this.scene.input.off('pointerup', this.onPointerUp, this);
+    this.scene.input.off('wheel', this.onWheel, this);
+    this.fadeOut();
   }
 
   navigateUp(): void {
     if (this.recipes.length === 0) return;
     this.selectedIndex = (this.selectedIndex - 1 + this.recipes.length) % this.recipes.length;
-    this.renderContent();
+    this.ensureVisible();
+    this.syncContent();
   }
 
   navigateDown(): void {
     if (this.recipes.length === 0) return;
     this.selectedIndex = (this.selectedIndex + 1) % this.recipes.length;
-    this.renderContent();
+    this.ensureVisible();
+    this.syncContent();
   }
 
   craftSelected(): boolean {
@@ -108,105 +169,6 @@ export class CraftingPanel extends BasePanel {
     return true;
   }
 
-  private renderContent(): void {
-    this.recipeLines.removeAll(true);
-    this.clickZones.forEach(z => z.destroy());
-    this.clickZones = [];
-
-    const lineSpacing = 20;
-    const startY = 72;
-
-    for (let i = 0; i < this.recipes.length; i++) {
-      const r = this.recipes[i];
-      let discovered = gameState.crafting.isDiscovered(r.id);
-      let recipe = discovered ? gameState.crafting.getDiscoveredRecipes().find(d => d.id === r.id) : null;
-      const marker = i === this.selectedIndex ? '▸' : ' ';
-      let text: string;
-      let color: string;
-
-      if (discovered) {
-        const canCraft = recipe ? gameState.crafting.canCraft(r.id) : false;
-        const craftedBefore = gameState.hasCraftedItem(recipe?.result ?? '');
-
-        const ings = recipe ? Object.entries(recipe.ingredients)
-          .map(([id, qty]) => {
-            const have = gameState.inventory.count(id);
-            return `${itemDisplayName(id)} ${have}/${qty}`;
-          })
-          .join(', ') : '';
-
-        text = `  ${marker} ${r.name.padEnd(16)} ${ings}${canCraft ? '  ✓' : ''}`;
-
-        if (canCraft) {
-          color = craftedBefore ? '#8ab0d0' : '#e8d080';
-        } else {
-          color = craftedBefore ? '#24465c' : '#b8a040';
-        }
-      } else {
-        const info = RECIPE_INFO[r.id];
-        const unlockStr = info?.unlock ? ` (${info.unlock})` : '';
-        text = `  ${marker} ???${unlockStr}`;
-        color = '#6a7a9a';
-      }
-
-      const ry = startY + i * lineSpacing;
-
-      const row = this.scene.add.container(0, 0);
-      let iconKey: string | null = null;
-      if (discovered && recipe) iconKey = itemIconKey(recipe.result);
-      if (iconKey && this.scene.textures.exists(iconKey)) {
-        row.add(this.scene.add.image(80, ry, iconKey).setScale(0.65));
-        row.add(this.scene.add.text(94, ry, text, {
-          fontSize: '11px', fontFamily: 'monospace', color, align: 'left',
-        }).setOrigin(0, 0.5));
-      } else {
-        row.add(this.scene.add.text(80, ry, text, {
-          fontSize: '11px', fontFamily: 'monospace', color, align: 'left',
-        }).setOrigin(0, 0.5));
-      }
-      this.recipeLines.add(row);
-
-      const zone = this.scene.add.zone(CX, startY + i * lineSpacing + 10, VW - 32, 40)
-        .setDepth(210)
-        .setScrollFactor(0)
-        .setInteractive();
-      zone.on('pointerdown', () => {
-        this.selectedIndex = i;
-        this.renderContent();
-        this.craftSelected();
-      });
-      this.recipeLines.add(zone);
-      this.clickZones.push(zone);
-    }
-
-    if (this.recipes.length === 0) {
-      const line = this.scene.add.text(CX, startY, '  (no recipes)', {
-        fontSize: '12px', fontFamily: 'monospace', color: '#6a7a9a',
-        align: 'left',
-      }).setOrigin(0.5, 0);
-      this.recipeLines.add(line);
-    }
-
-    if (this.recipes.length > 0 && this.selectedIndex < this.recipes.length) {
-      const selectedId = this.recipes[this.selectedIndex].id;
-      const disc = gameState.crafting.isDiscovered(selectedId);
-      const info = RECIPE_INFO[selectedId];
-      if (info) {
-        if (disc) {
-          this.descriptionText.setText(info.desc);
-          this.descriptionText.setColor('#b8a898');
-        } else {
-          this.descriptionText.setText(`??? — ${info.unlock ?? 'Unknown discovery method'}`);
-          this.descriptionText.setColor('#aa8844');
-        }
-      } else {
-        this.descriptionText.setText('');
-      }
-    } else {
-      this.descriptionText.setText('');
-    }
-  }
-
   refresh(): void {
     const pad = 16;
     this.overlay.clear();
@@ -226,7 +188,236 @@ export class CraftingPanel extends BasePanel {
       this.selectedIndex = 0;
     }
 
-    this.renderContent();
+    this.rebuildCards();
+    this.maxScroll = Math.max(0, this.recipes.length * (CARD_H + CARD_GAP) - (LIST_BTM - LIST_TOP));
+    this.scrollOffset = Phaser.Math.Clamp(this.scrollOffset, 0, this.maxScroll);
+    this.syncContent();
+  }
+
+  private getCardState(i: number): CardState {
+    const r = this.recipes[i];
+    if (!gameState.crafting.isDiscovered(r.id)) return 'undiscovered';
+    const recipe = getRecipe(r.id);
+    if (!recipe) return 'discovered';
+    if (gameState.crafting.canCraft(r.id)) return 'canCraft';
+    if (gameState.hasCraftedItem(recipe.result)) return 'craftedBefore';
+    return 'discovered';
+  }
+
+  private rebuildCards(): void {
+    this.cardContainers.forEach(c => c.destroy());
+    this.cardContainers = [];
+    this.cardBgs = [];
+
+    for (let i = 0; i < this.recipes.length; i++) {
+      this.createCard(i);
+    }
+  }
+
+  private createCard(i: number): void {
+    const r = this.recipes[i];
+    const discovered = gameState.crafting.isDiscovered(r.id);
+    const recipe = discovered ? getRecipe(r.id) : null;
+    const state = this.getCardState(i);
+    const isSelected = i === this.selectedIndex;
+    const cy = LIST_TOP + i * (CARD_H + CARD_GAP);
+
+    const card = this.scene.add.container(CARD_X, cy);
+
+    const bg = this.scene.add.graphics();
+    this.drawCardBg(bg, state, isSelected);
+    card.add(bg);
+
+    if (discovered && recipe) {
+      const iconKey = itemIconKey(recipe.result);
+      if (this.scene.textures.exists(iconKey)) {
+        const icon = this.scene.add.image(28, 26, iconKey).setScale(0.65);
+        card.add(icon);
+      }
+    } else {
+      const placeholder = this.scene.add.text(28, 26, '?', {
+        fontSize: '20px', fontFamily: 'monospace', color: '#5a6a7a',
+      }).setOrigin(0.5);
+      card.add(placeholder);
+    }
+
+    const nameColor = CARD_NAME_COLOR[state];
+    const nameStr = discovered ? r.name : '???';
+    const nameText = this.scene.add.text(56, 14, nameStr, {
+      fontSize: '12px', fontFamily: 'monospace', color: nameColor, fontStyle: 'bold',
+    });
+    card.add(nameText);
+
+    let indicator = '';
+    let indColor = '';
+    if (state === 'canCraft') { indicator = '✓'; indColor = '#44cc66'; }
+    else if (state === 'craftedBefore') { indicator = 'C'; indColor = '#4488aa'; }
+    else if (!discovered) { indicator = '?'; indColor = '#6a7a9a'; }
+
+    if (indicator) {
+      const ind = this.scene.add.text(CARD_W - 12, 14, indicator, {
+        fontSize: '12px', fontFamily: 'monospace', color: indColor, fontStyle: 'bold',
+      }).setOrigin(1, 0);
+      card.add(ind);
+    }
+
+    if (discovered && recipe) {
+      const ings = Object.entries(recipe.ingredients);
+      for (let mi = 0; mi < ings.length && mi < 3; mi++) {
+        const [matId, need] = ings[mi];
+        const have = gameState.inventory.count(matId);
+        const sufficient = have >= need;
+        const matColor = sufficient ? '#b8b8b8' : '#cc6644';
+        const matText = this.scene.add.text(56, 42 + mi * 14,
+          `\u2022 ${itemDisplayName(matId).padEnd(17)} ${String(have).padStart(2)}/${need}${sufficient ? ' \u2714' : ''}`, {
+          fontSize: '10px', fontFamily: 'monospace', color: matColor,
+        });
+        card.add(matText);
+      }
+    } else {
+      const info = RECIPE_INFO[r.id];
+      if (info?.unlock) {
+        const hint = this.scene.add.text(56, 42, `(Unlock: ${info.unlock})`, {
+          fontSize: '10px', fontFamily: 'monospace', color: '#5a6a7a',
+        });
+        card.add(hint);
+      }
+    }
+
+    this.recipeLines.add(card);
+    this.cardContainers.push(card);
+    this.cardBgs.push(bg);
+  }
+
+  private drawCardBg(bg: Phaser.GameObjects.Graphics, state: CardState, selected: boolean): void {
+    const fill = CARD_FILL[state];
+    const border = CARD_BORDER[state];
+    const bw = selected ? 2 : 1;
+
+    bg.fillStyle(fill, 1);
+    bg.fillRoundedRect(0, 0, CARD_W, CARD_H, 6);
+    bg.lineStyle(bw, border, 0.8);
+    bg.strokeRoundedRect(0, 0, CARD_W, CARD_H, 6);
+
+    if (selected) {
+      bg.fillStyle(border, 0.4);
+      bg.fillRect(0, 0, 4, CARD_H);
+    }
+  }
+
+  private ensureVisible(): void {
+    const cardTop = this.selectedIndex * (CARD_H + CARD_GAP);
+    const cardBottom = cardTop + CARD_H;
+    const viewTop = this.scrollOffset;
+    const viewBottom = this.scrollOffset + (LIST_BTM - LIST_TOP);
+
+    if (cardTop < viewTop) {
+      this.scrollOffset = cardTop;
+    } else if (cardBottom > viewBottom) {
+      this.scrollOffset = cardBottom - (LIST_BTM - LIST_TOP);
+    }
+
+    this.scrollOffset = Phaser.Math.Clamp(this.scrollOffset, 0, this.maxScroll);
+  }
+
+  private syncContent(): void {
+    this.recipeLines.y = -this.scrollOffset;
+    this.updateCardHighlights();
+    this.updateScrollbar();
+    this.updateDescription();
+  }
+
+  private updateCardHighlights(): void {
+    for (let i = 0; i < this.cardBgs.length; i++) {
+      const bg = this.cardBgs[i];
+      bg.clear();
+      this.drawCardBg(bg, this.getCardState(i), i === this.selectedIndex);
+    }
+  }
+
+  private updateScrollbar(): void {
+    this.scrollbarGfx.clear();
+    if (this.maxScroll <= 0) return;
+
+    const sbX = VW - 20;
+    const sbY = LIST_TOP;
+    const sbH = LIST_BTM - LIST_TOP;
+    const barH = Math.max(12, sbH * (sbH / (sbH + this.maxScroll)));
+    const barY = sbY + (this.scrollOffset / this.maxScroll) * (sbH - barH);
+
+    this.scrollbarGfx.fillStyle(0x5a5a7a, 0.5);
+    this.scrollbarGfx.fillRoundedRect(sbX, barY, 4, barH, 2);
+  }
+
+  private updateDescription(): void {
+    if (this.recipes.length > 0 && this.selectedIndex < this.recipes.length) {
+      const selectedId = this.recipes[this.selectedIndex].id;
+      const disc = gameState.crafting.isDiscovered(selectedId);
+      const info = RECIPE_INFO[selectedId];
+      if (info) {
+        if (disc) {
+          this.descriptionText.setText(info.desc);
+          this.descriptionText.setColor('#b8a898');
+        } else {
+          this.descriptionText.setText(`??? \u2014 ${info.unlock ?? 'Unknown discovery method'}`);
+          this.descriptionText.setColor('#aa8844');
+        }
+      } else {
+        this.descriptionText.setText('');
+      }
+    } else {
+      this.descriptionText.setText('');
+    }
+  }
+
+  private doScroll(dy: number): void {
+    this.scrollOffset = Phaser.Math.Clamp(this.scrollOffset + dy, 0, this.maxScroll);
+    this.recipeLines.y = -this.scrollOffset;
+    this.updateScrollbar();
+  }
+
+  private onPointerDown(pointer: Phaser.Input.Pointer): void {
+    if (pointer.x < 16 || pointer.x > VW - 16) return;
+    if (pointer.y < LIST_TOP || pointer.y > LIST_BTM) return;
+
+    this.pointerStartY = pointer.y;
+    this.pointerStartScroll = this.scrollOffset;
+    this.isPointerDown = true;
+    this.pointerMoved = false;
+  }
+
+  private onPointerMove(pointer: Phaser.Input.Pointer): void {
+    if (!this.isPointerDown) return;
+
+    const dy = pointer.y - this.pointerStartY;
+    if (Math.abs(dy) > 5) {
+      this.pointerMoved = true;
+      this.doScroll(this.pointerStartScroll - dy - this.scrollOffset);
+    }
+  }
+
+  private onPointerUp(_pointer: Phaser.Input.Pointer): void {
+    if (!this.isPointerDown) return;
+    this.isPointerDown = false;
+
+    if (this.pointerMoved) return;
+
+    const adjustedY = _pointer.y - LIST_TOP + this.scrollOffset;
+    const index = Math.floor(adjustedY / (CARD_H + CARD_GAP));
+
+    if (index < 0 || index >= this.recipes.length) return;
+
+    if (index === this.selectedIndex) {
+      this.craftSelected();
+    } else {
+      this.selectedIndex = index;
+      this.ensureVisible();
+      this.syncContent();
+    }
+  }
+
+  private onWheel(_pointer: Phaser.Input.Pointer, _gx: number[], _gy: number[], _gz: number[], dz: number): void {
+    this.doScroll(dz > 0 ? SCROLL_SPEED : -SCROLL_SPEED);
   }
 
   private showCraftSuccess(itemId: string): void {
@@ -250,7 +441,7 @@ export class CraftingPanel extends BasePanel {
   private showNoCraft(): void {
     const popup = this.scene.add.text(
       CX, VH / 2,
-      'No craftable recipe — need more materials!',
+      'No craftable recipe \u2014 need more materials!',
       { fontSize: '14px', fontFamily: 'monospace', color: '#cc6644' }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(250);
 
@@ -267,7 +458,7 @@ export class CraftingPanel extends BasePanel {
   private showHowToUnlock(hint: string): void {
     const popup = this.scene.add.text(
       CX, VH / 2,
-      `??? — ${hint}`,
+      `??? \u2014 ${hint}`,
       { fontSize: '14px', fontFamily: 'monospace', color: '#aa8844' }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(250);
 

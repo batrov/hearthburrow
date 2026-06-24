@@ -127,7 +127,7 @@ export class GatePanel extends BasePanel {
       { x: 285, y: 179 },
       { x: 352, y: 179 },
       { x: 285, y: 231 },
-      { x: 252, y: 231 },
+      { x: 352, y: 231 },
     ];
     for (let i = 0; i < 5; i++) {
       const bg = this.scene.add.graphics();

@@ -396,6 +396,13 @@ export class AudioSystem {
     }
   }
 
+  /** Bright descending arpeggio for carrot currency pickup. */
+  playCarrotPickup(): void {
+    this.playNote('sine', 880, 880, 0.08, 0.06, 0);
+    this.playNote('sine', 660, 660, 0.08, 0.06, 0.05);
+    this.playNote('sine', 440, 440, 0.10, 0.10, 0.10);
+  }
+
   /** Ascending casino-style chime for roulette wins. */
   playBingo(): void {
     this.playNote('sine', 523, 523, 0.1, 0.08, 0);

@@ -193,6 +193,27 @@ export function generateAll(scene: Phaser.Scene): void {
       g.lineStyle(2, 0xffffff, 0.6);
       g.strokeCircle(cx, cy, 12);
     },
+    carrot_pickup: () => {
+      const { cx, cy } = centered(40, 40);
+      g.fillStyle(0xff8833, 1);
+      g.beginPath();
+      g.moveTo(cx - 6, cy + 7);
+      g.lineTo(cx, cy - 8);
+      g.lineTo(cx + 6, cy + 7);
+      g.closePath();
+      g.fill();
+      g.fillStyle(0xffaa55, 1);
+      g.beginPath();
+      g.moveTo(cx - 3, cy + 7);
+      g.lineTo(cx, cy - 4);
+      g.lineTo(cx + 3, cy + 7);
+      g.closePath();
+      g.fill();
+      g.fillStyle(0x44aa33, 1);
+      g.fillTriangle(cx - 4, cy - 9, cx, cy - 16, cx + 4, cy - 9);
+      g.fillStyle(0x66cc55, 1);
+      g.fillTriangle(cx - 2, cy - 10, cx, cy - 14, cx + 2, cy - 10);
+    },
   };
 
   for (const [type, drawFn] of Object.entries(eventConfigs)) {

@@ -72,6 +72,7 @@ export class TavernScene extends Phaser.Scene {
   private bgm: Phaser.Sound.BaseSound | null = null;
   private actionBtnBg!: Phaser.GameObjects.Graphics;
   private actionBtnText!: Phaser.GameObjects.Text;
+  private carrotCountText!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: 'TavernScene' });
@@ -300,10 +301,20 @@ export class TavernScene extends Phaser.Scene {
       .on('pointerdown', () => this.photobook.toggle());
     this.cameras.main.ignore(photobookBtn);
 
+    this.carrotCountText = this.add.text(VW - 12, 12, '', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#ff8833', fontStyle: 'bold',
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(50);
+    this.cameras.main.ignore(this.carrotCountText);
+    this.updateCarrotCounter();
+
     this.promptText = this.add.text(0, 0, '', {
       fontSize: '11px', fontFamily: 'monospace', color: '#ffdd88',
     }).setOrigin(0.5).setDepth(100).setAlpha(0);
     this.hudCam.ignore(this.promptText);
+  }
+
+  private updateCarrotCounter(): void {
+    this.carrotCountText.setText(`🥕 ${gameState.inventory.count('carrot')}`);
   }
 
   private createActionButton(): void {
@@ -667,9 +678,9 @@ export class TavernScene extends Phaser.Scene {
 
     const overlayBg = this.add.graphics().setDepth(200).setScrollFactor(0);
     overlayBg.fillStyle(0x0a0a1a, 0.85);
-    overlayBg.fillRoundedRect(CX - 170, CY - 60, 340, 120, 10);
+    overlayBg.fillRoundedRect(CX - 170, CY - 65, 340, 130, 10);
     overlayBg.lineStyle(1, 0x6a5a8a, 0.5);
-    overlayBg.strokeRoundedRect(CX - 170, CY - 60, 340, 120, 10);
+    overlayBg.strokeRoundedRect(CX - 170, CY - 65, 340, 130, 10);
     this.cameras.main.ignore(overlayBg);
 
     const overlayText = this.add.text(CX, CY - 30, `${npc.name} says:`, {
@@ -677,8 +688,9 @@ export class TavernScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
     this.cameras.main.ignore(overlayText);
 
-    const speechText = this.add.text(CX, CY + 5, `"${greeting}"`, {
+    const speechText = this.add.text(CX, CY + 2, `"${greeting}"`, {
       fontSize: '12px', fontFamily: 'monospace', color: '#e8d5b7', align: 'center',
+      wordWrap: { width: 290 },
     }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
     this.cameras.main.ignore(speechText);
 
@@ -700,7 +712,7 @@ export class TavernScene extends Phaser.Scene {
       }
     }
 
-    const closeHint = this.add.text(CX, CY + 40, '[SPACE / ESC] close', {
+    const closeHint = this.add.text(CX, CY + 48, '[SPACE / ESC] close', {
       fontSize: '10px', fontFamily: 'monospace', color: '#6a5a4a',
     }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
     this.cameras.main.ignore(closeHint);
