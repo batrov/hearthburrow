@@ -349,6 +349,8 @@ Resolved Bugs:
 - **FloorPicker/ConfirmPopup clicks not registering** — overlay Graphics.setInteractive() and row Rectangles inside container all broken. Same fix: blocker + scene-level handler with manual hit-testing
 - **All remaining container-child setInteractive() instances fixed** — audit across 7 UI files: FloorPicker, ConfirmPopup, EquipmentPicker, GatePanel all migrated to blocker + scene-level handler pattern
 - **Starting floor defaults to highest unlocked** — now picks the deepest elevator floor the player has reached instead of always defaulting to floor 0
+- **[X] button bypassed CraftingPanel.hide()** — `BasePanel.addCloseButton()` called `this.fadeOut()` directly, skipping `CraftingPanel.hide()` which removes scene-level input handlers. Changed both click paths to call `this.hide()` so virtual dispatch cleans up handlers before fading.
+- **Building sprite hit area scaled wrong** — custom `Rectangle(-60,-50,120,100)` hit area uses local texture coordinates, but most buildings have `scale: 0.2-0.3` in sprite-offsets.json, making clickable region 24-36px. Switched to default texture-bounds hit area which correctly accounts for per-sprite scale.
 
 ## ✅ Portrait Refactor — Phase 1-3 Complete (June 2026)
 - **Resolution**: main.ts → `width: 390, height: 844` (iPhone Pro) with `Phaser.Scale.FIT` + `CENTER_BETTER`
@@ -392,6 +394,9 @@ Resolved Bugs:
 - **Click-to-move-then-interact**: clicking a non-adjacent building now pathfinds the player to the nearest walkable tile beside it, then auto-triggers the building's action (open panel / show gate / restore prompt)
 - **`handleBuildingClick()`** — checks adjacency; pathfinds if far, sets `pendingBuilding`, executed on proximity arrival via `checkProximity()`
 - **`findAdjacentTile()`** — scans perimeter tiles for the closest non-solid walkable tile to the player
+- **Sprite-based building click zones**: removed semi-transparent `Rectangle` overlays; building sprites and gate sprite now use `setInteractive()` with default texture-bounds hit area (accounts for per-sprite scale), `setData('isUI', true)` prevents analog stick interference
+- **Locked buildings clickable**: non-restored buildings were excluded from `setInteractive()`; moved `pointerdown` handler outside `ul` guard so clicking any building shows restore panel — matching old zone behavior
+- **Hover scale uses base 1**: `pointerover`/`pointerout` toggled between `cfg.scale` (0.2-0.3 for most buildings) and the image's actual scale (1.0), causing visible shrinkage; now uses plain `1 ↔ 1.05`
 - **Retreat confirmation**: tapping the retreat button in combat shows a `ConfirmPopup` ("Retreat?" / "Leave the dungeon?") — keyboard ESC still bypasses confirmation
 - **Combat click routing**: replaced broken container-child `setInteractive()` with blocker + scene-level `pointerdown` handler for strike/retreat/collect
 - **Run inventory panel depth**: bumped `BasePanel.container` depth from 200→210 so panels render above HUD elements (stamina bar at 201)

@@ -65,20 +65,22 @@ export class BasePanel {
     const btn = this.scene.add.text(x, y, '[X]', {
       fontSize: '24px', fontFamily: 'monospace', color: '#886666',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(220).setData('isUI', true);
+    this.scene.cameras.main.ignore(btn);
     btn.setVisible(false);
 
     const hitZone = this.scene.add.rectangle(x, y, 48, 48, 0xffffff, 0)
       .setScrollFactor(0).setDepth(220).setData('isUI', true).setVisible(false);
+    this.scene.cameras.main.ignore(hitZone);
     hitZone.setInteractive({ useHandCursor: true });
     hitZone.on('pointerdown', () => {
-      if (this.isVisible()) this.fadeOut();
+      if (this.isVisible()) this.hide();
     });
 
     this._closePointerDown = (pointer: Phaser.Input.Pointer) => {
       if (!this.isVisible()) return;
       const b = btn.getBounds();
       if (b.contains(pointer.x, pointer.y)) {
-        this.fadeOut();
+        this.hide();
       }
     };
     this.scene.input.on('pointerdown', this._closePointerDown);

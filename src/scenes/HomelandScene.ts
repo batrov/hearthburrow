@@ -215,11 +215,12 @@ export class HomelandScene extends Phaser.Scene {
   private farmPanel!: FarmPanel;
   private buildingImages: Map<string, Phaser.GameObjects.Image> = new Map();
   private buildingLabels: Phaser.GameObjects.Text[] = [];
-  private buildingZones: Phaser.GameObjects.Rectangle[] = [];
+
   private movePath: { x: number; y: number }[] = [];
   private decorationImages: Phaser.GameObjects.Image[] = [];
   private analog!: AnalogStickInput;
   private hudCam!: Phaser.Cameras.Scene2D.Camera;
+  private carrotCountText!: Phaser.GameObjects.Text;
   private animFrame: number = 0;
   private animTimer: number = 0;
   private readonly ANIM_INTERVAL: number = 60;
@@ -278,6 +279,16 @@ export class HomelandScene extends Phaser.Scene {
     this.cameras.main.ignore(this.tradePanel.container);
     this.cameras.main.ignore(this.researchPanel.container);
     this.cameras.main.ignore(this.farmPanel.container);
+
+    this.carrotCountText = this.add.text(VW - 12, 12, '', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#ff8833', fontStyle: 'bold',
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(55);
+    this.cameras.main.ignore(this.carrotCountText);
+    this.updateCarrotCounter();
+  }
+
+  private updateCarrotCounter(): void {
+    this.carrotCountText.setText(`🥕 ${gameState.inventory.count('carrot')}`);
   }
 
   private drawHubTerrain(): void {
@@ -309,8 +320,7 @@ export class HomelandScene extends Phaser.Scene {
     this.buildingImages.clear();
     this.buildingLabels.forEach(l => l.destroy());
     this.buildingLabels = [];
-    this.buildingZones?.forEach(z => z.destroy());
-    this.buildingZones = [];
+
     const buildingTextureKeys: Record<string, string> = {
       trading_post: 'building_trading_post',
       crafting: 'building_crafting',
@@ -345,15 +355,12 @@ export class HomelandScene extends Phaser.Scene {
       this.hudCam.ignore(label);
       this.buildingLabels.push(label);
 
-      const bRef = b;
-      const zone = this.add.rectangle(c.x, c.y, 120, 72, ul ? 0xffffff : 0x000000, ul ? 0.08 : 0)
-        .setInteractive({ useHandCursor: true }).setData('isUI', true)
-        .setDepth(6);
-      this.hudCam.ignore(zone);
-      zone.on('pointerdown', () => this.handleBuildingClick(bRef));
-      zone.on('pointerover', () => { if (ul) zone.setFillStyle(0xffffff, 0.15); });
-      zone.on('pointerout', () => { if (ul) zone.setFillStyle(0xffffff, 0.08); });
-      this.buildingZones.push(zone);
+      img.setInteractive({ useHandCursor: true }).setData('isUI', true);
+      img.on('pointerdown', () => this.handleBuildingClick(b));
+      if (ul) {
+        img.on('pointerover', () => img.setScale(1.05));
+        img.on('pointerout', () => img.setScale(1));
+      }
     }
 
 
@@ -394,12 +401,10 @@ export class HomelandScene extends Phaser.Scene {
     const gateDef = HUB_BUILDINGS.find(b => b.id === 'gate')!;
     descendText.on('pointerdown', () => this.handleBuildingClick(gateDef));
 
-    const gateZone = this.add.rectangle(c.x, c.y, 140, 84, 0xffffff, 0.06)
-      .setInteractive({ useHandCursor: true }).setData('isUI', true).setDepth(6);
-    this.hudCam.ignore(gateZone);
-    gateZone.on('pointerdown', () => this.handleBuildingClick(gateDef));
-    gateZone.on('pointerover', () => gateZone.setFillStyle(0xffffff, 0.12));
-    gateZone.on('pointerout', () => gateZone.setFillStyle(0xffffff, 0.06));
+    gateImg.setInteractive({ useHandCursor: true }).setData('isUI', true);
+    gateImg.on('pointerdown', () => this.handleBuildingClick(gateDef));
+    gateImg.on('pointerover', () => gateImg.setScale(1.05));
+    gateImg.on('pointerout', () => gateImg.setScale(1));
   }
 
   private drawHubDecorations(): void {
