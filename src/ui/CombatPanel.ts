@@ -49,6 +49,7 @@ export class CombatPanel extends BasePanel {
   private hitPauseTimer?: Phaser.Time.TimerEvent;
   private blocker: Phaser.GameObjects.Rectangle;
   private confirmPopup: ConfirmPopup;
+  private retreatHitZone: Phaser.GameObjects.Rectangle;
   private clickHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
 
   private readonly BAR_WIDTH = 300;
@@ -104,19 +105,26 @@ export class CombatPanel extends BasePanel {
     }).setOrigin(0.5);
     this.container.add(this.feedbackText);
 
-    this.hintText = scene.add.text(CX, 480, '[SPACE] Strike  |  Tap enemy to attack', {
+    this.hintText = scene.add.text(CX, 480, '[SPACE] Strike  |  Action button', {
       fontSize: '11px', fontFamily: 'monospace', color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
     this.retreatBtn = scene.add.text(CX, 520, '[ ESC ] Retreat', {
       fontSize: '14px', fontFamily: 'monospace', color: '#cc6644',
-    }).setOrigin(0.5).setScrollFactor(0).setData('isUI', true);
-    this.container.add(this.retreatBtn);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(210).setData('isUI', true).setVisible(false);
+
+    this.retreatHitZone = scene.add.rectangle(CX, 520, 200, 36, 0x000000, 0)
+      .setScrollFactor(0).setDepth(210).setData('isUI', true).setVisible(false);
+    this.retreatHitZone.setInteractive({ useHandCursor: true });
+    this.retreatHitZone.on('pointerdown', () => {
+      if (this._visible && !this.result) {
+        this.confirmPopup.show('Retreat?', 'Leave the dungeon?\nAll progress this floor is lost.', () => this.handleRetreat());
+      }
+    });
 
     this.blocker = scene.add.rectangle(CX, CY, VW, VH, 0x000000, 0)
       .setScrollFactor(0).setInteractive().setData('isUI', true);
-    this.blocker.on('pointerdown', () => {});
     this.container.add(this.blocker);
 
     this.confirmPopup = new ConfirmPopup(scene);
@@ -156,6 +164,7 @@ export class CombatPanel extends BasePanel {
 
     this.hitZoneOffset = 0;
     this.retreatBtn.setVisible(true);
+    this.retreatHitZone.setVisible(true);
     this.drawHP();
     this.drawTimingBar(config.hitZoneWidth);
     this.startMarker(config.timingSpeed);
@@ -164,20 +173,15 @@ export class CombatPanel extends BasePanel {
     this.clickHandler = (p: Phaser.Input.Pointer) => {
       if (!this._visible) return;
       if (this.confirmPopup.isVisible()) return;
-      // Check retreat button hit
-      const rb = this.retreatBtn.getBounds();
-      if (rb.contains(p.x, p.y)) {
-        this.confirmPopup.show('Retreat?', 'Leave the dungeon?\nAll progress this floor is lost.', () => this.handleRetreat());
-        return;
-      }
-      // Strike / collect
       if (this.result === 'victory') {
         this.handleCollect();
       } else if (this.handleStrike() === 'miss') {
         this.onMiss?.();
       }
     };
-    this.scene.input.on('pointerdown', this.clickHandler);
+    this.scene.time.delayedCall(0, () => {
+      this.scene.input.on('pointerdown', this.clickHandler!);
+    });
     this.fadeIn(200);
   }
 
@@ -196,9 +200,20 @@ export class CombatPanel extends BasePanel {
     this.currentEnemy = null;
     this.enemySprite.setVisible(false);
     this.blocker.setVisible(false);
-    this.retreatBtn.setVisible(true);
+    this.retreatBtn.setVisible(false);
+    this.retreatHitZone.setVisible(false);
     this.result = null;
     this.fadeOut(200);
+  }
+
+  destroy(): void {
+    if (this.clickHandler) {
+      this.scene.input.off('pointerdown', this.clickHandler);
+      this.clickHandler = null;
+    }
+    this.retreatHitZone.destroy();
+    this.retreatBtn.destroy();
+    super.destroy();
   }
 
   getResult(): CombatResult {

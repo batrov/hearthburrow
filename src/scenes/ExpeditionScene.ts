@@ -552,23 +552,23 @@ export class ExpeditionScene extends Phaser.Scene {
     this.staminaBg = this.add.graphics();
     this.staminaBg.fillStyle(0x0a0a1a, 0.75);
     this.staminaBg.fillRoundedRect(4, 4, VW - 8, 68, 6);
-    this.staminaBg.setScrollFactor(0).setDepth(201);
+    this.staminaBg.setScrollFactor(0).setDepth(211);
     this.cameras.main.ignore(this.staminaBg);
 
     this.portraitSprite = this.add.image(42, VH, 'portrait')
-      .setScrollFactor(0).setDepth(211);
+      .setScrollFactor(0).setDepth(213);
     this.cameras.main.ignore(this.portraitSprite);
     this.portraitSprite.setCrop(54, 0, 108, 108);
     this.portraitSprite.setDisplaySize(200, 200);
     this.portraitSprite.setFlipX(true);
     this.portraitSprite.setY(88);
 
-    this.staminaBarGfx = this.add.graphics().setScrollFactor(0).setDepth(201);
+    this.staminaBarGfx = this.add.graphics().setScrollFactor(0).setDepth(212);
     this.cameras.main.ignore(this.staminaBarGfx);
 
     this.staminaValueText = this.add.text(VW - 8, 10, '', {
       fontSize: '11px', fontFamily: 'monospace', color: '#ffffff',
-    }).setOrigin(1, 0).setScrollFactor(0).setDepth(201);
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(211);
     this.cameras.main.ignore(this.staminaValueText);
 
     this.drawStaminaBar();
