@@ -1100,6 +1100,7 @@ export class ExpeditionScene extends Phaser.Scene {
         if (t.type === 'mineable' && !t.broken) return false;
         if ((t.type === 'enemy' || t.type === 'event_boss') && !t.broken) return false;
         if (t.type.startsWith('event_') && !t.broken) return false;
+        if ((t.type === 'stairs_down' || t.type === 'stairs_up') && !(x === g.x && y === g.y)) return false;
         return true;
       };
       let bestPath = findPath(this.playerX, this.playerY, g.x, g.y, floor.cols, floor.rows, walkable);
@@ -1128,6 +1129,7 @@ export class ExpeditionScene extends Phaser.Scene {
         if (t.type === 'mineable' && !t.broken) return false;
         if ((t.type === 'enemy' || t.type === 'event_boss') && !t.broken) return false;
         if (t.type.startsWith('event_') && !t.broken) return false;
+        if ((t.type === 'stairs_down' || t.type === 'stairs_up') && !(x === g.x && y === g.y)) return false;
         return true;
       },
     );
