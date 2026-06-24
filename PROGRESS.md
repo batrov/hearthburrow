@@ -259,6 +259,7 @@ Resolved Bugs:
 - **Title image** — replaced 48px text "HEARTHBURROW" with centered title.png sprite (480×320 @ 0.22 scale ≈ 106×70px displayed)
 - **Loading bar fix** — progress/complete handlers moved from `create()` to `preload()` so they fire during actual asset loading instead of attaching after loading finished
 - **Click to proceed** — loading complete now shows pulsing hint (`[ click anywhere to proceed ]`) instead of auto-transitioning; waits for click, SPACE, or ENTER before fading to HomelandScene
+- **All assets in preload** — title + all sprites + audio load in a single `preload()` phase. `generateAll()` runs in `create()` only for procedural fallbacks (skipping keys that loaded from PNG). Two-phase approach was reverted because `generateAll()` creating textures before PNG queue prevented files from being added to the load queue via `File.hasCacheConflict()`.
 
 ## ✅ Player Default Facing (June 2026)
 - **Default direction bottom-left** — `facingY` changed from `-1` to `1` in HomelandScene and ExpeditionScene, so the player sprite initially faces downward (bottom-left texture) instead of upward (top-right texture)

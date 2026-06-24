@@ -203,6 +203,8 @@ export class HomelandScene extends Phaser.Scene {
   private moveTimer: number = 0;
   private moveDelay: number = 150;
   private isMoving: boolean = false;
+  private actionBtnBg!: Phaser.GameObjects.Graphics;
+  private actionBtnText!: Phaser.GameObjects.Text;
   private buildingInfoPanel!: BuildingInfoPanel;
   private restorePanel!: RestorePanel;
   private gatePanel!: GatePanel;
@@ -248,6 +250,7 @@ export class HomelandScene extends Phaser.Scene {
     this.drawHubDecorations();
     this.drawPlayer();
     this.createInteractionUI();
+    this.createActionButton();
     this.setupInput();
     this.setupPointerInput();
 
@@ -465,6 +468,22 @@ export class HomelandScene extends Phaser.Scene {
     this.hudCam.ignore(this.promptText);
   }
 
+  private createActionButton(): void {
+    const x = CX, y = VH - 90, size = 64;
+    this.actionBtnBg = this.add.graphics().setScrollFactor(0).setDepth(50);
+    this.cameras.main.ignore(this.actionBtnBg);
+    this.actionBtnText = this.add.text(x, y, '', {
+      fontSize: '24px', fontFamily: 'monospace',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(51);
+    this.cameras.main.ignore(this.actionBtnText);
+
+    const hit = this.add.rectangle(x, y, size, size, 0x000000, 0)
+      .setScrollFactor(0).setDepth(52).setData('isUI', true);
+    this.cameras.main.ignore(hit);
+    hit.setInteractive({ useHandCursor: true });
+    hit.on('pointerdown', () => this.handleActionButton());
+  }
+
   private setupInput(): void {
     const kb = this.input.keyboard!;
     kb.addCapture(Phaser.Input.Keyboard.KeyCodes.ESC);
@@ -668,6 +687,7 @@ export class HomelandScene extends Phaser.Scene {
     }
     this.checkProximity();
     this.handleInteraction();
+    this.updateActionButton();
   }
 
   private isSolid(gx: number, gy: number): boolean {
@@ -926,6 +946,39 @@ export class HomelandScene extends Phaser.Scene {
 
   private handleInteraction(): void {
     if (!Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) return;
+    if (!this.currentBuilding) return;
+    this.activateBuilding(this.currentBuilding);
+  }
+
+  private updateActionButton(): void {
+    const bx = CX - 32, by = VH - 122;
+    const show = (icon: string, color: string) => {
+      this.actionBtnBg.clear();
+      this.actionBtnBg.fillStyle(0x0a0a1a, 0.75);
+      this.actionBtnBg.fillRoundedRect(bx, by, 64, 64, 10);
+      this.actionBtnBg.lineStyle(2, Phaser.Display.Color.HexStringToColor(color).color, 0.6);
+      this.actionBtnBg.strokeRoundedRect(bx, by, 64, 64, 10);
+      this.actionBtnText.setText(icon).setColor(color);
+    };
+    const hide = () => {
+      this.actionBtnBg.clear();
+      this.actionBtnText.setText('');
+    };
+
+    if (this.isModalActive) { hide(); return; }
+
+    const b = this.currentBuilding;
+    if (!b) { hide(); return; }
+
+    const restored = !b.buildingId || isRestored(b.buildingId);
+    if (b.id === 'gate') { show('🚪', '#8866cc'); return; }
+    if (!restored) { show('🔨', '#ffcc44'); return; }
+    if (b.id === 'tavern') { show('🍺', '#88ccff'); return; }
+    show('🏛', '#44cc66');
+  }
+
+  private handleActionButton(): void {
+    if (this.isModalActive) return;
     if (!this.currentBuilding) return;
     this.activateBuilding(this.currentBuilding);
   }

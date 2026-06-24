@@ -19,45 +19,6 @@ export class BootScene extends Phaser.Scene {
 
     this.load.setPath('');
     this.load.image('title_img', 'icons/title.png');
-    this.load.setPath('assets/sprites');
-
-    const barWidth = 300;
-    const barHeight = 20;
-    const barX = cx - barWidth / 2;
-    const barY = cy + 30;
-
-    const barBg = this.add.graphics();
-    barBg.fillStyle(0x2a2a3a, 1);
-    barBg.fillRoundedRect(barX, barY, barWidth, barHeight, 4);
-
-    this.loadingBar = this.add.graphics();
-
-    this.progressText = this.add.text(cx, barY + barHeight + 12, 'Loading...', {
-      fontSize: '14px',
-      fontFamily: 'monospace',
-      color: '#6a5a4a',
-    }).setOrigin(0.5);
-
-    this.load.on('progress', (progress: number) => {
-      const pct = Math.floor(progress * 100);
-      this.loadingBar.clear();
-      this.loadingBar.fillStyle(0xe8d5b7, 1);
-      this.loadingBar.fillRoundedRect(barX + 2, barY + 2, (barWidth - 4) * progress, barHeight - 4, 3);
-      this.progressText.setText(`${pct}%`);
-    });
-
-    const startGame = () => {
-      this.progressText.setText('[ click anywhere to proceed ]');
-      this.tweens.add({
-        targets: this.progressText,
-        alpha: { from: 1, to: 0.3 },
-        duration: 800,
-        yoyo: true,
-        repeat: -1,
-      });
-    };
-
-    this.load.once('complete', startGame);
 
     this.load.setPath('assets/sprites');
 
@@ -159,6 +120,46 @@ export class BootScene extends Phaser.Scene {
 
     this.load.image('portrait', 'player/portrait.png');
     this.load.image('item_inventory_bag', 'items/inventory_bag.png');
+
+    this.load.setPath('');
+    this.load.audio('music_tavern', 'music/tavern.mp3');
+    this.load.setPath('assets/sprites');
+
+    const barWidth = 300;
+    const barHeight = 20;
+    const barX = cx - barWidth / 2;
+    const barY = cy + 30;
+
+    const barBg = this.add.graphics();
+    barBg.fillStyle(0x2a2a3a, 1);
+    barBg.fillRoundedRect(barX, barY, barWidth, barHeight, 4);
+
+    this.loadingBar = this.add.graphics();
+
+    this.progressText = this.add.text(cx, barY + barHeight + 12, 'Loading...', {
+      fontSize: '14px',
+      fontFamily: 'monospace',
+      color: '#6a5a4a',
+    }).setOrigin(0.5);
+
+    this.load.on('progress', (progress: number) => {
+      const pct = Math.floor(progress * 100);
+      this.loadingBar.clear();
+      this.loadingBar.fillStyle(0xe8d5b7, 1);
+      this.loadingBar.fillRoundedRect(barX + 2, barY + 2, (barWidth - 4) * progress, barHeight - 4, 3);
+      this.progressText.setText(`${pct}%`);
+    });
+
+    this.load.once('complete', () => {
+      this.progressText.setText('[ click anywhere to proceed ]');
+      this.tweens.add({
+        targets: this.progressText,
+        alpha: { from: 1, to: 0.3 },
+        duration: 800,
+        yoyo: true,
+        repeat: -1,
+      });
+    });
   }
 
   create(): void {
@@ -170,8 +171,10 @@ export class BootScene extends Phaser.Scene {
     const cx = this.cameras.main.centerX;
     const cy = this.cameras.main.centerY;
 
+    // Title loaded in preload — available now
     this.add.image(cx, cy - 80, 'title_img').setOrigin(0.5).setScale(0.7);
 
+    // Generate procedural fallbacks for any textures that didn't load (missing PNGs)
     generateAll(this);
 
     const proceed = () => {

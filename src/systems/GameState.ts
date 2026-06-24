@@ -17,7 +17,7 @@ export const NPC_PERSONALITIES: NPCPersonality[] = [
     archetype: 'Botanist',
     rescueLine: 'I was cataloging glowing moss when the floor collapsed! My specimen journal — did you see it anywhere?',
     greetings: [
-      'The fungi down here glow in patterns I\'ve never documented before.',
+      'The fungi down here glow in patterns\nI\'ve never documented before.',
       'I found a root that blooms only in absolute darkness.',
       'Every floor has its own ecosystem. Remarkable, really.',
     ],
@@ -28,8 +28,8 @@ export const NPC_PERSONALITIES: NPCPersonality[] = [
     archetype: 'Wannabe Warrior',
     rescueLine: 'I had that goblin right where I wanted him! ...Okay, maybe he had me. But I put up a fight!',
     greetings: [
-      'Next time I\'m bringing a real sword. This rusted thing is useless.',
-      'I\'ve been practicing my stance. Watch this! ...No, don\'t watch.',
+      'Next time I\'m bringing a real sword.\nThis rusted thing is useless.',
+      'I\'ve been practicing my stance.\nWatch this! ...No, don\'t watch.',
       'The slimes aren\'t so tough once you know their rhythm.',
     ],
     description: 'An aspiring adventurer with more courage than skill.',

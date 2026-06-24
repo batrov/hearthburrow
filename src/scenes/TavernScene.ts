@@ -69,6 +69,7 @@ export class TavernScene extends Phaser.Scene {
   private highlightedNPC: number = -1;
   private adjacentNPC: { variant: number; rescuedAtDepth: number; name: string; talkCount: number } | null = null;
   private pendingNPCIdx: number = -1;
+  private bgm: Phaser.Sound.BaseSound | null = null;
   private actionBtnBg!: Phaser.GameObjects.Graphics;
   private actionBtnText!: Phaser.GameObjects.Text;
 
@@ -109,6 +110,9 @@ export class TavernScene extends Phaser.Scene {
     this.cameras.main.setZoom(1.1);
     this.cameras.main.startFollow(this.player, true, 0.09, 0.5);
     this.cameras.main.setBounds(-400, -100, 900, 1000);
+
+    this.bgm = this.sound.add('music_tavern', { loop: true, volume: 0.3 });
+    this.bgm.play();
   }
 
   private drawTavern(): void {
@@ -812,6 +816,7 @@ export class TavernScene extends Phaser.Scene {
   }
 
   private leave(): void {
+    if (this.bgm) this.bgm.stop();
     this.cameras.main.fadeOut(300, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.start('HomelandScene');

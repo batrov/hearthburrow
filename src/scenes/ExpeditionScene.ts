@@ -1481,12 +1481,14 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.analog.reset();
     this.eventPanel.show(config, () => {
-      this.eventActive = false;
-      tile.broken = true;
-      this.interactTarget = null;
-      this.interactPrompt.setAlpha(0);
-      this.drawFloor();
-      this.drawMinimap();
+      this.time.delayedCall(0, () => {
+        this.eventActive = false;
+        tile.broken = true;
+        this.interactTarget = null;
+        this.interactPrompt.setAlpha(0);
+        this.drawFloor();
+        this.drawMinimap();
+      });
     });
   }
 
