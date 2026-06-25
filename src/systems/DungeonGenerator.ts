@@ -251,7 +251,7 @@ export class DungeonGenerator {
   }
 
   private makeTile(type: TileType, eventId?: string): DungeonTile {
-    return {
+    const tile: DungeonTile = {
       type,
       resource: '',
       durability: 0,
@@ -259,6 +259,11 @@ export class DungeonGenerator {
       broken: false,
       eventId: eventId ?? '',
     };
+    if (type === 'wall') {
+      tile.durability = 4;
+      tile.maxDurability = 4;
+    }
+    return tile;
   }
 
   private placeRooms(cols: number, rows: number): RoomRect[] {

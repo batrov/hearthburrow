@@ -80,6 +80,48 @@ export class AudioSystem {
     osc.stop(ctx.currentTime + 0.08);
   }
 
+  /** Low thud for wall hit — lower and heavier than ore mining. */
+  playWallHit(): void {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(60, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(30, ctx.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+    osc.connect(gain);
+    gain.connect(this.sfxGain!);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.12);
+  }
+
+  /** Low rumble for wall break — deeper than wall hit. */
+  playWallBreak(): void {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const bufferSize = ctx.sampleRate * 0.3;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 0.6);
+    }
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.18, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(800, ctx.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.3);
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.sfxGain!);
+    source.start(ctx.currentTime);
+  }
+
   /** Ascending sine chime for generic item pickup. */
   playItemPickup(durability?: number): void {
     const ctx = this.ensureContext();
@@ -156,6 +198,69 @@ export class AudioSystem {
     gain.connect(this.sfxGain!);
     osc.start(ctx.currentTime);
     osc.stop(ctx.currentTime + 0.1);
+  }
+
+  /** Pokémon-style super effective hit — bright double-snap with rising zing. */
+  playCombatCrit(): void {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+
+    // ── Helper: one "smack" layer ─────────────────────────────────────────────
+    const makeSmack = (startTime: number, freqStart: number, freqEnd: number, gainPeak: number) => {
+      // Square wave with fast pitch rise (Game Boy pulse character)
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(freqStart, startTime);
+      osc.frequency.exponentialRampToValueAtTime(freqEnd, startTime + 0.05);
+      gain.gain.setValueAtTime(gainPeak, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.07);
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+      osc.start(startTime);
+      osc.stop(startTime + 0.08);
+
+      // Click transient — very short noise burst for the attack "crack"
+      const clickSize = Math.floor(ctx.sampleRate * 0.008);
+      const clickBuf = ctx.createBuffer(1, clickSize, ctx.sampleRate);
+      const clickData = clickBuf.getChannelData(0);
+      for (let i = 0; i < clickSize; i++) {
+        clickData[i] = (Math.random() * 2 - 1) * (1 - i / clickSize);
+      }
+      const click = ctx.createBufferSource();
+      click.buffer = clickBuf;
+      const clickGain = ctx.createGain();
+      const clickHp = ctx.createBiquadFilter();
+      clickHp.type = 'highpass';
+      clickHp.frequency.value = 2000;
+      clickGain.gain.setValueAtTime(0.3, startTime);
+      click.connect(clickHp);
+      clickHp.connect(clickGain);
+      clickGain.connect(this.sfxGain!);
+      click.start(startTime);
+    };
+
+    // ── Hit 1: first smack (lower, punchier) ──────────────────────────────────
+    makeSmack(t, 320, 900, 0.28);
+
+    // ── Hit 2: second smack (higher, brighter — the "super effective" zing) ──
+    // Offset by ~80ms to create the classic Pokémon da-DUM double hit
+    makeSmack(t + 0.08, 520, 1600, 0.35);
+
+    // ── Zing tail: bright sine shimmer on the second hit ──────────────────────
+    // The tiny metallic "eeee" ring that lingers after the second smack
+    const zing = ctx.createOscillator();
+    const zingGain = ctx.createGain();
+    zing.type = 'sine';
+    zing.frequency.setValueAtTime(2200, t + 0.08);
+    zing.frequency.exponentialRampToValueAtTime(3200, t + 0.18);
+    zingGain.gain.setValueAtTime(0.12, t + 0.08);
+    zingGain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+    zing.connect(zingGain);
+    zingGain.connect(this.sfxGain!);
+    zing.start(t + 0.08);
+    zing.stop(t + 0.23);
   }
 
   /** Low buzz for missed strikes. */
@@ -394,6 +499,39 @@ export class AudioSystem {
         break;
       default: this.playNote('triangle', 300, 100, 0.05, 0.1); break;
     }
+  }
+
+  /** Gentle bubbling water sound for stamina fountain restoration. */
+  playFountain(): void {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    // Water bubble — bandpass noise burst
+    const bufferSize = ctx.sampleRate * 0.45;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 0.3);
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1500, ctx.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(500, ctx.currentTime + 0.45);
+    filter.Q.setValueAtTime(1.5, ctx.currentTime);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.sfxGain!);
+    noise.start(ctx.currentTime);
+
+    // Magical shimmer — ascending sine chord
+    [660, 880, 1100, 1320].forEach((freq, i) => {
+      this.playNote('sine', freq, freq, 0.06, 0.25, i * 0.08 + 0.05);
+    });
   }
 
   /** Bright descending arpeggio for carrot currency pickup. */

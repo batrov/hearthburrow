@@ -18,8 +18,17 @@ import {
   HALF_W, HALF_H, worldWidth, worldHeight,
 } from '../systems/IsoUtils';
 import { VW, VH, CX, CY } from '../systems/Viewport';
+import { textStyle } from '../systems/Font';
 
 const BIOMES = ['FOREST', 'CAVE', 'ICE', 'LAVA', 'RUINS'];
+
+const BIOME_BG_COLORS: Record<string, string> = {
+  FOREST: '#0a0a15',
+  CAVE: '#0f0804',
+  ICE: '#0a1525',
+  LAVA: '#150804',
+  RUINS: '#0d0615',
+};
 
 function getBiomeKey(depth: number): string {
   return BIOMES[Math.floor(depth / 5) % 5];
@@ -27,6 +36,10 @@ function getBiomeKey(depth: number): string {
 
 function getWallTextureKey(depth: number): string {
   return `wall_${getBiomeKey(depth)}`;
+}
+
+function getBiomeBackgroundColor(depth: number): string {
+  return BIOME_BG_COLORS[getBiomeKey(depth)] ?? '#0a0a0a';
 }
 
 function playerDepth(x: number, y: number): number {
@@ -133,6 +146,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private previewTile: Phaser.GameObjects.Image | null = null;
   private facingOutlineImages: Phaser.GameObjects.Image[] = [];
   private oreImageMap: Map<string, Phaser.GameObjects.Image> = new Map();
+  private wallImageMap: Map<string, Phaser.GameObjects.Image> = new Map();
   private rocksBrokenThisRun: number = 0;
   private itemFlyQueue: Array<{ sprite: Phaser.GameObjects.Image; resource: string }> = [];
   private itemFlyBusy: boolean = false;
@@ -174,7 +188,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
   private createPopup(text: string, x: number, y: number, color: string, opts?: { duration?: number; moveY?: number; scaleFrom?: number; scaleTo?: number }): void {
     const popup = this.add.text(x, y, text, {
-      fontSize: '16px', fontFamily: 'monospace', color, fontStyle: 'bold',
+      fontSize: '16px', fontFamily: 'Inter', resolution: 2, color, fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(DEPTH.POPUP).setScrollFactor(0);
     this.cameras.main.ignore(popup);
     const tween: any = { targets: popup, y: y + (opts?.moveY ?? -40), alpha: 0, duration: opts?.duration ?? 1200, ease: 'Quad.easeOut', onComplete: () => popup.destroy() };
@@ -191,7 +205,6 @@ export class ExpeditionScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.fadeIn(500, 0, 0, 0);
-    this.cameras.main.setBackgroundColor('#0a0a0a');
 
     this.hudCam = this.cameras.add(0, 0, VW, VH, false, 'hud');
     this.hudCam.setZoom(1);
@@ -251,7 +264,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.ignore(this.minimapDot);
 
     this.interactPrompt = this.add.text(0, 0, '', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#ffdd88',
+      fontSize: '12px', fontFamily: 'Inter', resolution: 2, color: '#ffdd88',
     }).setOrigin(0.5).setAlpha(0).setDepth(DEPTH.INTERACT_PROMPT);
     this.hudCam.ignore(this.interactPrompt);
 
@@ -277,6 +290,13 @@ export class ExpeditionScene extends Phaser.Scene {
     this.expeditionState.initExplored(floor.cols, floor.rows);
     this.revealSurroundings();
     this.updateDarkness();
+    this.updateBiomeBackground();
+  }
+
+  private updateBiomeBackground(): void {
+    const floor = this.currentFloor;
+    if (!floor) return;
+    this.cameras.main.setBackgroundColor(getBiomeBackgroundColor(floor.depth));
   }
 
   private drawFloor(): void {
@@ -285,6 +305,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.tileObjects.forEach(o => o.destroy());
     this.tileObjects = [];
     this.oreImageMap.clear();
+    this.wallImageMap.clear();
     if (this.previewTile) { this.previewTile.destroy(); this.previewTile = null; }
     this.facingHighlight.clear();
     this.selectedObject.clear();
@@ -366,7 +387,10 @@ export class ExpeditionScene extends Phaser.Scene {
       switch (tile.type) {
         case 'wall':
           if (hasWallTex) {
-            makeImg(wallKey);
+            const img = makeImg(wallKey);
+            this.wallImageMap.set(`${x},${y}`, img);
+            const tint = this.getDamageTint(tile);
+            if (tint !== null) img.setTint(tint);
           }
           break;
         case 'mineable':
@@ -423,7 +447,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const ty = this.playerY + this.facingY;
     if (tx < 0 || tx >= floor.cols || ty < 0 || ty >= floor.rows) return;
     const tile = floor.tiles[ty][tx];
-    if (tile.type === 'floor' || tile.type === 'corridor' || tile.type === 'wall' || tile.type === 'carrot_pickup') return;
+    if (tile.type === 'floor' || tile.type === 'corridor' || tile.type === 'carrot_pickup') return;
     if (tile.broken) return;
     const p = gridToIso(tx, ty);
 
@@ -432,6 +456,7 @@ export class ExpeditionScene extends Phaser.Scene {
     let texKey = '';
     switch (tile.type) {
       case 'mineable': texKey = 'ore_' + tile.resource; break;
+      case 'wall': texKey = getWallTextureKey(floor.depth); break;
       case 'stairs_up': texKey = 'stairs_up'; break;
       case 'stairs_down': texKey = 'stairs_down'; break;
       case 'pressure_plate': texKey = 'pressure_plate'; break;
@@ -456,16 +481,20 @@ export class ExpeditionScene extends Phaser.Scene {
           previewY = cp.y;
         }
       }
+      const playerDep = playerDepth(this.playerX, this.playerY);
+      const facingDep = 6 + ty * 0.002 + tx * 0.001;
+      const previewDepth = facingDep > playerDep ? playerDep + 0.001 : playerDep - 0.001;
+      this.selectedObject.setDepth(previewDepth - 0.001);
       const previewCfg = getSpriteConfig(texKey);
       previewX += previewCfg.offsetX ?? 0;
       previewY += previewCfg.offsetY ?? 0;
-      this.previewTile = this.add.image(previewX, previewY, texKey).setDepth(DEPTH.PREVIEW_TILE);
+      this.previewTile = this.add.image(previewX, previewY, texKey).setDepth(previewDepth);
       this.hudCam.ignore(this.previewTile);
       if (previewCfg.originX !== undefined || previewCfg.originY !== undefined) {
         this.previewTile.setOrigin(previewCfg.originX ?? 0.5, previewCfg.originY ?? 0.5);
       }
       if (previewCfg.scale !== undefined) this.previewTile.setScale(previewCfg.scale);
-      if (tile.type === 'mineable') {
+      if (tile.type === 'mineable' || tile.type === 'wall') {
         if (tile.maxDurability > 0) {
           const ratio = tile.durability / tile.maxDurability;
           if (ratio <= 0.33) {
@@ -482,10 +511,13 @@ export class ExpeditionScene extends Phaser.Scene {
         const alpha = t === 1 ? 0.85 : t === 2 ? 0.4 : 0.12;
         for (const [dx, dy] of dirs) {
           const img = this.add.image(previewX + dx * t, previewY + dy * t, texKey)
-            .setDepth(DEPTH.PREVIEW_TILE - 0.05)
+            .setDepth(previewDepth - 0.0005)
             .setTint(0xffffff).setTintMode(Phaser.TintModes.FILL)
             .setAlpha(alpha);
           if (s !== 1) img.setScale(s);
+          if (previewCfg.originX !== undefined || previewCfg.originY !== undefined) {
+            img.setOrigin(previewCfg.originX ?? 0.5, previewCfg.originY ?? 0.5);
+          }
           this.hudCam.ignore(img);
           this.facingOutlineImages.push(img);
         }
@@ -571,13 +603,13 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.ignore(this.staminaBarGfx);
 
     this.staminaValueText = this.add.text(VW - 8, 10, '', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#ffffff',
+      fontSize: '11px', fontFamily: 'Inter', resolution: 2, color: '#ffffff',
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(211);
     this.cameras.main.ignore(this.staminaValueText);
 
     this.carrotCountText = this.add.text(CX, 85, '', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#ff8833', fontStyle: 'bold',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(213);
+      fontSize: '14px', fontFamily: 'Inter', resolution: 2, color: '#ff8833', fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD_BG);
     this.cameras.main.ignore(this.carrotCountText);
     this.updateCarrotCounter();
 
@@ -585,7 +617,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     // === BOTTOM-CENTER: Depth ===
     this.depthTextCentered = this.add.text(CX, VH - 36, `Depth: ${this.expeditionState.depth}`, {
-      fontSize: '14px', fontFamily: 'monospace', color: '#ffffff', fontStyle: 'bold',
+      fontSize: '14px', fontFamily: 'Inter', resolution: 2, color: '#ffffff', fontStyle: 'bold',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.depthTextCentered);
 
@@ -602,8 +634,8 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.ignore(this.pickaxeSprite);
     this.pickaxeRing = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD + 1);
     this.cameras.main.ignore(this.pickaxeRing);
-    this.pickaxeUsesText = this.add.text(66, 99, '', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#cccccc', align: 'center',
+    this.pickaxeUsesText = this.add.text(60, 99, '', {
+      fontSize: '12px', fontFamily: 'Inter', resolution: 2, color: '#cccccc', align: 'center',
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.pickaxeUsesText);
 
@@ -624,7 +656,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.invBtnRing = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD + 1);
     this.cameras.main.ignore(this.invBtnRing);
     this.invSlotText = this.add.text(invCx, invCy + 16, '', {
-      fontSize: '9px', fontFamily: 'monospace', color: '#cccccc', align: 'center',
+      fontSize: '9px', fontFamily: 'Inter', resolution: 2, color: '#cccccc', align: 'center',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.invSlotText);
 
@@ -655,7 +687,7 @@ export class ExpeditionScene extends Phaser.Scene {
       }
     });
     this.escapeLabel = this.add.text(0, 0, '', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#cccccc',
+      fontSize: '11px', fontFamily: 'Inter', resolution: 2, color: '#cccccc',
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.escapeLabel);
@@ -669,7 +701,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.tryUseConsumable('stamina_potion');
     });
     this.potionCountText = this.add.text(0, 0, '', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#ffdd88',
+      fontSize: '12px', fontFamily: 'Inter', resolution: 2, color: '#ffdd88',
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.potionCountText);
@@ -683,7 +715,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.tryUseConsumable('mining_bomb');
     });
     this.bombCountText = this.add.text(0, 0, '', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#ffdd88',
+      fontSize: '12px', fontFamily: 'Inter', resolution: 2, color: '#ffdd88',
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.bombCountText);
@@ -706,7 +738,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.actionBtnBg = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.actionBtnBg);
     this.actionBtnText = this.add.text(x, y, '', {
-      fontSize: '24px', fontFamily: 'monospace',
+      fontSize: '24px', fontFamily: 'Inter', resolution: 2,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD + 1);
     this.cameras.main.ignore(this.actionBtnText);
 
@@ -757,14 +789,14 @@ export class ExpeditionScene extends Phaser.Scene {
       return;
     }
 
-    // Facing mineable
+    // Facing mineable or wall
     const floor2 = this.currentFloor;
     if (floor2) {
       const tx = this.playerX + this.facingX;
       const ty = this.playerY + this.facingY;
       if (tx >= 0 && tx < floor2.cols && ty >= 0 && ty < floor2.rows) {
         const tile = floor2.tiles[ty][tx];
-        if (tile.type === 'mineable' && !tile.broken) { show('⛏', '#ffcc44'); return; }
+        if ((tile.type === 'mineable' || tile.type === 'wall') && !tile.broken) { show('⛏', '#ffcc44'); return; }
       }
     }
 
@@ -1043,7 +1075,7 @@ export class ExpeditionScene extends Phaser.Scene {
               if (interactive) {
                 this.movePath = [];
                 this.analog.reset();
-                if (tile.type === 'mineable' && !tile.broken) {
+                if ((tile.type === 'mineable' || tile.type === 'wall') && !tile.broken) {
                   this.tryMine();
                 } else if (tile.type === 'enemy' || tile.type === 'event_boss') {
                   if (!tile.broken && this.stamina.remaining > 10) {
@@ -1590,7 +1622,7 @@ export class ExpeditionScene extends Phaser.Scene {
         title: 'Blessing Fountain',
         description: 'A mystical fountain pulses with energy. Drinking from it could restore your stamina.',
         choices: [
-          { label: 'Drink (+30 Stamina)', action: () => { this.stamina.refill(30); } },
+          { label: 'Drink (+30 Stamina)', action: () => { this.stamina.refill(30); audio.playFountain(); } },
           { label: 'Skip', action: () => {} },
         ],
       }),
@@ -1632,7 +1664,7 @@ export class ExpeditionScene extends Phaser.Scene {
               description: `"${line}"`,
               choices: [
                 {
-                  label: alreadyDiscovered ? 'Rescue (already know recipe)' : 'Rescue (learn Stamina Potion recipe)',
+                  label: alreadyDiscovered ? 'Rescue' : 'Rescue (learn Stamina Potion recipe)',
                   action: () => {
                     if (!alreadyDiscovered) {
                       gameState.crafting.discover('stamina_potion');
@@ -1733,22 +1765,22 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.ignore(bg);
 
     const text = this.add.text(cx, cy - 20, 'Use stairs?', {
-      fontSize: '20px', fontFamily: 'monospace', color: '#ffffff',
+      fontSize: '20px', fontFamily: 'Inter', resolution: 2, color: '#ffffff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
     this.cameras.main.ignore(text);
 
     const hint = this.add.text(cx, cy + 10, `[SPACE] ${action}  [ESC] Cancel`, {
-      fontSize: '12px', fontFamily: 'monospace', color: '#aaaaaa',
+      fontSize: '12px', fontFamily: 'Inter', resolution: 2, color: '#aaaaaa',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
     this.cameras.main.ignore(hint);
 
     const proceedBtn = this.add.text(cx - 70, cy + 48, `[ ${action} ]`, {
-      fontSize: '14px', fontFamily: 'monospace', color: '#66dd66',
+      fontSize: '14px', fontFamily: 'Inter', resolution: 2, color: '#66dd66',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
     this.cameras.main.ignore(proceedBtn);
 
     const cancelBtn = this.add.text(cx + 70, cy + 48, '[ Cancel ]', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#cc6666',
+      fontSize: '14px', fontFamily: 'Inter', resolution: 2, color: '#cc6666',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
     this.cameras.main.ignore(cancelBtn);
 
@@ -1924,6 +1956,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.drawMinimap();
     this.rocksBrokenThisRun = 0;
     this.updateDarkness();
+    this.updateBiomeBackground();
   }
 
   private tryMove(dx: number, dy: number): void {
@@ -2033,7 +2066,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.pendingMineTy = -1;
     if (tx >= 0 && tx < floor.cols && ty >= 0 && ty < floor.rows) {
       const tile = floor.tiles[ty][tx];
-      if (tile.type === 'mineable' && !tile.broken) {
+      if ((tile.type === 'mineable' || tile.type === 'wall') && !tile.broken) {
         this.pendingMineTx = tx;
         this.pendingMineTy = ty;
       }
@@ -2045,8 +2078,73 @@ export class ExpeditionScene extends Phaser.Scene {
     if (!floor) return;
 
     const tile = floor.tiles[ty][tx];
-    if (tile.type !== 'mineable' || tile.broken) return;
+    if (tile.broken) return;
+    if (tile.type !== 'mineable' && tile.type !== 'wall') return;
 
+    // --- Wall destruction branch ---
+    if (tile.type === 'wall') {
+      let mineDmg = this.mining.getDamage();
+      if (gameState.getResearchLevel('deep_core_mining') >= 1) mineDmg++;
+      tile.durability -= mineDmg;
+      audio.playWallHit();
+      this.cameras.main.shake(50, 0.006);
+      this.createWallImageShake(tx, ty);
+
+      // Update damage tint
+      const wallImg = this.wallImageMap.get(`${tx},${ty}`);
+      if (wallImg && tile.maxDurability > 0) {
+        const ratio = tile.durability / tile.maxDurability;
+        if (ratio <= 0.33) {
+          wallImg.setTint(0x777777);
+        } else if (ratio <= 0.66) {
+          wallImg.setTint(0xaaaaaa);
+        }
+      }
+      if (this.previewTile && tile.maxDurability > 0) {
+        const ratio = tile.durability / tile.maxDurability;
+        if (ratio <= 0.33) {
+          this.previewTile.setTint(0x777777);
+        } else if (ratio <= 0.66) {
+          this.previewTile.setTint(0xaaaaaa);
+        }
+      }
+
+      let staminaCost = 8;
+      if (gameState.getResearchLevel('efficient_mining') >= 1) staminaCost--;
+      if (!this.stamina.consume(staminaCost)) {
+        this.handleExhaustion();
+      }
+
+      if (tile.durability <= 0) {
+        tile.type = 'corridor';
+        tile.broken = true;
+        audio.playWallBreak();
+        this.createWallBreakParticles(tx, ty);
+        this.cameras.main.shake(120, 0.015);
+
+        const wallImg2 = this.wallImageMap.get(`${tx},${ty}`);
+        if (wallImg2) {
+          this.tweens.add({
+            targets: wallImg2,
+            scaleX: 2.0, scaleY: 2.0,
+            alpha: 0,
+            angle: Phaser.Math.Between(-15, 15),
+            duration: 250,
+            ease: 'Quad.easeOut',
+            onComplete: () => {
+              this.drawFloor();
+              this.drawMinimap();
+            },
+          });
+        } else {
+          this.drawFloor();
+          this.drawMinimap();
+        }
+      }
+      return;
+    }
+
+    // --- Ore mining branch ---
     let mineDmg = this.mining.getDamage();
     if (gameState.getResearchLevel('deep_core_mining') >= 1) mineDmg++;
     tile.durability -= mineDmg;
@@ -2242,7 +2340,7 @@ export class ExpeditionScene extends Phaser.Scene {
       p.x,
       p.y - 24,
       `+1 ${label}`,
-      { fontSize: '13px', fontFamily: 'monospace', color: '#ffcc44', fontStyle: 'bold' }
+      { fontSize: '13px', fontFamily: 'Inter', resolution: 2, color: '#ffcc44', fontStyle: 'bold' }
     ).setOrigin(0.5).setDepth(DEPTH.ITEM_POPUP);
     this.hudCam.ignore(popup);
 
@@ -2255,6 +2353,59 @@ export class ExpeditionScene extends Phaser.Scene {
       ease: 'Quad.easeOut',
       onComplete: () => popup.destroy(),
     });
+  }
+
+  private createWallImageShake(tx: number, ty: number): void {
+    const img = this.wallImageMap.get(`${tx},${ty}`);
+    if (!img) return;
+    this.tweens.add({
+      targets: img,
+      x: img.x + 2,
+      duration: 30,
+      yoyo: true,
+      repeat: 3,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
+  private createWallBreakParticles(tx: number, ty: number): void {
+    const p = gridToIso(tx, ty);
+    const cx = p.x;
+    const cy = p.y;
+
+    // Large chunks
+    for (let i = 0; i < 6; i++) {
+      const radius = Phaser.Math.FloatBetween(4, 8);
+      const chunk = this.add.circle(cx, cy, radius, 0x888888, 0.9).setDepth(DEPTH.PARTICLES);
+      this.hudCam.ignore(chunk);
+      this.tweens.add({
+        targets: chunk,
+        x: cx + Phaser.Math.Between(-25, 25),
+        y: cy + Phaser.Math.Between(-25, 25),
+        alpha: 0,
+        scale: 0.3,
+        duration: 500,
+        ease: 'Quad.easeOut',
+        onComplete: () => chunk.destroy(),
+      });
+    }
+
+    // Gray dust burst
+    for (let i = 0; i < 12; i++) {
+      const radius = Phaser.Math.FloatBetween(1.5, 3.5);
+      const dust = this.add.circle(cx, cy, radius, 0xaaaaaa, 0.6).setDepth(DEPTH.PARTICLES);
+      this.hudCam.ignore(dust);
+      this.tweens.add({
+        targets: dust,
+        x: cx + Phaser.Math.Between(-50, 50),
+        y: cy + Phaser.Math.Between(-50, 50),
+        alpha: 0,
+        scale: 0,
+        duration: Phaser.Math.Between(400, 600),
+        ease: 'Quad.easeOut',
+        onComplete: () => dust.destroy(),
+      });
+    }
   }
 
   private hasFinished: boolean = false;
@@ -2368,7 +2519,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const exhaustionText = this.add.text(
       cx, cy,
       'EXHAUSTED\nTeleporting home...',
-      { fontSize: '24px', fontFamily: 'monospace', color: '#cc4444', align: 'center' }
+      { fontSize: '24px', fontFamily: 'Inter', resolution: 2, color: '#cc4444', align: 'center' }
     ).setOrigin(0.5).setDepth(DEPTH.OVERLAY_TEXT).setScrollFactor(0);
     this.cameras.main.ignore(exhaustionText);
 
@@ -2393,7 +2544,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const safeExtractText = this.add.text(
       cx, cy,
       'Returning to Homeland...',
-      { fontSize: '20px', fontFamily: 'monospace', color: '#44cc66' }
+      { fontSize: '20px', fontFamily: 'Inter', resolution: 2, color: '#44cc66' }
     ).setOrigin(0.5).setDepth(DEPTH.OVERLAY_TEXT).setScrollFactor(0);
     this.cameras.main.ignore(safeExtractText);
 
@@ -2425,7 +2576,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const emergencyText = this.add.text(
       cx, cy,
       'Giving Up...\nLosing some items...',
-      { fontSize: '18px', fontFamily: 'monospace', color: '#cc8844', align: 'center' }
+      { fontSize: '18px', fontFamily: 'Inter', resolution: 2, color: '#cc8844', align: 'center' }
     ).setOrigin(0.5).setDepth(DEPTH.OVERLAY_TEXT).setScrollFactor(0);
     this.cameras.main.ignore(emergencyText);
 
@@ -2679,7 +2830,20 @@ export class ExpeditionScene extends Phaser.Scene {
       const ty = this.playerY + d.y;
       if (tx < 0 || tx >= floor.cols || ty < 0 || ty >= floor.rows) continue;
       const tile = floor.tiles[ty][tx];
-      if (tile.type !== 'mineable' || tile.broken) continue;
+      if (!(tile.type === 'mineable' || tile.type === 'wall') || tile.broken) continue;
+
+      if (tile.type === 'wall') {
+        tile.durability -= damage;
+        this.createHitEffect(tx, ty);
+        if (tile.durability <= 0) {
+          tile.type = 'corridor';
+          tile.broken = true;
+          this.createWallBreakParticles(tx, ty);
+        }
+        changed = true;
+        continue;
+      }
+
       tile.durability -= damage;
       this.createHitEffect(tx, ty);
       if (tile.durability <= 0) {
@@ -2744,13 +2908,13 @@ export class ExpeditionScene extends Phaser.Scene {
 
     if (qty > 1) {
       const badge = this.add.text(30, 26, `x${qty}`, {
-        fontSize: '9px', fontFamily: 'monospace', color: '#ffdd88',
+        fontSize: '9px', fontFamily: 'Inter', resolution: 2, color: '#ffdd88',
       }).setOrigin(1, 1);
       container.add(badge);
     }
 
     const label = this.add.text(38, 10, itemDisplayName(id), {
-      fontSize: '14px', fontFamily: 'monospace', color: '#e8d5b7',
+      fontSize: '14px', fontFamily: 'Inter', resolution: 2, color: '#e8d5b7',
     });
     container.add(label);
 
