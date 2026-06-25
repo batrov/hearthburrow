@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { itemIconKey, itemDisplayName } from '../systems/GameState';
 import { VW, VH, CX } from '../systems/Viewport';
+import { textStyle } from '../systems/Font';
 
 export class ConsumablePicker {
   private scene: Phaser.Scene;
@@ -55,37 +56,37 @@ export class ConsumablePicker {
     this.container.add(this.icon);
 
     this.nameText = scene.add.text(CX, 268, '', {
-      fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
+      fontSize: '16px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.nameText);
 
     this.descText = scene.add.text(CX, 296, '', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#b8a898',
+      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#b8a898',
     }).setOrigin(0.5);
     this.container.add(this.descText);
 
     this.stashText = scene.add.text(CX, 326, '', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#888888',
+      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#888888',
     }).setOrigin(0.5);
     this.container.add(this.stashText);
 
     this.qtyText = scene.add.text(CX, 370, '', {
-      fontSize: '24px', fontFamily: 'monospace', color: '#ffddaa',
+      fontSize: '24px', fontFamily: 'Inter', resolution: 4, color: '#ffddaa',
     }).setOrigin(0.5);
     this.container.add(this.qtyText);
 
     this.minusBtn = scene.add.text(CX - 60, 370, '[−]', {
-      fontSize: '22px', fontFamily: 'monospace', color: '#cc8888',
+      fontSize: '22px', fontFamily: 'Inter', resolution: 4, color: '#cc8888',
     }).setOrigin(0.5);
     this.container.add(this.minusBtn);
 
     this.plusBtn = scene.add.text(CX + 60, 370, '[+]', {
-      fontSize: '22px', fontFamily: 'monospace', color: '#88cc88',
+      fontSize: '22px', fontFamily: 'Inter', resolution: 4, color: '#88cc88',
     }).setOrigin(0.5);
     this.container.add(this.plusBtn);
 
     this.footerText = scene.add.text(CX, 440, '[← →] adjust  [SPACE] confirm  [ESC] cancel', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#8a7a9a',
+      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#8a7a9a',
     }).setOrigin(0.5);
     this.container.add(this.footerText);
   }

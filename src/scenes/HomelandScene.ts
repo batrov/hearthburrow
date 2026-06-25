@@ -18,6 +18,7 @@ import {
   HALF_W, HALF_H, worldWidth, worldHeight,
 } from '../systems/IsoUtils';
 import { VW, VH, CX, CY } from '../systems/Viewport';
+import { textStyle } from '../systems/Font';
 
 interface HubBuildingDef {
   id: string;
@@ -231,7 +232,7 @@ export class HomelandScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.fadeIn(400, 0, 0, 0);
-    this.cameras.main.setBackgroundColor('#0a0a0a');
+    this.cameras.main.setBackgroundColor('#334621');
 
     this.hudCam = this.cameras.add(0, 0, VW, VH, false, 'hud');
     this.hudCam.setZoom(1);
@@ -281,7 +282,7 @@ export class HomelandScene extends Phaser.Scene {
     this.cameras.main.ignore(this.farmPanel.container);
 
     this.carrotCountText = this.add.text(VW - 12, 12, '', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#ff8833', fontStyle: 'bold',
+      fontSize: '14px', fontFamily: 'Inter', resolution: 4, color: '#ff8833', fontStyle: 'bold',
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(55);
     this.cameras.main.ignore(this.carrotCountText);
     this.updateCarrotCounter();
@@ -349,8 +350,8 @@ export class HomelandScene extends Phaser.Scene {
       this.hudCam.ignore(img);
       this.buildingImages.set(b.buildingId || b.id, img);
 
-      const label = this.add.text(c.x, c.y - 48, b.label, {
-        fontSize: '11px', fontFamily: 'monospace', color: ul ? '#e8d5b7' : '#6a5a4a',
+      const label = this.add.text(c.x, c.y - 200, b.label, {
+        fontSize: '16px', fontFamily: 'Inter', resolution: 4, color: ul ? '#e8d5b7' : '#6a5a4a',
       }).setOrigin(0.5).setAlpha(alpha).setDepth(7);
       this.hudCam.ignore(label);
       this.buildingLabels.push(label);
@@ -389,12 +390,12 @@ export class HomelandScene extends Phaser.Scene {
     });
 
     const gateLabel = this.add.text(c.x, c.y - 60, 'FORGOTTEN DEPTHS', {
-      fontSize: '10px', fontFamily: 'monospace', color: '#7a6a9a',
+      fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#7a6a9a',
     }).setOrigin(0.5).setDepth(7);
     this.hudCam.ignore(gateLabel);
 
     const descendText = this.add.text(c.x, c.y + 24, '[SPACE] Descend', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#8a7aba',
+      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#8a7aba',
     }).setOrigin(0.5).setDepth(7);
     this.hudCam.ignore(descendText);
     descendText.setInteractive({ useHandCursor: true }).setData('isUI', true);
@@ -441,7 +442,7 @@ export class HomelandScene extends Phaser.Scene {
     }
     if (cfg.scale !== undefined) this.player.setScale(cfg.scale);
     this.playerLabel = this.add.text(p.x, p.y - 30, 'You', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#aaddff',
+      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#aaddff',
     }).setOrigin(0.5);
     this.hudCam.ignore(this.playerLabel);
     this.updatePlayerSprite();
@@ -468,7 +469,7 @@ export class HomelandScene extends Phaser.Scene {
 
   private createInteractionUI(): void {
     this.promptText = this.add.text(0, 0, '', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#ffdd88',
+      fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#ffdd88',
     }).setOrigin(0.5).setAlpha(0).setDepth(55);
     this.hudCam.ignore(this.promptText);
   }
@@ -478,7 +479,7 @@ export class HomelandScene extends Phaser.Scene {
     this.actionBtnBg = this.add.graphics().setScrollFactor(0).setDepth(50);
     this.cameras.main.ignore(this.actionBtnBg);
     this.actionBtnText = this.add.text(x, y, '', {
-      fontSize: '24px', fontFamily: 'monospace',
+      fontSize: '24px', fontFamily: 'Inter', resolution: 4,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(51);
     this.cameras.main.ignore(this.actionBtnText);
 
@@ -1010,7 +1011,7 @@ export class HomelandScene extends Phaser.Scene {
     container.add(bg);
 
     const title = this.add.text(0, -40, `Constructing ${building?.name ?? ''}...`, {
-      fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7',
+      fontSize: '16px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
     }).setOrigin(0.5);
     container.add(title);
 
@@ -1025,7 +1026,7 @@ export class HomelandScene extends Phaser.Scene {
     container.add(barFill);
 
     const statusText = this.add.text(0, 20, 'Building... 0%', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#8a9aaa',
+      fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#8a9aaa',
     }).setOrigin(0.5);
     container.add(statusText);
 
@@ -1066,7 +1067,7 @@ export class HomelandScene extends Phaser.Scene {
 
           const name = building?.name ?? buildingId.replace(/_/g, ' ');
           const popup = this.add.text(CX, CY, `${name} Restored!`, {
-            fontSize: '18px', fontFamily: 'monospace', color: '#44cc66', fontStyle: 'bold', align: 'center',
+            fontSize: '18px', fontFamily: 'Inter', resolution: 4, color: '#44cc66', fontStyle: 'bold', align: 'center',
           }).setOrigin(0.5).setScrollFactor(0).setDepth(250);
           this.cameras.main.ignore(popup);
 

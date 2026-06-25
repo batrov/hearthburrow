@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { VW, VH, CX } from '../systems/Viewport';
+import { textStyle } from '../systems/Font';
 
 export class ConfirmPopup {
   private scene: Phaser.Scene;
@@ -44,17 +45,17 @@ export class ConfirmPopup {
     this.container.add(this.popupBg);
 
     this.messageText = scene.add.text(CX, 200, '', {
-      fontSize: '18px', fontFamily: 'monospace', color: '#ff8844', fontStyle: 'bold',
+      fontSize: '18px', fontFamily: 'Inter', resolution: 4, color: '#ff8844', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.messageText);
 
     this.subText = scene.add.text(CX, 230, '', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#b8a898',
+      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#b8a898',
     }).setOrigin(0.5);
     this.container.add(this.subText);
 
     this.yesBtn = scene.add.text(CX - 60, 280, '[ YES ]', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#cc6666',
+      fontSize: '14px', fontFamily: 'Inter', resolution: 4, color: '#cc6666',
       backgroundColor: '#3a1a1acc', padding: { x: 12, y: 4 },
     }).setOrigin(0.5);
     this.container.add(this.yesBtn);
@@ -63,7 +64,7 @@ export class ConfirmPopup {
     this.yesBtnZone = yesZone;
 
     this.noBtn = scene.add.text(CX + 60, 280, '[Cancel]', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#aaaacc',
+      fontSize: '14px', fontFamily: 'Inter', resolution: 4, color: '#aaaacc',
       backgroundColor: '#1a1a3acc', padding: { x: 10, y: 4 },
     }).setOrigin(0.5);
     this.container.add(this.noBtn);
@@ -72,7 +73,7 @@ export class ConfirmPopup {
     this.noBtnZone = noZone;
 
     this.footerText = scene.add.text(CX, 340, '[← →] switch  [SPACE] confirm  [ESC] cancel', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#8a7a9a',
+      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#8a7a9a',
     }).setOrigin(0.5);
     this.container.add(this.footerText);
   }

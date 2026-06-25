@@ -4,6 +4,7 @@ import { getRecipe } from '../systems/DataRegistry';
 import { audio } from '../systems/AudioSystem';
 import { BasePanel } from './BasePanel';
 import { VW, VH, CX } from '../systems/Viewport';
+import { textStyle } from '../systems/Font';
 
 const RECIPE_INFO: Record<string, { desc: string; unlock?: string }> = {
   pickaxe_2: { desc: 'Bronze Pickaxe — 5 runs, mines bronze ore' },
@@ -86,7 +87,7 @@ export class CraftingPanel extends BasePanel {
     this.createOverlay();
 
     this.titleText = scene.add.text(CX, 36, 'Crafting Station', {
-      fontSize: '18px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
+      fontSize: '18px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
@@ -97,13 +98,13 @@ export class CraftingPanel extends BasePanel {
     this.container.add(this.scrollbarGfx);
 
     this.descriptionText = scene.add.text(CX, VH - 70, '', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#b8a898',
+      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#b8a898',
       align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.descriptionText);
 
     this.hintText = scene.add.text(CX, VH - 44, '[W/S] Select  [SPACE] Craft  [ESC] Close', {
-      fontSize: '10px', fontFamily: 'monospace', color: '#5a4a6a',
+      fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
@@ -236,7 +237,7 @@ export class CraftingPanel extends BasePanel {
       }
     } else {
       const placeholder = this.scene.add.text(28, 26, '?', {
-        fontSize: '20px', fontFamily: 'monospace', color: '#5a6a7a',
+        fontSize: '20px', fontFamily: 'Inter', resolution: 4, color: '#5a6a7a',
       }).setOrigin(0.5);
       card.add(placeholder);
     }
@@ -244,7 +245,7 @@ export class CraftingPanel extends BasePanel {
     const nameColor = CARD_NAME_COLOR[state];
     const nameStr = discovered ? r.name : '???';
     const nameText = this.scene.add.text(56, 14, nameStr, {
-      fontSize: '12px', fontFamily: 'monospace', color: nameColor, fontStyle: 'bold',
+      fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: nameColor, fontStyle: 'bold',
     });
     card.add(nameText);
 
@@ -256,7 +257,7 @@ export class CraftingPanel extends BasePanel {
 
     if (indicator) {
       const ind = this.scene.add.text(CARD_W - 12, 14, indicator, {
-        fontSize: '12px', fontFamily: 'monospace', color: indColor, fontStyle: 'bold',
+        fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: indColor, fontStyle: 'bold',
       }).setOrigin(1, 0);
       card.add(ind);
     }
@@ -270,7 +271,7 @@ export class CraftingPanel extends BasePanel {
         const matColor = sufficient ? '#b8b8b8' : '#cc6644';
         const matText = this.scene.add.text(56, 42 + mi * 14,
           `\u2022 ${itemDisplayName(matId).padEnd(17)} ${String(have).padStart(2)}/${need}${sufficient ? ' \u2714' : ''}`, {
-          fontSize: '10px', fontFamily: 'monospace', color: matColor,
+          fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: matColor,
         });
         card.add(matText);
       }
@@ -278,7 +279,7 @@ export class CraftingPanel extends BasePanel {
       const info = RECIPE_INFO[r.id];
       if (info?.unlock) {
         const hint = this.scene.add.text(56, 42, `(Unlock: ${info.unlock})`, {
-          fontSize: '10px', fontFamily: 'monospace', color: '#5a6a7a',
+          fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#5a6a7a',
         });
         card.add(hint);
       }
@@ -424,7 +425,7 @@ export class CraftingPanel extends BasePanel {
     const popup = this.scene.add.text(
       CX, VH / 2,
       `Crafted: ${itemDisplayName(itemId)}`,
-      { fontSize: '16px', fontFamily: 'monospace', color: '#44cc66', fontStyle: 'bold' }
+      { fontSize: '16px', fontFamily: 'Inter', resolution: 4, color: '#44cc66', fontStyle: 'bold' }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(250);
 
     this.scene.tweens.add({
@@ -442,7 +443,7 @@ export class CraftingPanel extends BasePanel {
     const popup = this.scene.add.text(
       CX, VH / 2,
       'No craftable recipe \u2014 need more materials!',
-      { fontSize: '14px', fontFamily: 'monospace', color: '#cc6644' }
+      { fontSize: '14px', fontFamily: 'Inter', resolution: 4, color: '#cc6644' }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(250);
 
     this.scene.tweens.add({
@@ -459,7 +460,7 @@ export class CraftingPanel extends BasePanel {
     const popup = this.scene.add.text(
       CX, VH / 2,
       `??? \u2014 ${hint}`,
-      { fontSize: '14px', fontFamily: 'monospace', color: '#aa8844' }
+      { fontSize: '14px', fontFamily: 'Inter', resolution: 4, color: '#aa8844' }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(250);
 
     this.scene.tweens.add({

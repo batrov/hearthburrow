@@ -3,6 +3,7 @@ import { gameState } from '../systems/GameState';
 import { audio } from '../systems/AudioSystem';
 import { BasePanel } from './BasePanel';
 import { VW, VH, CX } from '../systems/Viewport';
+import { textStyle } from '../systems/Font';
 
 export class FarmPanel extends BasePanel {
   private bg: Phaser.GameObjects.Graphics;
@@ -17,13 +18,13 @@ export class FarmPanel extends BasePanel {
     this.container.add(this.bg);
 
     this.text = scene.add.text(CX, 44, '', {
-      fontSize: '13px', fontFamily: 'monospace', color: '#e8d5b7',
+      fontSize: '13px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
       align: 'center', lineSpacing: 4,
     }).setOrigin(0.5, 0);
     this.container.add(this.text);
 
     this.plantBtn = scene.add.text(CX - 80, VH - 80, '[PLANT]', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#44cc66',
+      fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#44cc66',
       backgroundColor: '#1a2a1a', padding: { x: 12, y: 6 },
     }).setOrigin(0.5).setDepth(210).setScrollFactor(0);
     this.container.add(this.plantBtn);
@@ -33,7 +34,7 @@ export class FarmPanel extends BasePanel {
     this.container.add(plantZone);
 
     this.harvestBtn = scene.add.text(CX + 80, VH - 80, '[HARVEST]', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#ccaa44',
+      fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#ccaa44',
       backgroundColor: '#2a1a0a', padding: { x: 12, y: 6 },
     }).setOrigin(0.5).setDepth(210).setScrollFactor(0);
     this.container.add(this.harvestBtn);

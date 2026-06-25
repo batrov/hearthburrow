@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { VW, VH, CX } from '../systems/Viewport';
+import { textStyle } from '../systems/Font';
 
 export class SeedEntryPopup {
   private scene: Phaser.Scene;
@@ -44,23 +45,23 @@ export class SeedEntryPopup {
     this.container.add(this.popupBg);
 
     this.titleText = scene.add.text(CX, 170, 'Enter Run Seed', {
-      fontSize: '18px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
+      fontSize: '18px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
     this.seedText = scene.add.text(CX, 225, '', {
-      fontSize: '18px', fontFamily: 'monospace', color: '#88cc88',
+      fontSize: '18px', fontFamily: 'Inter', resolution: 4, color: '#88cc88',
     }).setOrigin(0.5);
     this.container.add(this.seedText);
 
     this.cursorText = scene.add.text(CX, 225, '|', {
-      fontSize: '18px', fontFamily: 'monospace', color: '#88cc88',
+      fontSize: '18px', fontFamily: 'Inter', resolution: 4, color: '#88cc88',
     }).setOrigin(0.5);
     this.cursorText.setVisible(false);
     this.container.add(this.cursorText);
 
     this.randomizeBtn = scene.add.text(CX, 270, '[ RANDOMIZE ]', {
-      fontSize: '13px', fontFamily: 'monospace', color: '#88aa88',
+      fontSize: '13px', fontFamily: 'Inter', resolution: 4, color: '#88aa88',
     }).setOrigin(0.5);
     this.container.add(this.randomizeBtn);
     const randZone = scene.add.rectangle(CX, 270, 130, 44, 0xffffff, 0)
@@ -69,7 +70,7 @@ export class SeedEntryPopup {
     this.randomizeZone = randZone;
 
     this.hintText = scene.add.text(CX, 308, '', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#8a7a9a', align: 'center',
+      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#8a7a9a', align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
   }

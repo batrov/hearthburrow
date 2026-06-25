@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { VW, VH, CX, PANEL_PAD, OVERLAY_W, OVERLAY_H } from '../systems/Viewport';
+import { textStyle } from '../systems/Font';
 
 export class BasePanel {
   protected scene: Phaser.Scene;
@@ -63,7 +64,7 @@ export class BasePanel {
 
   protected addCloseButton(x = VW - 40, y = 44): Phaser.GameObjects.Text {
     const btn = this.scene.add.text(x, y, '[X]', {
-      fontSize: '24px', fontFamily: 'monospace', color: '#886666',
+      fontSize: '24px', fontFamily: 'Inter', resolution: 4, color: '#886666',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(220).setData('isUI', true);
     this.scene.cameras.main.ignore(btn);
     btn.setVisible(false);

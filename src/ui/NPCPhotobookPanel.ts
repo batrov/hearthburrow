@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { gameState, NPC_PERSONALITIES } from '../systems/GameState';
 import { BasePanel } from './BasePanel';
 import { VW, VH, CX } from '../systems/Viewport';
+import { textStyle } from '../systems/Font';
 
 export class NPCPhotobookPanel extends BasePanel {
   private titleText: Phaser.GameObjects.Text;
@@ -18,12 +19,12 @@ export class NPCPhotobookPanel extends BasePanel {
     this.overlay.setData('isUI', true);
 
     this.titleText = scene.add.text(CX, 28, 'NPC Photobook', {
-      fontSize: '18px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
+      fontSize: '18px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
     this.contentText = scene.add.text(CX, 68, '', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#c8b898',
+      fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#c8b898',
       align: 'center', lineSpacing: 6,
     }).setOrigin(0.5, 0);
     this.contentText.setInteractive();
@@ -40,12 +41,12 @@ export class NPCPhotobookPanel extends BasePanel {
     this.container.add(this.contentText);
 
     this.hintText = scene.add.text(CX, VH - 38, '', {
-      fontSize: '10px', fontFamily: 'monospace', color: '#5a4a6a',
+      fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
     const upBtn = scene.add.text(CX, 62, '▲', {
-      fontSize: '18px', fontFamily: 'monospace', color: '#886644',
+      fontSize: '18px', fontFamily: 'Inter', resolution: 4, color: '#886644',
     }).setOrigin(0.5).setDepth(210).setScrollFactor(0);
     this.container.add(upBtn);
     const upHit = scene.add.rectangle(CX, 62, 60, 44, 0xffffff, 0)
@@ -54,7 +55,7 @@ export class NPCPhotobookPanel extends BasePanel {
     this.container.add(upHit);
 
     const downBtn = scene.add.text(CX, VH - 56, '▼', {
-      fontSize: '18px', fontFamily: 'monospace', color: '#886644',
+      fontSize: '18px', fontFamily: 'Inter', resolution: 4, color: '#886644',
     }).setOrigin(0.5).setDepth(210).setScrollFactor(0);
     this.container.add(downBtn);
     const downHit = scene.add.rectangle(CX, VH - 56, 60, 44, 0xffffff, 0)

@@ -3,6 +3,7 @@ import { BasePanel } from './BasePanel';
 import { audio } from '../systems/AudioSystem';
 import { itemIconKey } from '../systems/GameState';
 import { VW, VH, CX, CY } from '../systems/Viewport';
+import { textStyle } from '../systems/Font';
 
 export interface RouletteSegment {
   label: string;
@@ -64,17 +65,17 @@ export class GamblePanel extends BasePanel {
     this.container.add(this.pointerGfx);
 
     this.titleText = scene.add.text(CX, 180, '', {
-      fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
+      fontSize: '16px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
     this.subtitleText = scene.add.text(CX, 206, '', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#6a5a8a',
+      fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
     }).setOrigin(0.5);
     this.container.add(this.subtitleText);
 
     this.hintText = scene.add.text(CX, CY + 20, '', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#6a5a8a',
+      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
@@ -82,7 +83,7 @@ export class GamblePanel extends BasePanel {
     this.container.add(this.resultBg);
 
     this.resultText = scene.add.text(CX, this.wheelCY, '', {
-      fontSize: '18px', fontFamily: 'monospace', color: '#ffffff', fontStyle: 'bold',
+      fontSize: '18px', fontFamily: 'Inter', resolution: 4, color: '#ffffff', fontStyle: 'bold',
       align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.resultText);
@@ -113,7 +114,7 @@ export class GamblePanel extends BasePanel {
     this.container.add(this.legendGfx);
 
     this.legendTitle = scene.add.text(CX, 430, 'Rewards (% chance)', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#8a7a6a', fontStyle: 'bold',
+      fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#8a7a6a', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.legendTitle);
   }
@@ -127,7 +128,7 @@ export class GamblePanel extends BasePanel {
     this.container.add(this.spinBtnGfx);
 
     this.spinBtnText = scene.add.text(spinX + bw / 2, by + bh / 2, 'Spin!', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#ffffff', fontStyle: 'bold',
+      fontSize: '14px', fontFamily: 'Inter', resolution: 4, color: '#ffffff', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.spinBtnText);
 
@@ -139,7 +140,7 @@ export class GamblePanel extends BasePanel {
     this.container.add(this.walkBtnGfx);
 
     this.walkBtnText = scene.add.text(walkX + bw / 2, by + bh / 2, 'Walk away', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#ffffff',
+      fontSize: '14px', fontFamily: 'Inter', resolution: 4, color: '#ffffff',
     }).setOrigin(0.5);
     this.container.add(this.walkBtnText);
 
@@ -237,7 +238,7 @@ export class GamblePanel extends BasePanel {
           Math.cos(midAngle) * pctDist,
           Math.sin(midAngle) * pctDist,
           `${pct}%`,
-          { fontSize: '8px', fontFamily: 'monospace', color: '#ffffff' },
+          { fontSize: '8px', fontFamily: 'Inter', resolution: 4, color: '#ffffff' },
         ).setOrigin(0.5).setDepth(1);
         this.wheelContainer.add(txt);
         this.wheelPctTexts.push(txt);
@@ -279,7 +280,7 @@ export class GamblePanel extends BasePanel {
 
         const pct = Math.round((seg.weight / totalWeight) * 100);
         const txt = this.scene.add.text(x + 14, y, `${seg.label}  ${pct}%`, {
-          fontSize: '11px', fontFamily: 'monospace', color: '#b0a090',
+          fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#b0a090',
         });
         this.container.add(txt);
         this.legendLines.push(txt);

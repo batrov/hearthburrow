@@ -239,6 +239,15 @@ Resolved Bugs:
 - **Delayed damage** — mining damage/stamina/particles execute after the 240ms animation completes via `pendingMineTx/Ty` + `executeMine()`
 - **Empty swings** — pressing SPACE with no mineable target still plays the full swing animation
 
+## ✅ Wall Destruction & Tunneling (June 2026)
+- **Pickaxe mines walls** — walls have durability 4 (set at generation), same pickaxe damage model as ores; stamina cost 8 per swing
+- **Wall breaks into corridor** — destroyed wall converts to `'corridor'` tile, walkable and visually distinct as a tunnel
+- **Bomb also destroys walls** — mining bomb damages adjacent walls, converts to corridor, gray dust particles
+- **Wall hit feedback** — wall image shakes on hit, camera shake, gray damage tint (0xaaaaaa/0x777777), low sawtooth `playWallHit()` sound
+- **Wall break effects** — `createWallBreakParticles()` with gray rock chunks + dust burst, low rumble `playWallBreak()` sound
+- **Preview depth relative to player** — preview tile depth interleaves with painter's algorithm: above player when facing north/west, below when south/east
+- **Biome-based scene backgrounds** — ExpeditionScene background now cycles with biome: FOREST `#0a0a15`, CAVE `#0f0804`, ICE `#0a1525`, LAVA `#150804`, RUINS `#0d0615`
+
 ## ✅ Laboratory Progression Tree (June 2026)
 - **3 branches × 4 tiers** — Mining, Combat, and Survival trees with 12 research nodes, each requiring the previous tier as prerequisite
 - **Crystal-first costs** — T1=1c+50s, T2=3c+10bronze, T3=5c+10silver, T4=10c+5gold

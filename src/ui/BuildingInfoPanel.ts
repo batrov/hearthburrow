@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { BasePanel } from './BasePanel';
 import { VW, VH, CX, CY } from '../systems/Viewport';
+import { textStyle } from '../systems/Font';
 
 export class BuildingInfoPanel extends BasePanel {
   private titleText: Phaser.GameObjects.Text;
@@ -17,12 +18,12 @@ export class BuildingInfoPanel extends BasePanel {
     this.overlay.strokeRoundedRect(CX - 160, CY - 80, 320, 160, 10);
 
     this.titleText = scene.add.text(CX, CY - 50, '', {
-      fontSize: '16px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
+      fontSize: '16px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
     this.descText = scene.add.text(CX, CY, '', {
-      fontSize: '13px', fontFamily: 'monospace', color: '#b8a898', align: 'center',
+      fontSize: '13px', fontFamily: 'Inter', resolution: 4, color: '#b8a898', align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.descText);
 

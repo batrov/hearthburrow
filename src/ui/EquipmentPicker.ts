@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { itemIconKey } from '../systems/GameState';
 import { VW, VH, CX, CY } from '../systems/Viewport';
+import { textStyle } from '../systems/Font';
 
 export interface PickerOption {
   id: string;
@@ -57,7 +58,7 @@ export class EquipmentPicker {
     this.container.add(this.popupBg);
 
     this.titleText = scene.add.text(CX, 170, '', {
-      fontSize: '20px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
+      fontSize: '20px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
@@ -70,13 +71,13 @@ export class EquipmentPicker {
       this.container.add(icon);
 
       const nameText = scene.add.text(0, 0, '', {
-        fontSize: '11px', fontFamily: 'monospace', color: '#c8b898',
+        fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#c8b898',
       });
       nameText.setVisible(false);
       this.container.add(nameText);
 
       const descText = scene.add.text(0, 0, '', {
-        fontSize: '10px', fontFamily: 'monospace', color: '#888888',
+        fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#888888',
       });
       descText.setVisible(false);
       this.container.add(descText);
@@ -90,7 +91,7 @@ export class EquipmentPicker {
     }
 
     this.footerText = scene.add.text(CX, 520, '[W/S] select  [SPACE] equip  [ESC] cancel', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#8a7a9a',
+      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#8a7a9a',
     }).setOrigin(0.5);
     this.container.add(this.footerText);
   }

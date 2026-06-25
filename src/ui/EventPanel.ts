@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { audio } from '../systems/AudioSystem';
 import { BasePanel } from './BasePanel';
 import { VW, VH, CX } from '../systems/Viewport';
+import { textStyle } from '../systems/Font';
 
 export interface EventChoice {
   label: string;
@@ -31,24 +32,24 @@ export class EventPanel extends BasePanel {
     this.addTouchZones();
 
     this.titleText = scene.add.text(CX, 120, '', {
-      fontSize: '18px', fontFamily: 'monospace', color: '#e8d5b7', fontStyle: 'bold',
+      fontSize: '18px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
     this.descText = scene.add.text(CX, 160, '', {
-      fontSize: '13px', fontFamily: 'monospace', color: '#b8a898',
+      fontSize: '13px', fontFamily: 'Inter', resolution: 4, color: '#b8a898',
       align: 'center', wordWrap: { width: 320 }, lineSpacing: 4,
     }).setOrigin(0.5, 0);
     this.container.add(this.descText);
 
     this.choicesText = scene.add.text(CX, 260, '', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#c8b898',
+      fontSize: '14px', fontFamily: 'Inter', resolution: 4, color: '#c8b898',
       align: 'left', lineSpacing: 10,
     }).setOrigin(0.5, 0);
     this.container.add(this.choicesText);
 
     this.hintText = scene.add.text(CX, VH - 60, '', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#5a4a6a',
+      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 

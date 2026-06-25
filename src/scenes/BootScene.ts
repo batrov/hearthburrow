@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { gameState, GameState } from '../systems/GameState';
 import { audio } from '../systems/AudioSystem';
 import { generateAll } from '../systems/TextureGenerator';
+import { textStyle } from '../systems/Font';
 
 export class BootScene extends Phaser.Scene {
   private loadingBar!: Phaser.GameObjects.Graphics;
@@ -138,7 +139,7 @@ export class BootScene extends Phaser.Scene {
 
     this.progressText = this.add.text(cx, barY + barHeight + 12, 'Loading...', {
       fontSize: '14px',
-      fontFamily: 'monospace',
+      fontFamily: 'Inter', resolution: 4,
       color: '#6a5a4a',
     }).setOrigin(0.5);
 
@@ -180,7 +181,7 @@ export class BootScene extends Phaser.Scene {
     if (!GameState.storageAvailable) {
       this.add.text(cx, cy + 130, '⚠ Storage unavailable — progress will not be saved.\nUse a non-private browser to keep your progress.', {
         fontSize: '13px',
-        fontFamily: 'monospace',
+        fontFamily: 'Inter', resolution: 4,
         color: '#ff6644',
         align: 'center',
       }).setOrigin(0.5);
