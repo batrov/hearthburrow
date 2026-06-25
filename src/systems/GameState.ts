@@ -311,7 +311,19 @@ export function itemIdFromDisplayName(name: string): string | undefined {
 const MAX_PICKAXE_RUNS = 5;
 const MAX_EQUIP_RUNS = 5;
 
-class GameState {
+export class GameState {
+  /** Probes localStorage at module load time — catches Safari private browsing SecurityError. */
+  static readonly storageAvailable: boolean = (() => {
+    try {
+      const k = '__hb_test__';
+      localStorage.setItem(k, '1');
+      localStorage.removeItem(k);
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+
   inventory: InventorySystem;
   crafting: CraftingSystem;
   lastRunResult: RunResult | null = null;
@@ -651,6 +663,7 @@ class GameState {
 
   /** Persist entire game state to localStorage. */
   save(): void {
+    if (!GameState.storageAvailable) return;
     const data = {
       inventory: this.inventory.getItems().map(s => s ? { itemId: s.itemId, quantity: s.quantity } : null),
       restoredBuildings: Array.from(this.restoredBuildings),
@@ -689,6 +702,7 @@ class GameState {
 
   /** Restore game state from localStorage. Handles migration from legacy formats. */
   load(): void {
+    if (!GameState.storageAvailable) return;
     try {
       const raw = localStorage.getItem(SAVE_KEY);
       if (!raw) return;

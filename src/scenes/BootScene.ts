@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { gameState } from '../systems/GameState';
+import { gameState, GameState } from '../systems/GameState';
 import { audio } from '../systems/AudioSystem';
 import { generateAll } from '../systems/TextureGenerator';
 
@@ -176,6 +176,15 @@ export class BootScene extends Phaser.Scene {
 
     // Generate procedural fallbacks for any textures that didn't load (missing PNGs)
     generateAll(this);
+
+    if (!GameState.storageAvailable) {
+      this.add.text(cx, cy + 130, '⚠ Storage unavailable — progress will not be saved.\nUse a non-private browser to keep your progress.', {
+        fontSize: '13px',
+        fontFamily: 'monospace',
+        color: '#ff6644',
+        align: 'center',
+      }).setOrigin(0.5);
+    }
 
     const proceed = () => {
       this.tweens.killTweensOf(this.progressText);
