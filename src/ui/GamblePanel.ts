@@ -328,7 +328,6 @@ export class GamblePanel extends BasePanel {
   onPress(): void {
     if (!this._visible) return;
     if (this.mode === 'preview') {
-      if (this.canGamble) this.doSpin();
       return;
     }
     if (this.resolved) {
@@ -468,5 +467,6 @@ export class GamblePanel extends BasePanel {
     this.mode = 'preview';
     this._visible = false;
     this.container.setVisible(false);
+    if (this._closeBtn) this._closeBtn.setVisible(false);
   }
 }

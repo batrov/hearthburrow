@@ -12,7 +12,7 @@ export class BasePanel {
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
-    this.container = scene.add.container(0, 0).setDepth(210).setScrollFactor(0);
+    this.container = scene.add.container(0, 0).setDepth(215).setScrollFactor(0);
     this.container.setVisible(false);
   }
 
