@@ -9,6 +9,15 @@
         "--mcp"
       ],
       "enabled": true
+    },
+    "headroom": {
+      "type": "local",
+      "command": [
+        "headroom",
+        "mcp",
+        "serve"
+      ],
+      "enabled": true
     }
   }
 }

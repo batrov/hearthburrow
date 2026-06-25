@@ -34,6 +34,7 @@ export class AnalogStickInput {
     scene.input.on('pointerdown', this.onPointerDown, this);
     scene.input.on('pointermove', this.onPointerMove, this);
     scene.input.on('pointerup', this.onPointerUp, this);
+    scene.input.on('pointercancel', this.onPointerCancel, this);
 
     scene.events.on('shutdown', this.destroy, this);
   }
@@ -52,36 +53,31 @@ export class AnalogStickInput {
     this.scene.input.off('pointerdown', this.onPointerDown, this);
     this.scene.input.off('pointermove', this.onPointerMove, this);
     this.scene.input.off('pointerup', this.onPointerUp, this);
+    this.scene.input.off('pointercancel', this.onPointerCancel, this);
     this.scene.events.off('shutdown', this.destroy, this);
     this.reset();
   }
 
   private onPointerDown(pointer: Phaser.Input.Pointer): void {
-    if (this.config.isPointerOverUI?.(pointer) || this.config.isModal()) {
-      this.uiHitOnDown = true;
-      return;
-    }
+    if (this.config.isModal()) return;
 
+    this.uiHitOnDown = this.config.isPointerOverUI?.(pointer) || false;
     this.stickCenterX = pointer.x;
     this.stickCenterY = pointer.y;
     this.pointerDragged = false;
-    this.uiHitOnDown = false;
     this.reset();
   }
 
   private onPointerMove(pointer: Phaser.Input.Pointer): void {
     if (!pointer.isDown) return;
     if (this.config.isModal()) return;
-    if (this.config.isPointerOverUI?.(pointer)) return;
 
     const dx = pointer.x - this.stickCenterX;
     const dy = pointer.y - this.stickCenterY;
     const dist = Math.sqrt(dx * dx + dy * dy);
     if (dist < this.deadZone) {
       if (this._active) {
-        this._active = false;
-        this._dx = 0;
-        this._dy = 0;
+        this.reset();
       }
       return;
     }
@@ -131,17 +127,19 @@ export class AnalogStickInput {
   }
 
   private onPointerUp(pointer: Phaser.Input.Pointer): void {
+    this.reset();
+
     if (this.uiHitOnDown) {
       this.uiHitOnDown = false;
       return;
     }
-    if (this.config.isModal()) return;
-    if (this.config.isPointerOverUI?.(pointer)) return;
 
-    if (!this.pointerDragged) {
+    if (!this.pointerDragged && !this.config.isModal() && !this.config.isPointerOverUI?.(pointer)) {
       this.config.onClick?.(pointer.worldX, pointer.worldY);
     }
+  }
 
+  private onPointerCancel(): void {
     this.reset();
   }
 }

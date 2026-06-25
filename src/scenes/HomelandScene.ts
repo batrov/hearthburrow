@@ -888,6 +888,7 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private handleBuildingClick(b: HubBuildingDef): void {
+    if (this.analog.active) return;
     if (this.isModalActive) return;
     const bLeft = b.gx - 1, bRight = b.gx + b.gw;
     const bTop = b.gy - 1, bBottom = b.gy + b.gh;
@@ -917,6 +918,7 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private activateBuilding(b: HubBuildingDef): void {
+    if (this.analog.active) return;
     if (this.isModalActive) return;
     this.movePath = [];
     this.analog.reset();

@@ -1,9 +1,12 @@
 ## Pre-requisite
-- npm
+- Node.js (which includes npm)
+- Vite (installed automatically — see below)
 
 To get `npm` (Node Package Manager) on your computer, the easiest and most reliable way is to install **Node.js**. Because `npm` is the default package manager for Node.js, they come bundled together—install one, and you automatically get the other.
 
-Here is the straightforward guide to getting it up and running.
+**Vite** is the development server and build tool used by this project. It is listed as a devDependency in `package.json`, so it will be installed automatically when you run `npm install`. You do not need to install it separately.
+
+Here is the straightforward guide to getting everything up and running.
 
 ---
 
