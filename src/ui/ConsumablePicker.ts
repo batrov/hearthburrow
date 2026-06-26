@@ -11,7 +11,6 @@ export class ConsumablePicker {
   private currentQty = 0;
   private maxQty = 0;
   private onConfirmCb: ((id: string, qty: number) => void) | null = null;
-  private onCancelCb: (() => void) | null = null;
 
   private overlay: Phaser.GameObjects.Graphics;
   private blocker: Phaser.GameObjects.Rectangle;
@@ -96,20 +95,18 @@ export class ConsumablePicker {
     currentQty: number,
     maxQty: number,
     onConfirm: (id: string, qty: number) => void,
-    onCancel?: () => void,
   ): void {
     this.consumableId = consumableId;
     this.currentQty = currentQty;
     this.maxQty = maxQty;
     this.onConfirmCb = onConfirm;
-    this.onCancelCb = onCancel ?? null;
 
     this.keyHandler = (e: KeyboardEvent) => {
       switch (e.key) {
         case 'ArrowLeft': case 'a': e.preventDefault(); this.adjustQty(-1); break;
         case 'ArrowRight': case 'd': e.preventDefault(); this.adjustQty(1); break;
         case ' ': case 'Enter': e.preventDefault(); this.confirm(); break;
-        case 'Escape': this.hide(); break;
+        case 'Escape': e.preventDefault(); this.confirm(); break;
       }
     };
     this.scene.input.keyboard!.on('keydown', this.keyHandler);
@@ -119,7 +116,7 @@ export class ConsumablePicker {
       const popY = Math.floor((VH - popH) / 2);
       const insidePopup = p.x >= CX - 150 && p.x <= CX + 150 && p.y >= popY && p.y <= popY + popH;
       if (!insidePopup) {
-        this.hide();
+        this.confirm();
         return;
       }
       const btnY = popY + 198;
@@ -211,7 +208,6 @@ export class ConsumablePicker {
       onComplete: () => {
         this.container.setVisible(false);
         this.visible = false;
-        this.onCancelCb?.();
       },
     });
   }
