@@ -333,7 +333,7 @@ Resolved Bugs:
 ## ✅ Expedition Loadout Revamp (June 2026)
 - **Icon-driven layout** — GatePanel rewritten with stats column (left), 5 equipment slots, 3 consumable slots, settings (text), bottom embark button, and a 2-line description panel below embark
 - **Equipment picker** — `EquipmentPicker` popup with scrollable list, W/S keyboard navigation, SPACE confirm, click support. "(none)" option for rings/boots/lantern unequip
-- **Consumable picker** — `ConsumablePicker` with icon, description, stash count, −/+ quantity controls (← → and click), SPACE confirm, ESC/click-outside cancel
+- **Consumable picker** — `ConsumablePicker` with icon, description, stash count, −/+ quantity controls (← → and click), SPACE/ESC/click-outside all confirm qty
 - **Floor/Seed pickers** — `FloorPicker` (elevator floor list) and `SeedEntryPopup` (text input with blinking cursor)
 - **ConfirmPopup** — yes/no dialog for reset game
 - **Placeholder sprites** — empty equipment slots show dimmed (alpha 0.15) slot-appropriate base icon instead of blank frame
