@@ -112,16 +112,16 @@ export class ConfirmPopup {
         this.hide();
         return;
       }
-      const yesBounds = this.yesBtnZone.getBounds();
-      if (p.x >= yesBounds.x && p.x <= yesBounds.x + yesBounds.width &&
-          p.y >= yesBounds.y && p.y <= yesBounds.y + yesBounds.height) {
+      const yesX = CX - 60, yesY = 280, yesW = 80, yesH = 44;
+      if (p.x >= yesX - yesW / 2 && p.x <= yesX + yesW / 2 &&
+          p.y >= yesY - yesH / 2 && p.y <= yesY + yesH / 2) {
         this.selectedYes = true;
         this.confirm();
         return;
       }
-      const noBounds = this.noBtnZone.getBounds();
-      if (p.x >= noBounds.x && p.x <= noBounds.x + noBounds.width &&
-          p.y >= noBounds.y && p.y <= noBounds.y + noBounds.height) {
+      const noX = CX + 60, noY = 280, noW = 90, noH = 44;
+      if (p.x >= noX - noW / 2 && p.x <= noX + noW / 2 &&
+          p.y >= noY - noH / 2 && p.y <= noY + noH / 2) {
         this.selectedYes = false;
         this.hide();
         return;
@@ -178,6 +178,8 @@ export class ConfirmPopup {
   }
 
   isVisible(): boolean { return this.visible; }
+
+  getContainer(): Phaser.GameObjects.Container { return this.container; }
 
   destroy(): void {
     if (this.destroyed) return;

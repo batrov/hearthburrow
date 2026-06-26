@@ -8,6 +8,7 @@ import { gameState, itemDisplayName, itemIconKey, NPC_PERSONALITIES } from '../s
 import { InventoryPanel } from '../ui/InventoryPanel';
 import { EventPanel, EventChoice, EventConfig } from '../ui/EventPanel';
 import { CombatPanel, CombatResult, EnemyConfig } from '../ui/CombatPanel';
+import { ConfirmPopup } from '../ui/ConfirmPopup';
 import { GamblePanel, RouletteSegment } from '../ui/GamblePanel';
 import { AnalogStickInput } from '../ui/AnalogStickInput';
 import { audio } from '../systems/AudioSystem';
@@ -54,6 +55,44 @@ const DEPTH = {
   POPUP: 200, CLICK_ZONES: 210, ANALOG: 250,
 };
 
+type BossMechanic = 'shrink' | 'accelerate' | 'fake_zone' | 'invert';
+
+interface BossConfig {
+  name: string;
+  hp: number;
+  timingSpeed: number;
+  hitZoneWidth: number;
+  mechanic?: BossMechanic;
+  rewards: { id: string; quantity: number }[];
+}
+
+const BOSS_CONFIGS: Record<string, BossConfig> = {
+  FOREST: {
+    name: 'Forest Guardian', hp: 25, timingSpeed: 600, hitZoneWidth: 60,
+    rewards: [{ id: 'crystal', quantity: 3 }, { id: 'bronze_ore', quantity: 3 }, { id: 'silver_ore', quantity: 2 }, { id: 'forest_gem', quantity: 1 }],
+  },
+  CAVE: {
+    name: 'Cave Behemoth', hp: 30, timingSpeed: 550, hitZoneWidth: 100,
+    mechanic: 'shrink',
+    rewards: [{ id: 'crystal', quantity: 3 }, { id: 'silver_ore', quantity: 3 }, { id: 'gold_ore', quantity: 2 }, { id: 'cave_heart', quantity: 1 }],
+  },
+  ICE: {
+    name: 'Frost Wyrm', hp: 35, timingSpeed: 800, hitZoneWidth: 50,
+    mechanic: 'accelerate',
+    rewards: [{ id: 'crystal', quantity: 4 }, { id: 'gold_ore', quantity: 4 }, { id: 'ice_shard', quantity: 1 }],
+  },
+  LAVA: {
+    name: 'Magma Colossus', hp: 40, timingSpeed: 450, hitZoneWidth: 45,
+    mechanic: 'fake_zone',
+    rewards: [{ id: 'crystal', quantity: 5 }, { id: 'gold_ore', quantity: 4 }, { id: 'magma_core', quantity: 1 }],
+  },
+  RUINS: {
+    name: 'Void Lich', hp: 50, timingSpeed: 400, hitZoneWidth: 40,
+    mechanic: 'invert',
+    rewards: [{ id: 'monster_drop', quantity: 3 }, { id: 'crystal', quantity: 3 }, { id: 'gold_ore', quantity: 3 }, { id: 'void_essence', quantity: 1 }],
+  },
+};
+
 export class ExpeditionScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Container;
   private playerX: number = 1;
@@ -71,6 +110,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private portraitSprite!: Phaser.GameObjects.Image;
   private staminaBg!: Phaser.GameObjects.Graphics;
   private staminaBarGfx!: Phaser.GameObjects.Graphics;
+  private staminaAnimGfx!: Phaser.GameObjects.Graphics;
   private staminaValueText!: Phaser.GameObjects.Text;
   private depthTextCentered!: Phaser.GameObjects.Text;
   private pickaxeSprite!: Phaser.GameObjects.Image;
@@ -135,6 +175,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private combatPanel!: CombatPanel;
   private combatActive: boolean = false;
   private gamblePanel!: GamblePanel;
+  private confirmPopup!: ConfirmPopup;
   private minimapBg!: Phaser.GameObjects.Graphics;
   private minimapGfx!: Phaser.GameObjects.Graphics;
   private minimapDot!: Phaser.GameObjects.Rectangle;
@@ -218,6 +259,9 @@ export class ExpeditionScene extends Phaser.Scene {
     this.stairsSpawned = false;
     this.floorEntry = true;
     this.stamina = new StaminaSystem(staminaMax);
+    this.stamina.onChange = (prev, current) => {
+      this.animateStaminaBar(prev / this.stamina.maxStamina, current / this.stamina.maxStamina);
+    };
     if (gameState.getResearchLevel('second_wind') >= 1) this.stamina.refill(5);
     this.mining = new MiningSystem();
     this.mining.setPickaxeTier(gameState.currentPickaxeTier);
@@ -254,6 +298,8 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.ignore(this.combatPanel.container);
     this.gamblePanel = new GamblePanel(this);
     this.cameras.main.ignore(this.gamblePanel.container);
+    this.confirmPopup = new ConfirmPopup(this);
+    this.cameras.main.ignore(this.confirmPopup.getContainer());
     this.interactTarget = null;
 
     this.minimapBg = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD_BG);
@@ -475,8 +521,10 @@ export class ExpeditionScene extends Phaser.Scene {
           } else if (tile.type === 'enemy' && !tile.broken) {
             if (this.textures.exists('enemy_' + tile.resource)) makeImg('enemy_' + tile.resource);
           } else if (tile.type === 'event_boss' && !tile.broken) {
-            if (this.textures.exists('enemy_boss')) {
-              const img = makeImg('enemy_boss');
+            const bossBiome = tile.resource || getBiomeKey(floor.depth);
+            const bossKey = `enemy_boss_${bossBiome}`;
+            if (this.textures.exists(bossKey)) {
+              const img = makeImg(bossKey);
               img.setDepth(6 + y * 0.002 + x * 0.001 + 0.003);
             }
           }
@@ -513,7 +561,13 @@ export class ExpeditionScene extends Phaser.Scene {
       case 'blocked': texKey = 'blocked'; break;
       case 'enemy': texKey = 'enemy_' + tile.resource; break;
       case 'event_boss':
-      case 'boss_body': texKey = 'enemy_boss'; break;
+        texKey = `enemy_boss_${tile.resource || getBiomeKey(floor.depth)}`; break;
+      case 'boss_body': {
+        const center = this.findBossCenter(tx, ty);
+        const centerTile = center ? floor.tiles[center.y][center.x] : null;
+        texKey = `enemy_boss_${centerTile?.resource || getBiomeKey(floor.depth)}`;
+        break;
+      }
       case 'event_villager': texKey = 'npc_' + tile.resource; break;
       default:
         if (tile.type.startsWith('event_')) texKey = tile.type;
@@ -652,6 +706,9 @@ export class ExpeditionScene extends Phaser.Scene {
     this.staminaBarGfx = this.add.graphics().setScrollFactor(0).setDepth(212);
     this.cameras.main.ignore(this.staminaBarGfx);
 
+    this.staminaAnimGfx = this.add.graphics().setScrollFactor(0).setDepth(212.5);
+    this.cameras.main.ignore(this.staminaAnimGfx);
+
     this.staminaValueText = this.add.text(VW - 8, 10, '', {
       fontSize: '11px', fontFamily: 'Inter', resolution: 2, color: '#ffffff',
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(211);
@@ -724,18 +781,10 @@ export class ExpeditionScene extends Phaser.Scene {
 
     // === BOTTOM-RIGHT: Action Buttons ===
 
-    // Escape (above minimap)
+    // Escape (above minimap) — scene-level handler to avoid Phaser 4 camera-routing issues
     this.escapeSprite = this.add.image(0, 0, 'item_teleport_scroll')
       .setScrollFactor(0).setDepth(DEPTH.HUD).setInteractive({ useHandCursor: true }).setData('isUI', true);
     this.cameras.main.ignore(this.escapeSprite);
-    this.escapeSprite.on('pointerdown', () => {
-      if (this.isModalActive) return;
-      if (this.inventory.count('teleport_scroll') > 0) {
-        this.tryUseConsumable('teleport_scroll');
-      } else {
-        this.emergencyExtract();
-      }
-    });
     this.escapeLabel = this.add.text(0, 0, '', {
       fontSize: '11px', fontFamily: 'Inter', resolution: 2, color: '#cccccc',
       stroke: '#000000', strokeThickness: 2,
@@ -990,6 +1039,51 @@ export class ExpeditionScene extends Phaser.Scene {
     this.staminaValueText.setText(`${this.stamina.remaining}/${this.stamina.maxStamina}`);
   }
 
+  private animateStaminaBar(fromRatio: number, toRatio: number): void {
+    if (fromRatio === toRatio) return;
+    this.staminaAnimGfx.clear();
+
+    const x = 80, y = 32, w = VW - 100, h = 24;
+    const fillW = w - 2;
+    const fromFill = fillW * fromRatio;
+    const toFill = fillW * toRatio;
+    const decreasing = fromRatio > toRatio;
+    const duration = decreasing ? 200 : 300;
+
+    this.drawStaminaBar();
+
+    if (decreasing) {
+      const maxOverlayW = fromFill - toFill;
+      this.tweens.add({
+        targets: { p: 1 },
+        p: 0,
+        duration,
+        ease: 'Quad.easeOut',
+        onUpdate: (tween) => {
+          const prog = tween.progress;
+          this.staminaAnimGfx.clear();
+          this.staminaAnimGfx.fillStyle(0xff4444, 0.6);
+          this.staminaAnimGfx.fillRect(x + 1 + toFill, y + 1, maxOverlayW * (1 - prog), h - 2);
+        },
+        onComplete: () => this.staminaAnimGfx.clear(),
+      });
+    } else {
+      this.tweens.add({
+        targets: { a: 0.6 },
+        a: 0,
+        duration,
+        ease: 'Quad.easeOut',
+        onUpdate: (tween) => {
+          const raw = (tween.targets[0] as { a: number }).a;
+          this.staminaAnimGfx.clear();
+          this.staminaAnimGfx.fillStyle(0x44ddff, raw);
+          this.staminaAnimGfx.fillRect(x + 1 + fromFill, y + 1, toFill - fromFill, h - 2);
+        },
+        onComplete: () => this.staminaAnimGfx.clear(),
+      });
+    }
+  }
+
   private drawInventoryButton(): void {
     this.invBtnRing.clear();
 
@@ -1095,10 +1189,12 @@ export class ExpeditionScene extends Phaser.Scene {
   private get isModalActive(): boolean {
     return this.combatActive || this.eventActive
       || this.inventoryPanel.isVisible() || this.gamblePanel.isVisible()
+      || this.confirmPopup.isVisible()
       || !!this.stairAction || this.exhausted;
   }
 
   private isPointerOverUI(pointer: Phaser.Input.Pointer): boolean {
+    if (this.confirmPopup.isVisible()) return true;
     const hits = this.input.hitTestPointer(pointer);
     return hits.some(obj => (obj as Phaser.GameObjects.GameObject).getData?.('isUI'));
   }
@@ -1155,6 +1251,30 @@ export class ExpeditionScene extends Phaser.Scene {
           this.doClickToMove(worldX, worldY, floor);
         }
       },
+    });
+
+    // Scene-level handler for escape button (avoids Phaser 4 camera/container input issues)
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      if (this.confirmPopup.isVisible()) return;
+      const b = this.escapeSprite.getBounds();
+      if (b.contains(p.x, p.y)) {
+        const hasScroll = this.inventory.count('teleport_scroll') > 0;
+        this.time.delayedCall(0, () => {
+          this.confirmPopup.show(
+            hasScroll ? 'Use Teleport Scroll?' : 'Give Up?',
+            hasScroll
+              ? 'Return to Homeland safely.\nAll items kept.'
+              : 'Emergency teleport home.\nYou will lose some items.',
+            () => {
+              if (hasScroll) {
+                this.tryUseConsumable('teleport_scroll');
+              } else {
+                this.emergencyExtract();
+              }
+            },
+          );
+        });
+      }
     });
   }
 
@@ -1382,9 +1502,14 @@ export class ExpeditionScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.keys.F)) { this.movePath = []; this.analog.reset(); this.tryUseConsumable('mining_bomb'); return; }
 
     if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
+      if (this.confirmPopup.isVisible()) return;
       this.movePath = [];
       this.analog.reset();
-      this.emergencyExtract();
+      this.confirmPopup.show(
+        'Give Up?',
+        'Emergency teleport home.\nYou will lose some items.',
+        () => this.emergencyExtract(),
+      );
       return;
     }
 
@@ -2670,25 +2795,44 @@ export class ExpeditionScene extends Phaser.Scene {
       slime: { name: 'Slime', hp: 2, speed: 800, zoneWidth: 80, rewards: [{ id: 'monster_drop', quantity: 1 }] },
       rat: { name: 'Giant Rat', hp: 4, speed: 600, zoneWidth: 60, rewards: [{ id: 'monster_drop', quantity: 1 }, { id: 'stone', quantity: 1 }] },
       bat: { name: 'Cave Bat', hp: 1, speed: 450, zoneWidth: 50, rewards: [{ id: 'monster_drop', quantity: 1 }, { id: 'crystal', quantity: 1 }] },
-      boss: { name: 'Forest Guardian', hp: 25, speed: 600, zoneWidth: 60, rewards: [{ id: 'gold_ore', quantity: 3 }, { id: 'crystal', quantity: 2 }] },
     };
 
-    const data = enemyData[enemyType] ?? enemyData.slime;
     const ringEffects = gameState.getRingEffects();
 
-    const config: EnemyConfig = {
-      name: data.name,
-      hp: data.hp,
-      timingSpeed: data.speed,
-      hitZoneWidth: Math.round(data.zoneWidth * ringEffects.precisionMult),
-      spriteKey: isBoss ? 'enemy_boss' : `enemy_${enemyType}`,
-      rewards: data.rewards,
-      ringBonusDamage: ringEffects.bonusDamage,
-      ringCritChance: ringEffects.critChance,
-      researchBonusDamage: gameState.getResearchLevel('combat_training') >= 1 ? 1 : 0,
-      researchCritChance: gameState.getResearchLevel('critical_strikes') >= 1 ? 0.1 : 0,
-      bossDamageMult: isBoss && gameState.getResearchLevel('boss_slayer') >= 1 ? 1.5 : 1,
-    };
+    let config: EnemyConfig;
+
+    if (isBoss) {
+      const biomeKey = tile.resource || getBiomeKey(this.currentFloor!.depth);
+      const bossCfg = BOSS_CONFIGS[biomeKey] ?? BOSS_CONFIGS.FOREST;
+      config = {
+        name: bossCfg.name,
+        hp: bossCfg.hp,
+        timingSpeed: bossCfg.timingSpeed,
+        hitZoneWidth: Math.round(bossCfg.hitZoneWidth * ringEffects.precisionMult),
+        spriteKey: `enemy_boss_${biomeKey}`,
+        rewards: bossCfg.rewards,
+        ringBonusDamage: ringEffects.bonusDamage,
+        ringCritChance: ringEffects.critChance,
+        researchBonusDamage: gameState.getResearchLevel('combat_training') >= 1 ? 1 : 0,
+        researchCritChance: gameState.getResearchLevel('critical_strikes') >= 1 ? 0.1 : 0,
+        bossDamageMult: gameState.getResearchLevel('boss_slayer') >= 1 ? 1.5 : 1,
+        bossMechanic: bossCfg.mechanic,
+      };
+    } else {
+      const data = enemyData[enemyType] ?? enemyData.slime;
+      config = {
+        name: data.name,
+        hp: data.hp,
+        timingSpeed: data.speed,
+        hitZoneWidth: Math.round(data.zoneWidth * ringEffects.precisionMult),
+        spriteKey: `enemy_${enemyType}`,
+        rewards: data.rewards,
+        ringBonusDamage: ringEffects.bonusDamage,
+        ringCritChance: ringEffects.critChance,
+        researchBonusDamage: gameState.getResearchLevel('combat_training') >= 1 ? 1 : 0,
+        researchCritChance: gameState.getResearchLevel('critical_strikes') >= 1 ? 0.1 : 0,
+      };
+    }
 
     this.movePath = [];
     this.isMoving = false;

@@ -186,6 +186,52 @@ When modifying `DungeonGenerator.ts`, follow this sequence to maintain floor con
   - [ ] Does any child call `.setInteractive()` before/after `container.add()`?
   - [ ] If yes, remove `setInteractive()` + `on('pointerdown')` from the child, add a blocker, and use a scene-level handler.
 
+### ⚠️ Phaser 4 Same-Frame Show/Hide Conflict ("Blinking Popup")
+
+**Problem**: When a scene-level `pointerdown` handler shows a popup (e.g., `confirmPopup.show()`), and that popup has its own scene-level "outside-click → hide" handler, **both handlers fire in the same frame**. The show handler fires first, then the hide handler immediately closes it (because the click point is outside the popup bounds). The popup appears to "blink" or does nothing.
+
+```
+Frame N (pointerdown at escape-button coords):
+  1. Escape-btn handler → confirmPopup.show()          ← popup visible
+  2. ConfirmPopup clickHandler → "outside popup?" → YES → hide()  ← popup gone
+  Result: user sees nothing (or a 1-frame flash)
+```
+
+**Solution — defer show to the next frame**:
+Use `this.time.delayedCall(0, ...)` to defer `show()` to the next timestep. This ensures all `pointerdown` handlers for the current click have finished before the popup appears:
+
+```typescript
+this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+  if (this.confirmPopup.isVisible()) return;
+  const b = this.escapeSprite.getBounds();
+  if (b.contains(p.x, p.y)) {
+    const hasScroll = this.inventory.count('teleport_scroll') > 0;
+    this.time.delayedCall(0, () => {
+      this.confirmPopup.show(
+        hasScroll ? 'Use Teleport Scroll?' : 'Give Up?',
+        hasScroll ? 'Return to Homeland safely.\nAll items kept.' : 'Emergency teleport home.\nYou will lose some items.',
+        () => { /* confirm callback */ },
+      );
+    });
+  }
+});
+```
+
+Frame N:
+  1. Escape-btn handler → this.time.delayedCall(0, showFn)   ← scheduled, not yet run
+  2. ConfirmPopup clickHandler → popup not visible yet → no-op
+Frame N+1 (timer fires):
+  3. showFn() → confirmPopup.show()                           ← popup stays visible
+
+**Key insight**: The `delayedCall(0)` moves the `show()` out of the current input processing batch into the next idle frame. This is the standard fix anytime a scene-level `pointerdown` handler triggers a popup that has its own outside-click-hide logic.
+
+**Symptoms of this bug:**
+- Button appears to blink/flash when clicked
+- Click seems to do nothing (show + hide in same frame = no visible change)
+- Works on keyboard (ESC key) but not on click — because keyboard handlers run in `update()`, not during input processing
+
+**Exception**: If the popup doesn't have an outside-click-hide handler (e.g., it's a notification that auto-dismisses), the `delayedCall` is not needed.
+
 ---
 
 # Hearthburrow Development Workflow

@@ -88,6 +88,13 @@
 - **BasePanel class** — created `BasePanel` base class hiding `container`/`depth`/`_visible`/`isVisible()`/`toggle()`/`destroy()` boilerplate. All 7 UI panels refactored to extend it (~63 net lines saved across 7 panels)
 - **Total**: ~137 lines removed from codebase, improving AI-agent scanability
 
+## ✅ Biome Boss Overhaul (June 2026)
+- **5 biome-specific bosses** — FOREST (standard), CAVE (shrinking hit zone), ICE (accelerating marker), LAVA (fake decoy zones), RUINS (inverted hit/miss logic)
+- **Per-biome drops** — `forest_gem`, `cave_heart`, `ice_shard`, `magma_core`, `void_essence` added to items.json + texture generators + GameState
+- **Biome-key routing** — boss tile `.resource` stores biome name; `BOSS_CONFIGS` table keyed by biome stores hp, speed, zone width, damage mult, mechanic, and loot
+- **Mechanic implementations** in CombatPanel: `shrink` (zone ×0.9/hit), `accelerate` (speed ×0.88/hit), `fake_zone` (decoy zones every 2s), `invert` (toggle every 2.5s)
+- **Clean build** — `npm run build` zero errors
+
 ## ✅ Boss Overhaul
 - **3×3 grid** — boss now occupies 3×3 tiles (center = `event_boss`, 8 surrounding = `boss_body`), all blocking movement/pathfinding
 - **120×120 texture** — boss rendered as a single large pre-baked texture, no body tile sprites
