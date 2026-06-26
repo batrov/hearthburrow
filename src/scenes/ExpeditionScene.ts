@@ -351,6 +351,49 @@ export class ExpeditionScene extends Phaser.Scene {
     this.tileObjects = [];
     const floor = this.currentFloor;
     if (!floor) return;
+
+    // BFS distance field: how many steps each wall is from the nearest walkable tile
+    const wallDist: number[][] = [];
+    const queue: { x: number; y: number }[] = [];
+    for (let y = 0; y < floor.rows; y++) {
+      wallDist[y] = [];
+      for (let x = 0; x < floor.cols; x++) {
+        if (floor.tiles[y][x].type === 'wall') {
+          wallDist[y][x] = Infinity;
+        } else {
+          wallDist[y][x] = 0;
+          queue.push({ x, y });
+        }
+      }
+    }
+    let head = 0;
+    while (head < queue.length) {
+      const cur = queue[head++];
+      const nd = wallDist[cur.y][cur.x] + 1;
+      for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+        const nx = cur.x + dx;
+        const ny = cur.y + dy;
+        if (nx < 0 || nx >= floor.cols || ny < 0 || ny >= floor.rows) continue;
+        if (wallDist[ny][nx] <= nd) continue;
+        if (floor.tiles[ny][nx].type !== 'wall') continue;
+        wallDist[ny][nx] = nd;
+        queue.push({ x: nx, y: ny });
+      }
+    }
+
+    const makeShadowTint = (dist: number): number | null => {
+      if (dist < 2) return null;
+      const alpha = Math.min(0.9, Math.max(0.5, (dist - 1) * 0.5));
+      const factor = Math.round(255 * (1 - alpha));
+      return (factor << 16) | (factor << 8) | factor;
+    };
+
+    const combineTints = (a: number, b: number): number => {
+      return (Math.round(((a >> 16) & 0xff) * ((b >> 16) & 0xff) / 255) << 16)
+           | (Math.round(((a >> 8) & 0xff) * ((b >> 8) & 0xff) / 255) << 8)
+           | Math.round((a & 0xff) * (b & 0xff) / 255);
+    };
+
     const wallKey = getWallTextureKey(floor.depth);
     const hasWallTex = this.textures.exists(wallKey);
 
@@ -389,8 +432,15 @@ export class ExpeditionScene extends Phaser.Scene {
           if (hasWallTex) {
             const img = makeImg(wallKey);
             this.wallImageMap.set(`${x},${y}`, img);
-            const tint = this.getDamageTint(tile);
-            if (tint !== null) img.setTint(tint);
+            const damageTint = this.getDamageTint(tile);
+            const shadowTint = makeShadowTint(wallDist[y][x]);
+            if (shadowTint !== null && damageTint !== null) {
+              img.setTint(combineTints(shadowTint, damageTint));
+            } else if (shadowTint !== null) {
+              img.setTint(shadowTint);
+            } else if (damageTint !== null) {
+              img.setTint(damageTint);
+            }
           }
           break;
         case 'mineable':
