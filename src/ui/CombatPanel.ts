@@ -164,8 +164,9 @@ export class CombatPanel extends BasePanel {
 
     if (config.spriteKey && this.scene.textures.exists(config.spriteKey)) {
       this.enemySprite.setTexture(config.spriteKey);
-      this.enemySprite.setDisplaySize(96, 96);
+      this.enemySprite.setDisplaySize(config.bossDamageMult !== undefined ? 200 : 96, config.bossDamageMult !== undefined ? 200 : 96);
       this.enemySprite.setScrollFactor(0);
+      if (config.bossDamageMult !== undefined) this.enemySprite.y += 20;
       this.enemySprite.setVisible(true);
     } else {
       this.enemySprite.setVisible(false);
@@ -194,7 +195,7 @@ export class CombatPanel extends BasePanel {
     }
 
     // Boss entrance effects
-    if (config.bossMechanic) {
+    if (config.bossDamageMult !== undefined) {
       const flash = this.scene.add.rectangle(CX, VH / 2, VW, VH, 0xffffff, 0)
         .setScrollFactor(0).setDepth(210);
       this.container.add(flash);
@@ -205,10 +206,13 @@ export class CombatPanel extends BasePanel {
         onComplete: () => flash.destroy(),
       });
 
-      this.enemySprite.setScale(0.3);
+      const targetW = this.enemySprite.displayWidth;
+      const targetH = this.enemySprite.displayHeight;
+      this.enemySprite.setDisplaySize(targetW * 0.3, targetH * 0.3);
       this.scene.tweens.add({
         targets: this.enemySprite,
-        scale: 1,
+        displayWidth: targetW,
+        displayHeight: targetH,
         duration: 500,
         ease: 'Back.easeOut',
       });
@@ -350,7 +354,7 @@ export class CombatPanel extends BasePanel {
         this.stopMarker();
         this.retreatBtn.setVisible(false);
 
-        if (this.currentEnemy?.bossMechanic) {
+        if (this.currentEnemy?.bossDamageMult !== undefined) {
           audio.playBossVictory();
 
           this.scene.tweens.add({

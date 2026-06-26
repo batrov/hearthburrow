@@ -211,7 +211,9 @@ export class DungeonGenerator {
       exitX = Math.floor(exitRoom.x + exitRoom.w / 2);
       exitY = Math.floor(exitRoom.y + exitRoom.h / 2);
 
+      if (puzzle && tiles[entryY][entryX].type === 'pressure_plate') puzzle.totalPlates--;
       tiles[entryY][entryX] = this.makeTile(depth % 5 === 0 ? 'stairs_up' : 'floor');
+      if (puzzle && tiles[exitY][exitX].type === 'pressure_plate') puzzle.totalPlates--;
       tiles[exitY][exitX] = this.makeTile('floor');
 
       // Place carrots on random floor tiles

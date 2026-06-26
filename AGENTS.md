@@ -113,6 +113,44 @@ All custom panels (Inventory, Crafting, Research, etc.) must implement the follo
 
 ---
 
+## 🔬 Debugging Seed-Specific Bugs
+
+When a user reports a bug with a specific seed (e.g., `mowrsn77`, depth 2), reproduce the dungeon generation offline to inspect the exact floor layout without running the game:
+
+### Technique: Standalone RNG + DungeonGenerator
+
+Phaser's `RandomDataGenerator` uses a well-defined algorithm (Alea PRNG). Copy it into a Node.js CJS script to generate deterministically:
+
+1. **Extract the RNG core** from `node_modules/phaser/dist/phaser.js` (search for `RandomDataGenerator` class):
+   - `sow()` initializes with hash of strings
+   - `hash()` per-character hash using `this.n`
+   - `rnd()` Alea PRNG step
+   - `frac() = rnd() + (rnd() * 0x200000 | 0) * 1.1102230246251565e-16`
+   - `integerInRange(min, max) = Math.floor(realInRange(0, max-min+1) + min)`
+   - `pick(array) = array[integerInRange(0, array.length-1)]`
+   - `shuffle(array)` — Fisher-Yates with `Math.floor(frac() * (i+1))`
+
+2. **Seed format**: `DungeonGenerator.setSeed()` calls `this.rng.init([seed])` where seed = `"${runSeed}_depth_${depth}"`. So for run seed `mowrsn77` at depth 2, call `new RNG(['mowrsn77_depth_2'])`.
+
+3. **Rebuild minimal DG** in the test script: export the `DungeonGenerator` class logic into a plain JS class with the same method names, substituting `gameState.restoredBuildings` with `new Set()` etc. The full `generateFloor()` pipeline must be replicated including `placeRooms`, `carveRoom`, `carveCorridor`, `placeEventTiles`, `placeEnemyTiles`, `placePuzzle`, entry/exit tile assignment, and carrot placement.
+
+4. **Verify post-generation invariants** by scanning the puzzle room interior:
+   ```javascript
+   // Count actual pressure plate tiles vs puzzle.totalPlates
+   let plates = 0;
+   for (let y = room.y+1; y < room.y+room.h-1; y++)
+     for (let x = room.x+1; x < room.x+room.w-1; x++)
+       if (tiles[y][x].type === 'pressure_plate') plates++;
+   console.log('plates on tiles:', plates, 'totalPlates:', puzzle.totalPlates);
+   ```
+   A mismatch means a tile was overwritten after `placePuzzle()` (e.g., entry/exit center, carrot, or event placement).
+
+### Common Pitfall: Entry/Exit Overwrite
+
+The entry room center (`rooms[0]`) and exit room center (`rooms[last]`) are set to `'floor'` **after** `placePuzzle()`. If a pressure plate sits at the center of `rooms[0]` (the entry room) — and `rooms[0]` is also the puzzle room — the plate gets silently destroyed, but `puzzle.totalPlates` is not updated. The player can never satisfy `pressedPlates >= totalPlates`. Fix: decrement `puzzle.totalPlates` before overwriting.
+
+---
+
 ## 🛠️ Dungeon Generation Pipeline
 
 When modifying `DungeonGenerator.ts`, follow this sequence to maintain floor connectivity and balance:

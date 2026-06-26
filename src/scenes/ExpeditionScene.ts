@@ -2950,7 +2950,8 @@ export class ExpeditionScene extends Phaser.Scene {
     if (!floor) return;
     if (floor.puzzle) return;
     const stairMult = gameState.getBootEffects().stairMultiplier;
-    const chance = (0.1 + (1 - (0.9 * (floor.mineableCount / floor.initialMineableCount)))) * stairMult;
+    let chance = (0.1 + (1 - (0.9 * (floor.mineableCount / floor.initialMineableCount)))) * stairMult;
+    if (this.debugMode) chance *= 10;
     const rd = Math.random()
     if (rd < chance) {
       const tile = floor.tiles[y][x];
