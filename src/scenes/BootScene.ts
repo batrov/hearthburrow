@@ -61,7 +61,11 @@ export class BootScene extends Phaser.Scene {
     this.load.image('enemy_slime', 'enemies/slime.png');
     this.load.image('enemy_rat', 'enemies/rat.png');
     this.load.image('enemy_bat', 'enemies/bat.png');
-    this.load.image('enemy_boss', 'enemies/boss.png');
+    this.load.image('enemy_boss_FOREST', 'enemies/boss_forest.png');
+    this.load.image('enemy_boss_CAVE', 'enemies/boss_cave.png');
+    this.load.image('enemy_boss_ICE', 'enemies/boss_ice.png');
+    this.load.image('enemy_boss_LAVA', 'enemies/boss_lava.png');
+    this.load.image('enemy_boss_RUINS', 'enemies/boss_ruins.png');
 
     this.load.image('event_chest', 'events/chest.png');
     this.load.image('event_merchant', 'events/merchant.png');

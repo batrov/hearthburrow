@@ -1,6 +1,12 @@
 import Phaser from 'phaser';
 import { gameState } from './GameState';
 
+const BIOME_NAMES = ['FOREST', 'CAVE', 'ICE', 'LAVA', 'RUINS'];
+
+function getBiomeKey(depth: number): string {
+  return BIOME_NAMES[Math.floor(depth / 5) % 5];
+}
+
 export type TileType = 'wall' | 'floor' | 'mineable' | 'stairs_up' | 'stairs_down' | 'corridor'
   | 'event_chest' | 'event_merchant' | 'event_goblin' | 'event_villager' | 'event_fountain'
   | 'event_shop'
@@ -101,7 +107,7 @@ export class DungeonGenerator {
 
       tiles[centerY][centerX] = {
         type: 'event_boss',
-        resource: 'boss',
+        resource: getBiomeKey(depth),
         durability: 0,
         maxDurability: 0,
         broken: false,

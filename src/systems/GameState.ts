@@ -284,6 +284,11 @@ const ITEM_NAMES: Record<string, string> = {
   lantern_gold: 'Gold Lantern',
   miners_spirit: "Miner's Spirit",
   miners_potion: "Miner's Potion",
+  forest_gem: 'Forest Gem',
+  cave_heart: 'Cave Heart',
+  ice_shard: 'Ice Shard',
+  magma_core: 'Magma Core',
+  void_essence: 'Void Essence',
 };
 
 /** Get the human-readable display name for an item ID. Falls back to replacing underscores with spaces. */

@@ -7,7 +7,12 @@
     { "id": "crystal", "name": "Crystal", "tier": 3, "rarity": "rare", "maxStack": 99 },
     { "id": "monster_drop", "name": "Monster Essence", "tier": 1, "rarity": "uncommon", "maxStack": 99 },
     { "id": "carrot", "name": "Carrot", "tier": 1, "rarity": "common", "maxStack": 99 },
-    { "id": "miners_spirit", "name": "Miner's Spirit", "tier": 3, "rarity": "rare", "maxStack": 99 }
+    { "id": "miners_spirit", "name": "Miner's Spirit", "tier": 3, "rarity": "rare", "maxStack": 99 },
+    { "id": "forest_gem", "name": "Forest Gem", "tier": 2, "rarity": "rare", "maxStack": 9 },
+    { "id": "cave_heart", "name": "Cave Heart", "tier": 3, "rarity": "rare", "maxStack": 9 },
+    { "id": "ice_shard", "name": "Ice Shard", "tier": 3, "rarity": "rare", "maxStack": 9 },
+    { "id": "magma_core", "name": "Magma Core", "tier": 4, "rarity": "rare", "maxStack": 9 },
+    { "id": "void_essence", "name": "Void Essence", "tier": 4, "rarity": "rare", "maxStack": 9 }
   ],
   "equipment": [
     { "id": "pickaxe_1", "name": "Common Pickaxe", "tier": 1, "slot": "pickaxe", "mining_power": 1 },

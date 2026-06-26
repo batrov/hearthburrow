@@ -300,6 +300,102 @@ export class AudioSystem {
     });
   }
 
+  /** Majestic 3-second boss victory fanfare. */
+  playBossVictory(): void {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+
+    // Phase 1 (0-0.6s): low ominous chord — C2+E2+G2 triangle pad
+    [131, 165, 196].forEach((freq) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.08, t);
+      gain.gain.linearRampToValueAtTime(0.001, t + 3.0);
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+      osc.start(t);
+      osc.stop(t + 3.0);
+    });
+
+    // Phase 2 (0.6-1.2s): F2+A2+C3 swell (hope building)
+    [175, 220, 262].forEach((freq) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t + 0.6);
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.09, t + 0.6);
+      gain.gain.linearRampToValueAtTime(0.001, t + 2.0);
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+      osc.start(t);
+      osc.stop(t + 2.0);
+    });
+
+    // Phase 3 (1.2-1.8s): G2+B2+D3 rising tension
+    [196, 247, 294].forEach((freq) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t + 1.2);
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.10, t + 1.2);
+      gain.gain.linearRampToValueAtTime(0.001, t + 2.4);
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+      osc.start(t);
+      osc.stop(t + 2.4);
+    });
+
+    // Phase 4 (1.8-2.2s): fast ascending arpeggio C3→E3→G3→C4
+    [262, 330, 392, 523].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      const noteT = t + 1.8 + i * 0.1;
+      osc.frequency.setValueAtTime(freq, noteT);
+      gain.gain.setValueAtTime(0.12, noteT);
+      gain.gain.exponentialRampToValueAtTime(0.001, noteT + 0.35);
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+      osc.start(noteT);
+      osc.stop(noteT + 0.35);
+    });
+
+    // Phase 5 (2.2-3.0s): full C major sustained chord with shimmer
+    [262, 330, 392, 523].forEach((freq) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t + 2.2);
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.14, t + 2.2);
+      gain.gain.linearRampToValueAtTime(0.001, t + 3.0);
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+      osc.start(t);
+      osc.stop(t + 3.0);
+    });
+
+    // Shimmer: high triangle harmonics on top
+    [1047, 1319, 1568].forEach((freq) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, t + 2.2);
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.05, t + 2.2);
+      gain.gain.linearRampToValueAtTime(0.001, t + 3.0);
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+      osc.start(t);
+      osc.stop(t + 3.0);
+    });
+  }
+
   playError(): void {
     const ctx = this.ensureContext();
     if (!ctx) return;

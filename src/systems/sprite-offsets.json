@@ -4,7 +4,7 @@
   "enemy_slime":           { "offsetY": -2, "scale": 0.8 },
   "enemy_rat":             { "offsetY": -10, "scale": 1.2 },
   "enemy_bat":             { "offsetY": -2, "scale": 1.2  },
-  "enemy_boss":            { "offsetY": -80, "scale": 1 },
+  "enemy_boss_*":            { "offsetY": -80, "scale": 1 },
   "player_*":              { "offsetY": -22, "scale": 1.2 },
   "npc_0":                 { "offsetY": -20, "scale": 1 },
   "npc_1":                 { "offsetY": -20, "scale": 1 },

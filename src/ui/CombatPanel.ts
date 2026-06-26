@@ -19,6 +19,7 @@ export interface EnemyConfig {
   researchBonusDamage?: number;
   researchCritChance?: number;
   bossDamageMult?: number;
+  bossMechanic?: 'shrink' | 'accelerate' | 'fake_zone' | 'invert';
 }
 
 export class CombatPanel extends BasePanel {
@@ -52,6 +53,12 @@ export class CombatPanel extends BasePanel {
   private confirmPopup: ConfirmPopup;
   private retreatHitZone: Phaser.GameObjects.Rectangle;
   private clickHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
+  private currentSpeed: number = 600;
+  private fakeZoneTimer?: Phaser.Time.TimerEvent;
+  private fakeZoneGfx?: Phaser.GameObjects.Graphics;
+  private fakeZoneX: number = 0;
+  private isInverted: boolean = false;
+  private invertTimer?: Phaser.Time.TimerEvent;
 
   private readonly BAR_WIDTH = 300;
   private readonly BAR_HEIGHT = 16;
@@ -165,11 +172,57 @@ export class CombatPanel extends BasePanel {
     }
 
     this.hitZoneOffset = 0;
+    this.currentSpeed = config.timingSpeed;
+    this.isInverted = false;
     this.retreatBtn.setVisible(true);
     this.retreatHitZone.setVisible(true);
     this.drawHP();
     this.drawTimingBar(config.hitZoneWidth);
     this.startMarker(config.timingSpeed);
+
+    if (config.bossMechanic === 'fake_zone') {
+      this.fakeZoneTimer = this.scene.time.addEvent({
+        delay: 2000, loop: true,
+        callback: () => this.spawnFakeZone(),
+      });
+    }
+    if (config.bossMechanic === 'invert') {
+      this.invertTimer = this.scene.time.addEvent({
+        delay: 2500, loop: true,
+        callback: () => this.toggleInvert(),
+      });
+    }
+
+    // Boss entrance effects
+    if (config.bossMechanic) {
+      const flash = this.scene.add.rectangle(CX, VH / 2, VW, VH, 0xffffff, 0)
+        .setScrollFactor(0).setDepth(210);
+      this.container.add(flash);
+      this.scene.tweens.add({
+        targets: flash,
+        alpha: { from: 0.5, to: 0 },
+        duration: 400,
+        onComplete: () => flash.destroy(),
+      });
+
+      this.enemySprite.setScale(0.3);
+      this.scene.tweens.add({
+        targets: this.enemySprite,
+        scale: 1,
+        duration: 500,
+        ease: 'Back.easeOut',
+      });
+
+      this.enemyNameText.setScale(2).setAlpha(0);
+      this.scene.tweens.add({
+        targets: this.enemyNameText,
+        scale: 1,
+        alpha: 1,
+        duration: 300,
+        ease: 'Quad.easeOut',
+        delay: 200,
+      });
+    }
 
     this.blocker.setVisible(true);
     this.clickHandler = (p: Phaser.Input.Pointer) => {
@@ -195,6 +248,18 @@ export class CombatPanel extends BasePanel {
     if (this.markerTween) {
       this.markerTween.stop();
     }
+    if (this.fakeZoneTimer) {
+      this.fakeZoneTimer.remove();
+      this.fakeZoneTimer = undefined;
+    }
+    if (this.invertTimer) {
+      this.invertTimer.remove();
+      this.invertTimer = undefined;
+    }
+    if (this.fakeZoneGfx) {
+      this.fakeZoneGfx.destroy();
+      this.fakeZoneGfx = undefined;
+    }
     if (this.clickHandler) {
       this.scene.input.off('pointerdown', this.clickHandler);
       this.clickHandler = null;
@@ -205,6 +270,7 @@ export class CombatPanel extends BasePanel {
     this.retreatBtn.setVisible(false);
     this.retreatHitZone.setVisible(false);
     this.result = null;
+    this.isInverted = false;
     this.fadeOut(200);
   }
 
@@ -233,13 +299,33 @@ export class CombatPanel extends BasePanel {
     const inZone = markerX >= zoneLeft && markerX <= zoneRight;
     const inCritZone = inZone && markerX >= zoneCenter - this.critZoneHalf && markerX <= zoneCenter + this.critZoneHalf;
 
-    if (inZone) {
+    // LAVA: fake zone check — hitting inside a decoy counts as miss
+    if (this.currentEnemy?.bossMechanic === 'fake_zone' && this.fakeZoneGfx?.visible) {
+      const inFake = Math.abs(markerX - this.fakeZoneX) < this.hitZoneHalf;
+      if (inFake) {
+        this.showFeedback('MISS! (Decoy)', '#cc4444');
+        audio.playCombatMiss();
+        this.spawnStaminaPopup(10, this.marker.x, this.BAR_Y);
+        this.markerTween?.pause();
+        this.hitPauseTimer = this.scene.time.delayedCall(250, () => {
+          this.hitPauseTimer = undefined;
+          this.markerTween?.resume();
+        });
+        return 'miss';
+      }
+    }
+
+    // RUINS: invert zone — hitting outside = damage, hitting inside = miss
+    const effectiveInZone = this.isInverted ? !inZone : inZone;
+    const effectiveInCrit = this.isInverted ? false : inCritZone;
+
+    if (effectiveInZone) {
       let damage = 1 + (this.currentEnemy?.ringBonusDamage ?? 0) + (this.currentEnemy?.researchBonusDamage ?? 0);
-      if (inCritZone) damage *= 2;
+      if (effectiveInCrit) damage *= 2;
       const isCrit = Math.random() < ((this.currentEnemy?.ringCritChance ?? 0) + (this.currentEnemy?.researchCritChance ?? 0));
       if (isCrit) damage *= 2;
       if (this.currentEnemy?.bossDamageMult) damage = Math.floor(damage * this.currentEnemy.bossDamageMult);
-      this.spawnDamagePopup(damage, isCrit || inCritZone, this.marker.x, this.BAR_Y);
+      this.spawnDamagePopup(damage, isCrit || effectiveInCrit, this.marker.x, this.BAR_Y);
 
       this.enemyHP -= damage;
       if (this.enemyHP < 0) {
@@ -247,7 +333,7 @@ export class CombatPanel extends BasePanel {
       }
       this.drawHP();
       this.showFeedback(isCrit ? 'CRIT! +' + damage : 'HIT!', '#44cc66');
-      if (isCrit || inCritZone) audio.playCombatCrit();
+      if (isCrit || effectiveInCrit) audio.playCombatCrit();
       else audio.playCombatHit();
 
       this.scene.tweens.add({
@@ -262,23 +348,69 @@ export class CombatPanel extends BasePanel {
       if (this.enemyHP <= 0) {
         this.result = 'victory';
         this.stopMarker();
-        this.showFeedback('VICTORY!', '#44cc66');
-        audio.playVictory();
-        this.hintText.setText('[SPACE] Collect rewards');
         this.retreatBtn.setVisible(false);
+
+        if (this.currentEnemy?.bossMechanic) {
+          audio.playBossVictory();
+
+          this.scene.tweens.add({
+            targets: this.enemySprite,
+            x: { value: '+=' + 15 },
+            duration: 35,
+            yoyo: true,
+            repeat: 7,
+            ease: 'Sine.easeInOut',
+          });
+
+          const killFlash = this.scene.add.rectangle(CX, VH / 2, VW, VH, 0xffffff, 0)
+            .setScrollFactor(0).setDepth(210);
+          this.container.add(killFlash);
+          this.scene.tweens.add({
+            targets: killFlash,
+            alpha: { value: { from: 0.4, to: 0 } },
+            duration: 200,
+            yoyo: true,
+            repeat: 2,
+            onComplete: () => killFlash.destroy(),
+          });
+
+          this.scene.time.delayedCall(600, () => {
+            this.showFeedback('VICTORY!', '#44cc66');
+            this.hintText.setText('[SPACE] Collect rewards');
+          });
+        } else {
+          this.showFeedback('VICTORY!', '#44cc66');
+          audio.playVictory();
+          this.hintText.setText('[SPACE] Collect rewards');
+        }
         return 'kill';
+      }
+
+      // CAVE: shrink hit zone on each hit
+      if (this.currentEnemy?.bossMechanic === 'shrink') {
+        this.currentHitZoneWidth = Math.max(20, this.currentHitZoneWidth * 0.9);
+      }
+
+      // ICE: accelerate marker on each hit
+      if (this.currentEnemy?.bossMechanic === 'accelerate') {
+        this.currentSpeed = Math.max(200, this.currentSpeed * 0.88);
       }
 
       this.markerTween?.pause();
       this.hitPauseTimer = this.scene.time.delayedCall(250, () => {
         this.hitPauseTimer = undefined;
-        this.markerTween?.resume();
+        if (this.currentEnemy?.bossMechanic === 'accelerate') {
+          this.startMarker(this.currentSpeed);
+        } else {
+          this.markerTween?.resume();
+        }
         this.randomizeHitZone();
       });
       return 'hit';
     } else {
       this.showFeedback('MISS!', '#cc4444');
       audio.playCombatMiss();
+      this.spawnStaminaPopup(10, this.marker.x, this.BAR_Y);
       this.markerTween?.pause();
       this.hitPauseTimer = this.scene.time.delayedCall(250, () => {
         this.hitPauseTimer = undefined;
@@ -380,6 +512,42 @@ export class CombatPanel extends BasePanel {
     }
   }
 
+  private spawnFakeZone(): void {
+    if (!this._visible || this.result) return;
+    if (!this.fakeZoneGfx) {
+      this.fakeZoneGfx = this.scene.add.graphics().setScrollFactor(0).setDepth(205);
+      this.container.add(this.fakeZoneGfx);
+    }
+    const maxOffset = (this.BAR_WIDTH / 2) - this.currentHitZoneWidth / 2;
+    this.fakeZoneX = this.barCenter + Phaser.Math.Between(-maxOffset, maxOffset);
+    const y = this.BAR_Y;
+    const h = this.BAR_HEIGHT;
+    this.fakeZoneGfx.clear();
+    this.fakeZoneGfx.fillStyle(0xcc4444, 0.4);
+    this.fakeZoneGfx.fillRect(this.fakeZoneX - this.hitZoneHalf, y + 2, this.currentHitZoneWidth, h - 4);
+    this.fakeZoneGfx.setVisible(true);
+    this.scene.time.delayedCall(500, () => {
+      if (this.fakeZoneGfx) {
+        this.fakeZoneGfx.clear();
+        this.fakeZoneGfx.setVisible(false);
+      }
+    });
+  }
+
+  private toggleInvert(): void {
+    if (!this._visible || this.result) return;
+    this.isInverted = !this.isInverted;
+    if (this.isInverted) {
+      this.instructionText.setText('⚠ ZONE INVERTED — hit OUTSIDE the green!');
+      this.instructionText.setColor('#ff6644');
+      this.hintText.setColor('#ff6644');
+    } else {
+      this.instructionText.setText('Watch the marker — strike when it\'s in the green zone!');
+      this.instructionText.setColor('#b8a898');
+      this.hintText.setColor('#5a4a6a');
+    }
+  }
+
   private spawnDamagePopup(damage: number, isCritical: boolean, x: number, y: number): void {
     const popup = this.scene.add.text(x, y, isCritical ? `${damage}!` : `${damage}` , {
       fontSize: isCritical ? '22px' : '16px',
@@ -405,6 +573,35 @@ export class CombatPanel extends BasePanel {
         popup.y = y - peakY * 4 * t * (1 - t) + 15 * t;
         popup.x = x + driftX * t;
         popup.setScale(1 + t * 1.0);
+      },
+      onComplete: () => popup.destroy(),
+    });
+  }
+
+  private spawnStaminaPopup(amount: number, x: number, y: number): void {
+    const popup = this.scene.add.text(x, y, `-${amount}`, {
+      fontSize: '14px',
+      fontFamily: 'Inter', resolution: 4,
+      color: '#ff4444',
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(250);
+    this.container.add(popup);
+
+    const duration = 700;
+    const peakY = 50;
+    const driftX = Phaser.Math.Between(-30, 30);
+
+    this.scene.tweens.add({
+      targets: popup,
+      alpha: 0,
+      duration,
+      ease: 'Quad.easeIn',
+      onUpdate: (tween) => {
+        const t = tween.progress;
+        popup.y = y - peakY * 4 * t * (1 - t) + 15 * t;
+        popup.x = x + driftX * t;
+        popup.setScale(1 + t * 0.8);
       },
       onComplete: () => popup.destroy(),
     });

@@ -110,8 +110,8 @@ export function generateAll(scene: Phaser.Scene): void {
     });
   }
 
-  // --- Boss (large, 3x3 tiles) ---
-  make(scene, g, 'enemy_boss', 120, 120, () => {
+  // --- Boss sprites (large, 120x120 — one per biome) ---
+  make(scene, g, 'enemy_boss_FOREST', 120, 120, () => {
     const { cx, cy } = centered(120, 120);
     g.fillStyle(0xcc4444, 1);
     g.fillCircle(cx, cy, 42);
@@ -121,6 +121,66 @@ export function generateAll(scene: Phaser.Scene): void {
     g.strokeCircle(cx, cy, 42);
     g.fillStyle(0xffff00, 0.6);
     g.fillTriangle(cx - 12, cy - 24, cx, cy - 42, cx + 12, cy - 24);
+  });
+  make(scene, g, 'enemy_boss_CAVE', 120, 120, () => {
+    const { cx, cy } = centered(120, 120);
+    g.fillStyle(0x5a4a3a, 1);
+    g.fillCircle(cx, cy, 42);
+    g.fillStyle(0x3a2a1a, 0.6);
+    g.fillCircle(cx, cy, 30);
+    g.lineStyle(4, 0x8a6a4a, 0.8);
+    g.strokeCircle(cx, cy, 42);
+    g.fillStyle(0xff8833, 0.8);
+    g.fillCircle(cx - 14, cy - 8, 6);
+    g.fillCircle(cx + 14, cy - 8, 6);
+  });
+  make(scene, g, 'enemy_boss_ICE', 120, 120, () => {
+    const { cx, cy } = centered(120, 120);
+    g.fillStyle(0x6a9abb, 1);
+    g.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 - Math.PI / 2;
+      const r = i % 2 === 0 ? 42 : 36;
+      if (i === 0) g.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+      else g.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+    }
+    g.closePath(); g.fill();
+    g.fillStyle(0x9accee, 0.5);
+    g.fillCircle(cx, cy, 24);
+    g.lineStyle(3, 0xbbddff, 0.6);
+    g.strokeCircle(cx, cy, 42);
+  });
+  make(scene, g, 'enemy_boss_LAVA', 120, 120, () => {
+    const { cx, cy } = centered(120, 120);
+    g.fillStyle(0xcc4422, 1);
+    g.fillCircle(cx, cy, 42);
+    g.fillStyle(0xff6633, 0.6);
+    g.fillCircle(cx, cy, 30);
+    g.lineStyle(3, 0x662200, 0.8);
+    g.lineBetween(cx - 28, cy - 10, cx - 4, cy + 24);
+    g.lineBetween(cx + 28, cy - 10, cx + 4, cy + 24);
+    g.lineBetween(cx - 20, cy + 18, cx + 20, cy + 18);
+    g.fillStyle(0xffaa44, 0.7);
+    g.fillCircle(cx, cy, 14);
+  });
+  make(scene, g, 'enemy_boss_RUINS', 120, 120, () => {
+    const { cx, cy } = centered(120, 120);
+    g.fillStyle(0x5a2a7a, 1);
+    g.beginPath();
+    g.moveTo(cx, cy - 42);
+    g.lineTo(cx + 42, cy);
+    g.lineTo(cx, cy + 42);
+    g.lineTo(cx - 42, cy);
+    g.closePath(); g.fill();
+    g.fillStyle(0x8a4acc, 0.5);
+    g.beginPath();
+    g.moveTo(cx, cy - 28);
+    g.lineTo(cx + 28, cy);
+    g.lineTo(cx, cy + 28);
+    g.lineTo(cx - 28, cy);
+    g.closePath(); g.fill();
+    g.lineStyle(3, 0xcc88ff, 0.5);
+    g.strokeCircle(cx, cy, 42);
   });
 
   // --- Boss body (surrounding tiles) ---
@@ -442,6 +502,53 @@ export function generateAll(scene: Phaser.Scene): void {
       g.fillCircle(cx, cy, 4);
       g.lineStyle(1, 0xffffff, 0.5);
       g.strokeCircle(cx, cy, 7);
+    },
+    forest_gem: (cx, cy) => {
+      g.fillStyle(0x44aa44, 1);
+      g.beginPath();
+      g.moveTo(cx, cy - 8);
+      g.lineTo(cx + 8, cy);
+      g.lineTo(cx, cy + 8);
+      g.lineTo(cx - 8, cy);
+      g.closePath(); g.fill();
+      g.fillStyle(0x66dd66, 0.7);
+      g.fillCircle(cx, cy, 3);
+    },
+    cave_heart: (cx, cy) => {
+      g.fillStyle(0xaa4444, 1);
+      g.fillCircle(cx, cy, 6);
+      g.fillStyle(0xcc6666, 0.7);
+      g.fillCircle(cx, cy, 3);
+      g.lineStyle(1, 0x882222, 0.6);
+      g.strokeCircle(cx, cy, 6);
+    },
+    ice_shard: (cx, cy) => {
+      g.fillStyle(0x88ccff, 1);
+      g.beginPath();
+      g.moveTo(cx, cy - 9);
+      g.lineTo(cx + 6, cy);
+      g.lineTo(cx, cy + 9);
+      g.lineTo(cx - 6, cy);
+      g.closePath(); g.fill();
+      g.fillStyle(0xbbddff, 0.6);
+      g.fillCircle(cx, cy, 2);
+    },
+    magma_core: (cx, cy) => {
+      g.fillStyle(0xcc4422, 1);
+      g.fillCircle(cx, cy, 7);
+      g.fillStyle(0xff8844, 0.7);
+      g.fillCircle(cx, cy, 3);
+      g.lineStyle(1, 0xaa2200, 0.5);
+      g.lineBetween(cx - 5, cy - 3, cx + 5, cy + 3);
+      g.lineBetween(cx - 5, cy + 3, cx + 5, cy - 3);
+    },
+    void_essence: (cx, cy) => {
+      g.fillStyle(0x6a2a8a, 1);
+      g.fillCircle(cx, cy, 6);
+      g.fillStyle(0xaa66cc, 0.6);
+      g.fillCircle(cx, cy, 3);
+      g.lineStyle(1, 0xcc88ff, 0.4);
+      g.strokeCircle(cx, cy, 6);
     },
   };
 
