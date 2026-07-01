@@ -8,6 +8,7 @@ import { SCENES } from '../constants/scenes';
 export class BootScene extends Phaser.Scene {
   private loadingBar!: Phaser.GameObjects.Graphics;
   private progressText!: Phaser.GameObjects.Text;
+  private titleText!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: SCENES.BOOT });
@@ -19,6 +20,33 @@ export class BootScene extends Phaser.Scene {
 
     this.cameras.main.setBackgroundColor('#0a0a1a');
 
+    // Show styled title text immediately before any loading
+    this.titleText = createText(this, cx, cy - 80, 'HEARTHBURROW', {
+      fontSize: fs(28),
+      fontFamily: 'Inter', resolution: 4,
+      color: '#e8d5b7',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    // Loading bar appears below the title
+    const barWidth = 300;
+    const barHeight = 20;
+    const barX = cx - barWidth / 2;
+    const barY = cy + 10;
+
+    const barBg = this.add.graphics();
+    barBg.fillStyle(0x2a2a3a, 1);
+    barBg.fillRoundedRect(barX, barY, barWidth, barHeight, 4);
+
+    this.loadingBar = this.add.graphics();
+
+    this.progressText = createText(this, cx, barY + barHeight + 12, 'Loading...', {
+      fontSize: fs(14),
+      fontFamily: 'Inter', resolution: 4,
+      color: '#6a5a4a',
+    }).setOrigin(0.5);
+
+    // Queue all assets
     this.load.setPath('');
     this.load.image('title_img', 'icons/title.png');
 
@@ -128,23 +156,6 @@ export class BootScene extends Phaser.Scene {
     this.load.audio('music_tavern', 'music/tavern.mp3');
     this.load.setPath('assets/sprites');
 
-    const barWidth = 300;
-    const barHeight = 20;
-    const barX = cx - barWidth / 2;
-    const barY = cy + 30;
-
-    const barBg = this.add.graphics();
-    barBg.fillStyle(0x2a2a3a, 1);
-    barBg.fillRoundedRect(barX, barY, barWidth, barHeight, 4);
-
-    this.loadingBar = this.add.graphics();
-
-    this.progressText = createText(this, cx, barY + barHeight + 12, 'Loading...', {
-      fontSize: fs(14),
-      fontFamily: 'Inter', resolution: 4,
-      color: '#6a5a4a',
-    }).setOrigin(0.5);
-
     this.load.on('progress', (progress: number) => {
       const pct = Math.floor(progress * 100);
       this.loadingBar.clear();
@@ -174,7 +185,8 @@ export class BootScene extends Phaser.Scene {
     const cx = this.cameras.main.centerX;
     const cy = this.cameras.main.centerY;
 
-    // Title loaded in preload — available now
+    // Replace text title with the real loaded PNG
+    this.titleText.destroy();
     this.add.image(cx, cy - 80, 'title_img').setOrigin(0.5).setScale(0.7);
 
     // Generate procedural fallbacks for any textures that didn't load (missing PNGs)

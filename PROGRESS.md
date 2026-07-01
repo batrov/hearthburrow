@@ -461,3 +461,11 @@ Resolved Bugs:
 ## ✅ Code Quality — Two-Phase Loading Reverted (June 2026)
 - **`generateAll()` moved to `create()`** — reverted the two-phase loading experiment; `generateAll()` now runs after PNGs are in TextureManager, preventing `File.hasCacheConflict()` from silently dropping every PNG from the load queue
 - **All assets load in `preload()`** — title sprites, all tile sprites, and audio load in a single `preload()` phase with no texture key conflicts
+
+## ✅ Code Quality — Constants Extraction & Depth Dedup (July 2026)
+- **Dead code removal** — removed `drawExtrudedAt()` from IsoUtils, `overlay_damage`/`overlay_crack` textures from BootScene + TextureGenerator, unnecessary `export` on `NPC_NAMES` in GameState
+- **Constants files** — `src/constants/scenes.ts` (SCENES), `src/constants/items.ts` (ITEMS), `src/constants/buildings.ts` (BUILDINGS) — 14 hardcoded scene key strings replaced across 6 files
+- **`interactiveDepth(x, y, offset)`** — shared function added to IsoUtils, replaces 12+ scattered `6 + y*0.002 + x*0.001 + ...` formulas in ExpeditionScene and HomelandScene
+- **Duplicated map eliminated** — `buildingTextureKeys` defined once as module-level constant instead of twice in HomelandScene
+- **Type safety** — 4 `any` annotations replaced with proper types (`Phaser.Types.Tweens.TweenBuilderConfig`, `DungeonTile`, typed union, `Phaser.Input.Pointer`)
+- **Clean build** — `tsc --noEmit` zero errors
