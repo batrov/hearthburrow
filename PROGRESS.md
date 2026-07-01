@@ -443,6 +443,20 @@ Resolved Bugs:
 - **`uiHitOnDown` guard in AnalogStickInput** — `onPointerDown` sets `uiHitOnDown = true` when pointer is over any UI element or a modal is active; `onPointerUp` checks this flag first, absorbing the click even when the modal state changes between pointerdown and pointerup
 - **EventPanel choice zones tagged** — `setData('isUI', true)` added to choice zone rectangles so `isPointerOverUI` identifies them even after container visibility changes
 
+## ✅ iOS Storage Warning Overlay (July 2026)
+- **`console.warn` logging** — all silent `catch` blocks in `GameState.ts` (static init, save, load) now log failures for discoverability
+- **Full-screen dismissable overlay** — replaces subtle text line in BootScene; explains iOS Safari blocks localStorage in embedded Iframes on Itch.io, suggests "Pop Out" or non-Safari browser
+
+## ✅ Farm Balance — Steps-Based Yield + Capped Plots (July 2026)
+- **Steps-based yield** — farm now produces `floor(stepsTaken × farmPlanted / 100)` carrots per expedition, tying reward to exploration effort instead of expedition count
+- **Steps tracked in `tryMove()`** — increment after every successful tile move, covers keyboard/analog/click-to-move equally
+- **6-plot cap** — max 6 planted plots (no research expansion); `audio.playError()` on attempt to exceed cap or plant without carrots
+- **Consumed on harvest** — `farmPlanted` resets to 0 after harvesting; must replant each expedition cycle
+- **Visual plot grid** — FarmPanel shows `████░░ 4/6` bar indicating used/free plots
+- **Recap display** — "Farm grew X carrots!" line shown in ExpeditionRecapScene when yield > 0
+- **Farm yield moved to extraction** — calculated in `ExpeditionScene.extract()` and stored in `RunResult.farmYield`; removed from `ExpeditionRecapScene.returnToHomeland()`
+- **`stepsTaken`/`farmYield` added to `RunResult` interface** — no schema migration needed
+
 ## ✅ Code Quality — Two-Phase Loading Reverted (June 2026)
 - **`generateAll()` moved to `create()`** — reverted the two-phase loading experiment; `generateAll()` now runs after PNGs are in TextureManager, preventing `File.hasCacheConflict()` from silently dropping every PNG from the load queue
 - **All assets load in `preload()`** — title sprites, all tile sprites, and audio load in a single `preload()` phase with no texture key conflicts
