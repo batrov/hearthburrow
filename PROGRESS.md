@@ -462,6 +462,11 @@ Resolved Bugs:
 - **`generateAll()` moved to `create()`** — reverted the two-phase loading experiment; `generateAll()` now runs after PNGs are in TextureManager, preventing `File.hasCacheConflict()` from silently dropping every PNG from the load queue
 - **All assets load in `preload()`** — title sprites, all tile sprites, and audio load in a single `preload()` phase with no texture key conflicts
 
+## ✅ Title-First Boot Screen (July 2026)
+- **Title loads first** — `title_img` queued as the first asset; shown via `filecomplete` event as soon as the PNG finishes, while remaining assets continue loading in the bar below
+- **Loading bar below title** — positioned at `cy + 10`, leaving room for the title at `cy - 80`; fills progressively as the remaining ~100+ assets load
+- **No text placeholder** — the real title image pops in naturally at its own pace (typically within 1-2 frames from cache)
+
 ## ✅ Code Quality — Constants Extraction & Depth Dedup (July 2026)
 - **Dead code removal** — removed `drawExtrudedAt()` from IsoUtils, `overlay_damage`/`overlay_crack` textures from BootScene + TextureGenerator, unnecessary `export` on `NPC_NAMES` in GameState
 - **Constants files** — `src/constants/scenes.ts` (SCENES), `src/constants/items.ts` (ITEMS), `src/constants/buildings.ts` (BUILDINGS) — 14 hardcoded scene key strings replaced across 6 files

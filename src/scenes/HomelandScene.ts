@@ -271,7 +271,7 @@ export class HomelandScene extends Phaser.Scene {
     const yMin = -HALF_H * 3;
     this.cameras.main.startFollow(this.player, true, 0.5, 0.5);
     this.cameras.main.setBounds(xMin, yMin, worldWidth(HUB_COLS, HUB_ROWS) + HALF_W * 4, worldHeight(HUB_COLS, HUB_ROWS) + HALF_H * 4);
-    this.cameras.main.setZoom(0.85);
+    this.cameras.main.setZoom(1.3);
 
     this.buildingInfoPanel = new BuildingInfoPanel(this);
     this.restorePanel = new RestorePanel(this, () => { this.restoreBuildingId = ''; }, (id) => this.tryRestore(id));
