@@ -28,7 +28,7 @@ export class NPCPhotobookPanel extends BasePanel {
       align: 'center', lineSpacing: 6,
     }).setOrigin(0.5, 0);
     this.contentText.setInteractive();
-    this.contentText.on('pointerdown', (_p: any, localX: number, localY: number) => {
+    this.contentText.on('pointerdown', (_p: Phaser.Input.Pointer, localX: number, localY: number) => {
       const lineHeight = 22;
       const lineIdx = Math.floor(localY / lineHeight);
       const startIdx = Math.max(0, this.selectionIndex - 8);

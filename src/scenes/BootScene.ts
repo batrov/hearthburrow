@@ -3,13 +3,14 @@ import { gameState, GameState } from '../systems/GameState';
 import { audio } from '../systems/AudioSystem';
 import { generateAll } from '../systems/TextureGenerator';
 import { textStyle, fs, createText } from '../systems/Font';
+import { SCENES } from '../constants/scenes';
 
 export class BootScene extends Phaser.Scene {
   private loadingBar!: Phaser.GameObjects.Graphics;
   private progressText!: Phaser.GameObjects.Text;
 
   constructor() {
-    super({ key: 'BootScene' });
+    super({ key: SCENES.BOOT });
   }
 
   preload(): void {
@@ -75,9 +76,6 @@ export class BootScene extends Phaser.Scene {
     this.load.image('event_shop', 'events/shop.png');
     this.load.image('event_treasure_vault', 'events/treasure_vault.png');
     this.load.image('event_relic', 'events/relic.png');
-
-    this.load.image('overlay_damage', 'overlays/damage.png');
-    this.load.image('overlay_crack', 'overlays/crack.png');
 
     this.load.image('terrain_diamond', 'tiles/terrain_diamond.png');
     this.load.image('terrain_grass_a', 'tiles/terrain_grass_a.png');
@@ -186,7 +184,7 @@ export class BootScene extends Phaser.Scene {
       this.tweens.killTweensOf(this.progressText);
       this.cameras.main.fadeOut(400, 0, 0, 0);
       this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start('HomelandScene');
+        this.scene.start(SCENES.HOMELAND);
       });
     };
 
@@ -224,7 +222,7 @@ export class BootScene extends Phaser.Scene {
     }
 
     this.time.delayedCall(3000, () => {
-      if (this.scene.isActive('BootScene')) {
+      if (this.scene.isActive(SCENES.BOOT)) {
         this.progressText.setText('[ click anywhere to proceed ]');
       }
     });

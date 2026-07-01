@@ -1,0 +1,17 @@
+export const ITEMS = {
+  CARROT: 'carrot',
+  STONE: 'stone',
+  CRYSTAL: 'crystal',
+  STAMINA_POTION: 'stamina_potion',
+  TELEPORT_SCROLL: 'teleport_scroll',
+  BRONZE_ORE: 'bronze_ore',
+  SILVER_ORE: 'silver_ore',
+  GOLD_ORE: 'gold_ore',
+  MONSTER_DROP: 'monster_drop',
+  MINING_BOMB: 'mining_bomb',
+  FOREST_GEM: 'forest_gem',
+  CAVE_HEART: 'cave_heart',
+  ICE_SHARD: 'ice_shard',
+  MAGMA_CORE: 'magma_core',
+  VOID_ESSENCE: 'void_essence',
+} as const;

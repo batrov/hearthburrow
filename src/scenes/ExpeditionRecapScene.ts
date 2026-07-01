@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { gameState, itemDisplayName, itemIconKey, itemIdFromDisplayName } from '../systems/GameState';
 import { VW, VH, CX, CY } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { SCENES } from '../constants/scenes';
 
 export class ExpeditionRecapScene extends Phaser.Scene {
   private scrollY: number = 0;
@@ -11,13 +12,13 @@ export class ExpeditionRecapScene extends Phaser.Scene {
   private readonly SCROLL_SPEED = 28;
 
   constructor() {
-    super({ key: 'ExpeditionRecapScene' });
+    super({ key: SCENES.RECAP });
   }
 
   create(): void {
     const result = gameState.lastRunResult;
     if (!result) {
-      this.scene.start('HomelandScene');
+      this.scene.start(SCENES.HOMELAND);
       return;
     }
 
@@ -187,7 +188,7 @@ export class ExpeditionRecapScene extends Phaser.Scene {
   private returnToHomeland(): void {
     this.cameras.main.fadeOut(300, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.start('HomelandScene');
+      this.scene.start(SCENES.HOMELAND);
     });
   }
 

@@ -7,6 +7,7 @@ import { FloorPicker } from './FloorPicker';
 import { SeedEntryPopup } from './SeedEntryPopup';
 import { ConfirmPopup } from './ConfirmPopup';
 import { VW, VH, CX } from '../systems/Viewport';
+import { SCENES } from '../constants/scenes';
 import { textStyle, fs, createText } from '../systems/Font';
 
 const NAMES: Record<number, string> = {
@@ -380,7 +381,7 @@ export class GatePanel extends BasePanel {
 
       slot.bg.clear();
 
-      let opt: any = null;
+      let opt: { id: string; tier?: number; name?: string; runs?: number } | null = null;
       let iconKey = '';
       let badgeText = '';
 
@@ -775,7 +776,7 @@ export class GatePanel extends BasePanel {
         this.hide();
         this.scene.cameras.main.fadeOut(400, 0, 0, 0);
         this.scene.cameras.main.once('camerafadeoutcomplete', () => {
-          this.scene.scene.start('HomelandScene');
+          this.scene.scene.start(SCENES.HOMELAND);
         });
       },
     );

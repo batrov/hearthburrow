@@ -13,8 +13,9 @@ import { getBuilding } from '../systems/DataRegistry';
 import { audio } from '../systems/AudioSystem';
 import { AnalogStickInput } from '../ui/AnalogStickInput';
 import { getSpriteConfig } from '../systems/SpriteConfig';
+import { SCENES } from '../constants/scenes';
 import {
-  gridToIso, isoToGrid, findPath,
+  gridToIso, isoToGrid, findPath, interactiveDepth,
   HALF_W, HALF_H, worldWidth, worldHeight,
 } from '../systems/IsoUtils';
 import { VW, VH, CX, CY } from '../systems/Viewport';
@@ -58,6 +59,16 @@ const HUB_BUILDINGS: HubBuildingDef[] = [
   { id: 'gate', label: 'Expedition Gate', gx: 12, gy: 20, gw: 2, gh: 1, buildingId: '',
     description: 'Descend into the procedural dungeon to mine resources.', solid: false },
 ];
+
+const BUILDING_TEXTURE_KEYS: Record<string, string> = {
+  trading_post: 'building_trading_post',
+  crafting: 'building_crafting',
+  farm: 'building_farm',
+  tavern: 'building_tavern',
+  storage: 'building_storage',
+  laboratory: 'building_laboratory',
+  gate: 'building_gate',
+};
 
 function buildPathSet(): Set<string> {
   const s = new Set<string>();
@@ -227,7 +238,7 @@ export class HomelandScene extends Phaser.Scene {
   private readonly ANIM_INTERVAL: number = 60;
 
   constructor() {
-    super({ key: 'HomelandScene' });
+    super({ key: SCENES.HOMELAND });
   }
 
   create(): void {
@@ -322,20 +333,12 @@ export class HomelandScene extends Phaser.Scene {
     this.buildingLabels.forEach(l => l.destroy());
     this.buildingLabels = [];
 
-    const buildingTextureKeys: Record<string, string> = {
-      trading_post: 'building_trading_post',
-      crafting: 'building_crafting',
-      farm: 'building_farm',
-      tavern: 'building_tavern',
-      storage: 'building_storage',
-      laboratory: 'building_laboratory',
-    };
     const unlocked = (b: HubBuildingDef) => !b.buildingId || isRestored(b.buildingId);
 
     for (const b of HUB_BUILDINGS) {
       if (b.id === 'gate') continue;
       const ul = unlocked(b);
-      const texKey = buildingTextureKeys[b.id] ?? 'building_trading_post';
+      const texKey = BUILDING_TEXTURE_KEYS[b.id] ?? 'building_trading_post';
       const alpha = ul ? 1 : 0.5;
 
       const c = gridToIso(b.gx + b.gw / 2, b.gy + b.gh / 2);
@@ -346,7 +349,7 @@ export class HomelandScene extends Phaser.Scene {
         texKey,
       ).setAlpha(alpha);
       img.setData('bid', b.buildingId || b.id);
-      img.setDepth(6 + b.gy * 0.002 + (b.gx + b.gw - 1) * 0.001);
+      img.setDepth(interactiveDepth(b.gx + b.gw - 1, b.gy));
       this.hudCam.ignore(img);
       this.buildingImages.set(b.buildingId || b.id, img);
 
@@ -374,10 +377,10 @@ export class HomelandScene extends Phaser.Scene {
       c.x + (cfg.offsetX ?? 0),
       c.y + (cfg.offsetY ?? 0),
       'building_gate',
-    ).setDepth(6 + 20 * 0.002 + 13 * 0.001);
+    ).setDepth(interactiveDepth(13, 20));
     this.hudCam.ignore(gateImg);
 
-    const glow = this.add.image(c.x, c.y - 36, 'gate_glow').setDepth(6 + 20 * 0.002 + 13 * 0.001 + 0.001);
+    const glow = this.add.image(c.x, c.y - 36, 'gate_glow').setDepth(interactiveDepth(13, 20, 0.001));
     this.hudCam.ignore(glow);
 
     this.tweens.add({
@@ -421,7 +424,7 @@ export class HomelandScene extends Phaser.Scene {
         img.setOrigin(cfg.originX ?? 0.5, cfg.originY ?? 0.5);
       }
       if (cfg.scale !== undefined) img.setScale(cfg.scale);
-      img.setDepth(6 + d.gy * 0.002 + d.gx * 0.001);
+      img.setDepth(interactiveDepth(d.gx, d.gy));
       this.hudCam.ignore(img);
       this.decorationImages.push(img);
     }
@@ -435,7 +438,7 @@ export class HomelandScene extends Phaser.Scene {
       p.x + (cfg.offsetX ?? 0),
       p.y + (cfg.offsetY ?? 0),
       'player_bottom_left',
-    ).setDepth(6 + this.playerGy * 0.002 + this.playerGx * 0.001 + 0.0005);
+    ).setDepth(interactiveDepth(this.playerGx, this.playerGy, 0.0005));
     this.hudCam.ignore(this.player);
     if (cfg.originX !== undefined || cfg.originY !== undefined) {
       this.player.setOrigin(cfg.originX ?? 0.5, cfg.originY ?? 0.5);
@@ -463,7 +466,7 @@ export class HomelandScene extends Phaser.Scene {
     const p = gridToIso(this.playerGx, this.playerGy);
     const cfg = getSpriteConfig('player_bottom_left');
     this.player.setPosition(p.x + (cfg.offsetX ?? 0), p.y + (cfg.offsetY ?? 0));
-    this.player.setDepth(6 + this.playerGy * 0.002 + this.playerGx * 0.001 + 0.0005);
+    this.player.setDepth(interactiveDepth(this.playerGx, this.playerGy, 0.0005));
     this.playerLabel.setPosition(p.x, p.y - 30);
   }
 
@@ -758,7 +761,7 @@ export class HomelandScene extends Phaser.Scene {
       targets: this.player,
       x: target.x + (cfg.offsetX ?? 0),
       y: target.y + (cfg.offsetY ?? 0),
-      depth: 6 + ny * 0.002 + nx * 0.001 + 0.0005,
+      depth: interactiveDepth(nx, ny, 0.0005),
       duration: 100,
       ease: 'Linear',
       onComplete: () => { this.isMoving = false; },
@@ -858,22 +861,13 @@ export class HomelandScene extends Phaser.Scene {
     this.facingOutlineImages = [];
     const b = this.currentBuilding;
     if (!b) return;
-    const buildingTextureKeys: Record<string, string> = {
-      trading_post: 'building_trading_post',
-      crafting: 'building_crafting',
-      farm: 'building_farm',
-      tavern: 'building_tavern',
-      storage: 'building_storage',
-      laboratory: 'building_laboratory',
-      gate: 'building_gate',
-    };
-    const texKey = buildingTextureKeys[b.id];
+    const texKey = BUILDING_TEXTURE_KEYS[b.id];
     if (!texKey || !this.textures.exists(texKey)) return;
     const c = gridToIso(b.gx + b.gw / 2, b.gy + b.gh / 2);
     const cfg = getSpriteConfig(texKey);
     const px = c.x + (cfg.offsetX ?? 0);
     const py = c.y + (cfg.offsetY ?? 0);
-    const depth = 6 + b.gy * 0.002 + (b.gx + b.gw - 1) * 0.001 - 0.005;
+    const depth = interactiveDepth(b.gx + b.gw - 1, b.gy, -0.005);
     const dirs: [number, number][] = [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
     for (let t = 1; t <= 3; t++) {
       const alpha = t === 1 ? 0.85 : t === 2 ? 0.4 : 0.12;
@@ -932,7 +926,7 @@ export class HomelandScene extends Phaser.Scene {
     const buildingActions: Record<string, { restoreId: string; show: () => void }> = {
       storage: { restoreId: 'storage', show: () => { this.inventoryPanel.refresh(); this.inventoryPanel.show(); } },
       crafting: { restoreId: 'crafting_station', show: () => { this.craftingPanel.refresh(); this.craftingPanel.show(); } },
-      tavern: { restoreId: 'housing', show: () => { this.scene.start('TavernScene'); } },
+      tavern: { restoreId: 'housing', show: () => { this.scene.start(SCENES.TAVERN); } },
       trading_post: { restoreId: 'trading_post', show: () => this.showTradePanel() },
       laboratory: { restoreId: 'laboratory', show: () => this.showResearchPanel() },
       farm: { restoreId: 'farm', show: () => this.showFarmPanel() },
@@ -1103,7 +1097,7 @@ export class HomelandScene extends Phaser.Scene {
     this.closePanel();
     this.cameras.main.fadeOut(500, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.start('ExpeditionScene', {
+      this.scene.start(SCENES.EXPEDITION, {
         debug: config.debug,
         consumables: config.consumables,
         startFloor: config.startFloor,

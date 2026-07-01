@@ -8,6 +8,7 @@ import {
   HALF_W, HALF_H,
 } from '../systems/IsoUtils';
 import { NPCPhotobookPanel } from '../ui/NPCPhotobookPanel';
+import { SCENES } from '../constants/scenes';
 import { AnalogStickInput } from '../ui/AnalogStickInput';
 import { VW, VH, CX, CY } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
@@ -76,7 +77,7 @@ export class TavernScene extends Phaser.Scene {
   private carrotCountText!: Phaser.GameObjects.Text;
 
   constructor() {
-    super({ key: 'TavernScene' });
+    super({ key: SCENES.TAVERN });
   }
 
   create(): void {
@@ -832,7 +833,7 @@ export class TavernScene extends Phaser.Scene {
     if (this.bgm) this.bgm.stop();
     this.cameras.main.fadeOut(300, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.start('HomelandScene');
+      this.scene.start(SCENES.HOMELAND);
     });
   }
 }

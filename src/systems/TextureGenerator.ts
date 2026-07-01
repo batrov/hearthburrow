@@ -559,18 +559,6 @@ export function generateAll(scene: Phaser.Scene): void {
     });
   }
 
-  // --- Durability overlays ---
-  make(scene, g, 'overlay_damage', 28, 28, () => {
-    g.fillStyle(0x000000, 0.25);
-    g.fillRoundedRect(0, 0, 28, 28, 4);
-  });
-
-  make(scene, g, 'overlay_crack', 28, 28, () => {
-    g.lineStyle(1, 0x000000, 0.5);
-    g.lineBetween(4, 2, 24, 26);
-    g.lineBetween(24, 2, 4, 26);
-  });
-
   // --- Hub terrain diamond (white, tinted at use) ---
   make(scene, g, 'terrain_diamond', 80, 40, () => {
     drawDiamond(g, 40, 20, 0xffffff, 1);

@@ -234,7 +234,7 @@ export const NPC_PERSONALITIES: NPCPersonality[] = [
   },
 ];
 
-export const NPC_NAMES = NPC_PERSONALITIES.map(p => p.name);
+const NPC_NAMES = NPC_PERSONALITIES.map(p => p.name);
 
 export interface RescuedVillager {
   variant: number;

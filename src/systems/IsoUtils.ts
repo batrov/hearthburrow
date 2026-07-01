@@ -32,6 +32,11 @@ export function tileSortKey(x: number, y: number): number {
   return x + y;
 }
 
+/** Depth for interactive objects at grid (x, y). Uses y-dominant ordering for isometric perspective. */
+export function interactiveDepth(x: number, y: number, offset: number = 0): number {
+  return 6 + y * 0.002 + x * 0.001 + offset;
+}
+
 /** Draw an isometric diamond at a pixel position. */
 export function drawDiamond(
   g: Phaser.GameObjects.Graphics,
@@ -112,19 +117,6 @@ export function drawExtrudedTile(
   g.lineTo(cx - hw, cy - height);
   g.closePath();
   g.fill();
-}
-
-/** Draw a 3D extruded tile at a grid position. */
-export function drawExtrudedAt(
-  g: Phaser.GameObjects.Graphics,
-  x: number, y: number,
-  topColor: number,
-  leftColor: number,
-  rightColor: number,
-  height?: number,
-): void {
-  const p = gridToIso(x, y);
-  drawExtrudedTile(g, p.x, p.y, topColor, leftColor, rightColor, height);
 }
 
 /** Draw a cohesive building shape (roof + side walls) covering a gw×gh grid, centered in a w×h canvas. */

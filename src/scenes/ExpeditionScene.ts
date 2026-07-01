@@ -4,6 +4,7 @@ import { MiningSystem } from '../systems/MiningSystem';
 import { InventorySystem } from '../systems/InventorySystem';
 import { DungeonGenerator, DungeonFloor, DungeonTile } from '../systems/DungeonGenerator';
 import { ExpeditionState } from '../systems/ExpeditionState';
+import { SCENES } from '../constants/scenes';
 import { gameState, itemDisplayName, itemIconKey, NPC_PERSONALITIES } from '../systems/GameState';
 import { InventoryPanel } from '../ui/InventoryPanel';
 import { EventPanel, EventChoice, EventConfig } from '../ui/EventPanel';
@@ -15,7 +16,7 @@ import { audio } from '../systems/AudioSystem';
 import { getSpriteConfig } from '../systems/SpriteConfig';
 import {
   gridToIso, isoToGrid, findPath,
-  tileSortKey, drawDiamondAt,
+  tileSortKey, drawDiamondAt, interactiveDepth,
   HALF_W, HALF_H, worldWidth, worldHeight,
 } from '../systems/IsoUtils';
 import { VW, VH, CX, CY } from '../systems/Viewport';
@@ -44,7 +45,7 @@ function getBiomeBackgroundColor(depth: number): string {
 }
 
 function playerDepth(x: number, y: number): number {
-  return 6 + y * 0.002 + x * 0.001 + 0.0005;
+  return interactiveDepth(x, y, 0.0005);
 }
 
 const DEPTH = {
@@ -205,7 +206,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private hudCam!: Phaser.Cameras.Scene2D.Camera;
 
   constructor() {
-    super({ key: 'ExpeditionScene' });
+    super({ key: SCENES.EXPEDITION });
     this.stamina = new StaminaSystem(100);
     this.mining = new MiningSystem();
     this.inventory = new InventorySystem(16, false);
@@ -233,7 +234,7 @@ export class ExpeditionScene extends Phaser.Scene {
       fontSize: fs(16), fontFamily: 'Inter', resolution: 4, color, fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(DEPTH.POPUP).setScrollFactor(0);
     this.cameras.main.ignore(popup);
-    const tween: any = { targets: popup, y: y + (opts?.moveY ?? -40), alpha: 0, duration: opts?.duration ?? 1200, ease: 'Quad.easeOut', onComplete: () => popup.destroy() };
+    const tween: Phaser.Types.Tweens.TweenBuilderConfig = { targets: popup, y: y + (opts?.moveY ?? -40), alpha: 0, duration: opts?.duration ?? 1200, ease: 'Quad.easeOut', onComplete: () => popup.destroy() };
     if (opts?.scaleFrom || opts?.scaleTo) tween.scale = { from: opts?.scaleFrom ?? 1.2, to: opts?.scaleTo ?? 0.9 };
     this.tweens.add(tween);
   }
@@ -456,8 +457,8 @@ export class ExpeditionScene extends Phaser.Scene {
     for (const { x, y } of tiles) {
       const tile = floor.tiles[y][x];
       const p = gridToIso(x, y);
-      const depth = 6 + y * 0.002 + x * 0.001;
-
+      const depth = interactiveDepth(x, y);
+ 
       const makeImg = (key: string) => {
         const cfg = getSpriteConfig(key);
         const img = this.add.image(
@@ -527,7 +528,7 @@ export class ExpeditionScene extends Phaser.Scene {
             const bossKey = `enemy_boss_${bossBiome}`;
             if (this.textures.exists(bossKey)) {
               const img = makeImg(bossKey);
-              img.setDepth(6 + y * 0.002 + x * 0.001 + 0.003);
+              img.setDepth(interactiveDepth(x, y, 0.003));
             }
           }
           break;
@@ -588,7 +589,7 @@ export class ExpeditionScene extends Phaser.Scene {
         }
       }
       const playerDep = playerDepth(this.playerX, this.playerY);
-      const facingDep = 6 + ty * 0.002 + tx * 0.001;
+      const facingDep = interactiveDepth(tx, ty);
       const previewDepth = facingDep > playerDep ? playerDep + 0.001 : playerDep - 0.001;
       this.selectedObject.setDepth(previewDepth - 0.001);
       const previewCfg = getSpriteConfig(texKey);
@@ -2650,7 +2651,7 @@ export class ExpeditionScene extends Phaser.Scene {
     }
 
     this.time.delayedCall(800, () => {
-      this.scene.start('ExpeditionRecapScene');
+      this.scene.start(SCENES.RECAP);
     });
   }
 
@@ -2795,7 +2796,7 @@ export class ExpeditionScene extends Phaser.Scene {
     return null;
   }
 
-  private startCombat(tx: number, ty: number, tile: any): void {
+  private startCombat(tx: number, ty: number, tile: DungeonTile): void {
     const isBoss = tile.type === 'event_boss';
     const enemyType = tile.eventId || 'slime';
 
