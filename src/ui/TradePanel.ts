@@ -3,7 +3,7 @@ import { gameState, itemDisplayName, itemIconKey } from '../systems/GameState';
 import { audio } from '../systems/AudioSystem';
 import { BasePanel } from './BasePanel';
 import { VW, VH, CX } from '../systems/Viewport';
-import { textStyle } from '../systems/Font';
+import { textStyle, fs, createText } from '../systems/Font';
 
 interface TradeItem {
   id: string;
@@ -34,8 +34,8 @@ export class TradePanel extends BasePanel {
 
     this.createOverlay();
 
-    this.text = scene.add.text(CX, 44, '', {
-      fontSize: '13px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
+    this.text = createText(scene, CX, 44, '', {
+      fontSize: fs(13), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
       align: 'center', lineSpacing: 4,
     }).setOrigin(0.5, 0);
     this.container.add(this.text);
@@ -133,11 +133,11 @@ export class TradePanel extends BasePanel {
       if (this.scene.textures.exists(iconKey)) {
         row.add(this.scene.add.image(30, y, iconKey).setScale(0.6));
       }
-      row.add(this.scene.add.text(46, y, `${cursor} ${label}`, {
-        fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
+      row.add(createText(this.scene, 46, y, `${cursor} ${label}`, {
+        fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
       }).setOrigin(0, 0.5));
-      row.add(this.scene.add.text(CX + 20, y, `${item.priceQty}${haveText}`, {
-        fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
+      row.add(createText(this.scene, CX + 20, y, `${item.priceQty}${haveText}`, {
+        fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
       }).setOrigin(0, 0.5));
       this.itemRows.add(row);
 

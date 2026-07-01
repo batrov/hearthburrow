@@ -3,7 +3,7 @@ import { gameState, itemDisplayName } from '../systems/GameState';
 import { audio } from '../systems/AudioSystem';
 import { BasePanel } from './BasePanel';
 import { VW, VH, CX } from '../systems/Viewport';
-import { textStyle } from '../systems/Font';
+import { textStyle, fs, createText } from '../systems/Font';
 
 interface ResearchNode {
   id: string;
@@ -87,28 +87,28 @@ export class ResearchPanel extends BasePanel {
     this.descSprite = scene.add.image(24 + 20, 440 + 28, 'ore_stone').setDepth(207).setScrollFactor(0).setScale(1.5).setVisible(false);
     this.container.add(this.descSprite);
 
-    this.descName = scene.add.text(24 + 44, 440 + 4, '', {
-      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
+    this.descName = createText(scene, 24 + 44, 440 + 4, '', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setDepth(207).setScrollFactor(0);
     this.container.add(this.descName);
 
-    this.descDetail = scene.add.text(24 + 44, 440 + 18, '', {
-      fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#888899',
+    this.descDetail = createText(scene, 24 + 44, 440 + 18, '', {
+      fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#888899',
     }).setDepth(207).setScrollFactor(0);
     this.container.add(this.descDetail);
 
-    this.descCost = scene.add.text(24 + 44, 440 + 34, '', {
-      fontSize: '9px', fontFamily: 'Inter', resolution: 4, color: '#888899',
+    this.descCost = createText(scene, 24 + 44, 440 + 34, '', {
+      fontSize: fs(9), fontFamily: 'Inter', resolution: 4, color: '#888899',
     }).setDepth(207).setScrollFactor(0).setVisible(false);
     this.container.add(this.descCost);
 
-    this.descStatus = scene.add.text(CX + 160, 440 + 6, '', {
-      fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#88dd88',
+    this.descStatus = createText(scene, CX + 160, 440 + 6, '', {
+      fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#88dd88',
     }).setDepth(207).setScrollFactor(0).setOrigin(1, 0);
     this.container.add(this.descStatus);
 
-    this.hintText = scene.add.text(CX, VH - 30, '[W/S] Scroll  [A/D] Nav  [SPACE] Research  [Click] Focus', {
-      fontSize: '9px', fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
+    this.hintText = createText(scene, CX, VH - 30, '[W/S] Scroll  [A/D] Nav  [SPACE] Research  [Click] Focus', {
+      fontSize: fs(9), fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
     }).setOrigin(0.5).setDepth(207).setScrollFactor(0);
     this.container.add(this.hintText);
 
@@ -214,21 +214,21 @@ export class ResearchPanel extends BasePanel {
     box.strokeRoundedRect(px - pw / 2, py - ph / 2, pw, ph, 8);
     this.promptContainer.add(box);
 
-    const title = this.scene.add.text(px, py - 48, `Research ${node.name}?`, {
-      fontSize: '13px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
+    const title = createText(this.scene, px, py - 48, `Research ${node.name}?`, {
+      fontSize: fs(13), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.promptContainer.add(title);
 
     const costStr = Object.entries(node.cost)
       .map(([id, qty]) => `${qty} ${itemDisplayName(id)}`)
       .join(', ');
-    const costText = this.scene.add.text(px, py - 24, `Cost: ${costStr}`, {
-      fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#888899',
+    const costText = createText(this.scene, px, py - 24, `Cost: ${costStr}`, {
+      fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#888899',
     }).setOrigin(0.5);
     this.promptContainer.add(costText);
 
-    const effectDesc = this.scene.add.text(px, py - 4, this.effectDescription(node), {
-      fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#88dd88',
+    const effectDesc = createText(this.scene, px, py - 4, this.effectDescription(node), {
+      fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#88dd88',
     }).setOrigin(0.5);
     this.promptContainer.add(effectDesc);
 
@@ -239,8 +239,8 @@ export class ResearchPanel extends BasePanel {
     confirmBg.strokeRoundedRect(px - 90, py + 24, 80, 24, 4);
     this.promptContainer.add(confirmBg);
 
-    const confirmText = this.scene.add.text(px - 50, py + 36, 'Confirm', {
-      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#88ff88',
+    const confirmText = createText(this.scene, px - 50, py + 36, 'Confirm', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#88ff88',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     this.promptContainer.add(confirmText);
 
@@ -251,8 +251,8 @@ export class ResearchPanel extends BasePanel {
     cancelBg.strokeRoundedRect(px + 10, py + 24, 80, 24, 4);
     this.promptContainer.add(cancelBg);
 
-    const cancelText = this.scene.add.text(px + 50, py + 36, 'Cancel', {
-      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#b8a8d8',
+    const cancelText = createText(this.scene, px + 50, py + 36, 'Cancel', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b8a8d8',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     this.promptContainer.add(cancelText);
 
@@ -365,8 +365,8 @@ export class ResearchPanel extends BasePanel {
     const branchKeys = ['mining', 'combat', 'survival'];
     const branchColors = ['#e8c87a', '#e87a7a', '#7ac8e8'];
     for (let col = 0; col < 3; col++) {
-      const label = this.scene.add.text(BRANCH_COLS[col], 68, branchKeys[col].toUpperCase(), {
-        fontSize: '9px', fontFamily: 'Inter', resolution: 4, color: branchColors[col], fontStyle: 'bold',
+      const label = createText(this.scene, BRANCH_COLS[col], 68, branchKeys[col].toUpperCase(), {
+        fontSize: fs(9), fontFamily: 'Inter', resolution: 4, color: branchColors[col], fontStyle: 'bold',
       }).setOrigin(0.5);
       this.scrollContainer.add(label);
       this.sprites.push(label as unknown as Phaser.GameObjects.Image);
@@ -394,8 +394,8 @@ export class ResearchPanel extends BasePanel {
         this.sprites.push(img);
 
         const labelColor = !prereqDone ? '#333333' : (level >= 1 ? '#c8b898' : '#888888');
-        const label = this.scene.add.text(x, y + 22, node.name, {
-          fontSize: '8px', fontFamily: 'Inter', resolution: 4, color: labelColor, align: 'center',
+        const label = createText(this.scene, x, y + 22, node.name, {
+          fontSize: fs(8), fontFamily: 'Inter', resolution: 4, color: labelColor, align: 'center',
         }).setOrigin(0.5, 0);
         this.scrollContainer.add(label);
         this.labels.push(label);

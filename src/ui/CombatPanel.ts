@@ -3,7 +3,7 @@ import { audio } from '../systems/AudioSystem';
 import { BasePanel } from './BasePanel';
 import { ConfirmPopup } from './ConfirmPopup';
 import { VW, VH, CX, CY } from '../systems/Viewport';
-import { textStyle } from '../systems/Font';
+import { textStyle, fs, createText } from '../systems/Font';
 
 export type CombatResult = 'victory' | 'retreat' | null;
 
@@ -73,8 +73,8 @@ export class CombatPanel extends BasePanel {
     this.overlay = scene.add.graphics();
     this.container.add(this.overlay);
 
-    this.enemyNameText = scene.add.text(CX, 100, '', {
-      fontSize: '18px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
+    this.enemyNameText = createText(scene, CX, 100, '', {
+      fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.enemyNameText);
 
@@ -85,13 +85,13 @@ export class CombatPanel extends BasePanel {
     this.hpBar = scene.add.graphics();
     this.container.add(this.hpBar);
 
-    this.hpText = scene.add.text(CX, 310, '', {
-      fontSize: '14px', fontFamily: 'Inter', resolution: 4, color: '#cc6666',
+    this.hpText = createText(scene, CX, 310, '', {
+      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#cc6666',
     }).setOrigin(0.5);
     this.container.add(this.hpText);
 
-    this.instructionText = scene.add.text(CX, 340, '', {
-      fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#b8a898',
+    this.instructionText = createText(scene, CX, 340, '', {
+      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#b8a898',
     }).setOrigin(0.5);
     this.container.add(this.instructionText);
 
@@ -109,18 +109,18 @@ export class CombatPanel extends BasePanel {
     this.marker.setDepth(201);
     this.container.add(this.marker);
 
-    this.feedbackText = scene.add.text(CX, 440, '', {
-      fontSize: '16px', fontFamily: 'Inter', resolution: 4, fontStyle: 'bold', align: 'center',
+    this.feedbackText = createText(scene, CX, 440, '', {
+      fontSize: fs(16), fontFamily: 'Inter', resolution: 4, fontStyle: 'bold', align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.feedbackText);
 
-    this.hintText = scene.add.text(CX, 480, '[SPACE] Strike  |  Action button', {
-      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#5a4a6a',
+    this.hintText = createText(scene, CX, 480, '[SPACE] Strike  |  Action button', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
-    this.retreatBtn = scene.add.text(CX, 520, '[ ESC ] Retreat', {
-      fontSize: '14px', fontFamily: 'Inter', resolution: 4, color: '#cc6644',
+    this.retreatBtn = createText(scene, CX, 520, '[ ESC ] Retreat', {
+      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#cc6644',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(210).setData('isUI', true).setVisible(false);
 
     this.retreatHitZone = scene.add.rectangle(CX, 520, 200, 36, 0x000000, 0)
@@ -553,7 +553,7 @@ export class CombatPanel extends BasePanel {
   }
 
   private spawnDamagePopup(damage: number, isCritical: boolean, x: number, y: number): void {
-    const popup = this.scene.add.text(x, y, isCritical ? `${damage}!` : `${damage}` , {
+    const popup = createText(this.scene, x, y, isCritical ? `${damage}!` : `${damage}` , {
       fontSize: isCritical ? '22px' : '16px',
       fontFamily: 'Inter', resolution: 4,
       color: isCritical ? '#ffdd44' : '#ffffff',
@@ -583,8 +583,8 @@ export class CombatPanel extends BasePanel {
   }
 
   private spawnStaminaPopup(amount: number, x: number, y: number): void {
-    const popup = this.scene.add.text(x, y, `-${amount}`, {
-      fontSize: '14px',
+    const popup = createText(this.scene, x, y, `-${amount}`, {
+      fontSize: fs(14),
       fontFamily: 'Inter', resolution: 4,
       color: '#ff4444',
       stroke: '#000000',

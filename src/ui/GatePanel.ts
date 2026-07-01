@@ -7,7 +7,7 @@ import { FloorPicker } from './FloorPicker';
 import { SeedEntryPopup } from './SeedEntryPopup';
 import { ConfirmPopup } from './ConfirmPopup';
 import { VW, VH, CX } from '../systems/Viewport';
-import { textStyle } from '../systems/Font';
+import { textStyle, fs, createText } from '../systems/Font';
 
 const NAMES: Record<number, string> = {
   1: 'Common Pickaxe', 2: 'Bronze Pickaxe', 3: 'Silver Pickaxe', 4: 'Gold Pickaxe',
@@ -106,8 +106,8 @@ export class GatePanel extends BasePanel {
     this.panelBlocker.on('pointerdown', () => {});
     this.container.add(this.panelBlocker);
 
-    this.title = this.scene.add.text(CX, 20, 'Expedition Loadout', {
-      fontSize: '16px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
+    this.title = createText(this.scene, CX, 20, 'Expedition Loadout', {
+      fontSize: fs(16), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.title);
 
@@ -116,8 +116,8 @@ export class GatePanel extends BasePanel {
     this.container.add(this.portraitSprite);
 
     for (let i = 0; i < 5; i++) {
-      const t = this.scene.add.text(200, 48 + i * 14, '', {
-        fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#b8a898',
+      const t = createText(this.scene, 200, 48 + i * 14, '', {
+        fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#b8a898',
       });
       this.container.add(t);
       this.statTexts.push(t);
@@ -137,8 +137,8 @@ export class GatePanel extends BasePanel {
       const icon = this.scene.add.image(equipYX[i].x, equipYX[i].y, 'item_pickaxe_1').setScale(iconScale);
       icon.setVisible(false);
       this.container.add(icon);
-      const badge = this.scene.add.text(equipYX[i].x, equipYX[i].y + 26, '', {
-        fontSize: '9px', fontFamily: 'Inter', resolution: 4, color: '#999999',
+      const badge = createText(this.scene, equipYX[i].x, equipYX[i].y + 26, '', {
+        fontSize: fs(9), fontFamily: 'Inter', resolution: 4, color: '#999999',
       }).setOrigin(0.5);
       badge.setVisible(false);
       this.container.add(badge);
@@ -150,8 +150,8 @@ export class GatePanel extends BasePanel {
       this.equipSlots.push({ bg, icon, badge, zone });
     }
 
-    this.container.add(this.scene.add.text(CX, 138, 'EQUIPMENT', {
-      fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
+    this.container.add(createText(this.scene, CX, 138, 'EQUIPMENT', {
+      fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
     }).setOrigin(0.5));
 
     const consYX = [
@@ -165,8 +165,8 @@ export class GatePanel extends BasePanel {
       const icon = this.scene.add.image(consYX[i].x, consYX[i].y, 'item_stamina_potion').setScale(0.8);
       icon.setVisible(false);
       this.container.add(icon);
-      const badge = this.scene.add.text(consYX[i].x, consYX[i].y + 16, '', {
-        fontSize: '9px', fontFamily: 'Inter', resolution: 4, color: '#88cc88',
+      const badge = createText(this.scene, consYX[i].x, consYX[i].y + 16, '', {
+        fontSize: fs(9), fontFamily: 'Inter', resolution: 4, color: '#88cc88',
       }).setOrigin(0.5);
       badge.setVisible(false);
       this.container.add(badge);
@@ -177,13 +177,13 @@ export class GatePanel extends BasePanel {
       this.consSlots.push({ bg, icon, badge, zone });
     }
 
-    this.container.add(this.scene.add.text(CX, 270, 'CONSUMABLES', {
-      fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
+    this.container.add(createText(this.scene, CX, 270, 'CONSUMABLES', {
+      fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
     }).setOrigin(0.5));
 
     for (let i = 0; i < 4; i++) {
-      const t = this.scene.add.text(CX, 362 + i * 22, '', {
-        fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#b8a898',
+      const t = createText(this.scene, CX, 362 + i * 22, '', {
+        fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b8a898',
       }).setOrigin(0.5);
       this.container.add(t);
       this.settingsTexts.push(t);
@@ -194,12 +194,12 @@ export class GatePanel extends BasePanel {
       this.settingsZones.push(zone);
     }
 
-    this.container.add(this.scene.add.text(CX, 344, 'SETTINGS', {
-      fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
+    this.container.add(createText(this.scene, CX, 344, 'SETTINGS', {
+      fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
     }).setOrigin(0.5));
 
-    this.embarkBtn = this.scene.add.text(CX, 462, '[  EMBARK  ]', {
-      fontSize: '14px', fontFamily: 'Inter', resolution: 4, color: '#ffcc44',
+    this.embarkBtn = createText(this.scene, CX, 462, '[  EMBARK  ]', {
+      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#ffcc44',
       backgroundColor: '#442a1acc', padding: { x: 16, y: 4 },
     }).setOrigin(0.5).setScrollFactor(0);
     this.embarkBtn.setVisible(false);
@@ -214,15 +214,15 @@ export class GatePanel extends BasePanel {
     this.container.add(this.descBg);
 
     for (let i = 0; i < 2; i++) {
-      const t = this.scene.add.text(CX, 472 + i * 16, '', {
-        fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#c8b898',
+      const t = createText(this.scene, CX, 472 + i * 16, '', {
+        fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#c8b898',
       }).setOrigin(0.5);
       this.container.add(t);
       this.descLines.push(t);
     }
 
-    this.footerText = this.scene.add.text(CX, VH - 30, '', {
-      fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#8a7a9a', align: 'center',
+    this.footerText = createText(this.scene, CX, VH - 30, '', {
+      fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#8a7a9a', align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.footerText);
 

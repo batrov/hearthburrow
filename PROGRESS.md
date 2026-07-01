@@ -61,6 +61,7 @@
 - **Crafting panel**: 4-color recipe lines (crafted/craftable state) + persisted `craftedItems`
 - **Inventory panel**: Description bar for selected item
 - **Item sprites**: 22 procedurally generated item sprites (equipment, consumables, relics, food) shown left of item names in Inventory, Crafting, and Trade panels. Works via `itemIconKey()` helper mapping `itemId → texture key`.
+- **Text resolution** — added `createText()` wrapper that applies LINEAR GPU filtering per-text, overriding `pixelArt: true`'s NEAREST default; patched `Text.prototype.updateText` to re-apply LINEAR after every `setText()` call, since `canvasToTexture` resets the filter on each text update. Uses `resolution: 4` for crisp rendering.
 
 
 ## ✅ Touch Screen Improvements

@@ -10,7 +10,7 @@ import {
 import { NPCPhotobookPanel } from '../ui/NPCPhotobookPanel';
 import { AnalogStickInput } from '../ui/AnalogStickInput';
 import { VW, VH, CX, CY } from '../systems/Viewport';
-import { textStyle } from '../systems/Font';
+import { textStyle, fs, createText } from '../systems/Font';
 
 const TAVERN_COLS = 12;
 const TAVERN_ROWS = 10;
@@ -153,8 +153,8 @@ export class TavernScene extends Phaser.Scene {
           drawDiamond(g, pos.x, pos.y, 0x4a3a2a);
           drawExtrudedTile(g, pos.x, pos.y, 0x5a4a2a, 0x4a3a1a, 0x3a2a0a, 10);
           this.hudCam.ignore(g);
-          const exitLabel = this.add.text(pos.x, pos.y - 28, 'EXIT', {
-            fontSize: '9px', fontFamily: 'Inter', resolution: 4, color: '#6a5a3a',
+          const exitLabel = createText(this, pos.x, pos.y - 28, 'EXIT', {
+            fontSize: fs(9), fontFamily: 'Inter', resolution: 4, color: '#6a5a3a',
           }).setOrigin(0.5).setDepth(15);
           this.hudCam.ignore(exitLabel);
           const glow = this.add.image(pos.x, pos.y - 14, 'terrain_diamond')
@@ -181,8 +181,8 @@ export class TavernScene extends Phaser.Scene {
       this.player.setOrigin(cfg.originX ?? 0.5, cfg.originY ?? 0.5);
     }
     if (cfg.scale !== undefined) this.player.setScale(cfg.scale);
-    this.playerLabel = this.add.text(p.x, p.y - 30, 'You', {
-      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#aaddff',
+    this.playerLabel = createText(this, p.x, p.y - 30, 'You', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#aaddff',
     }).setOrigin(0.5);
     this.hudCam.ignore(this.player);
     this.hudCam.ignore(this.playerLabel);
@@ -235,8 +235,8 @@ export class TavernScene extends Phaser.Scene {
       if (npcCfg.scale !== undefined) sprite.setScale(npcCfg.scale);
       container.add(sprite);
 
-      const label = this.add.text(0, 16, npc.name, {
-        fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
+      const label = createText(this, 0, 16, npc.name, {
+        fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
       }).setOrigin(0.5);
       container.add(label);
 
@@ -279,37 +279,37 @@ export class TavernScene extends Phaser.Scene {
   }
 
   private createUI(): void {
-    const title = this.add.text(CX, 12, 'THE COZY TAVERN', {
-      fontSize: '16px', fontFamily: 'Inter', resolution: 4, color: '#cc8844', fontStyle: 'bold',
+    const title = createText(this, CX, 12, 'THE COZY TAVERN', {
+      fontSize: fs(16), fontFamily: 'Inter', resolution: 4, color: '#cc8844', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(50).setScrollFactor(0);
     this.cameras.main.ignore(title);
 
     const rescued = gameState.rescuedVillagers;
-    const countText = this.add.text(CX, VH - 32, `${rescued.length} / 20 villagers resting here  [P] Photobook`, {
-      fontSize: '9px', fontFamily: 'Inter', resolution: 4, color: '#7a6a5a',
+    const countText = createText(this, CX, VH - 32, `${rescued.length} / 20 villagers resting here  [P] Photobook`, {
+      fontSize: fs(9), fontFamily: 'Inter', resolution: 4, color: '#7a6a5a',
     }).setOrigin(0.5).setDepth(50).setScrollFactor(0);
     this.cameras.main.ignore(countText);
 
-    const exitBtn = this.add.text(VW - 12, VH - 12, '[EXIT]', {
-      fontSize: '14px', fontFamily: 'Inter', resolution: 4, color: '#ff8844',
+    const exitBtn = createText(this, VW - 12, VH - 12, '[EXIT]', {
+      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#ff8844',
     }).setOrigin(1, 1).setDepth(50).setInteractive({ useHandCursor: true }).setScrollFactor(0)
       .on('pointerdown', () => this.leave());
     this.cameras.main.ignore(exitBtn);
 
-    const photobookBtn = this.add.text(12, VH - 12, '[PHOTOBOOK]', {
-      fontSize: '14px', fontFamily: 'Inter', resolution: 4, color: '#7a6a5a',
+    const photobookBtn = createText(this, 12, VH - 12, '[PHOTOBOOK]', {
+      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#7a6a5a',
     }).setOrigin(0, 1).setDepth(50).setInteractive({ useHandCursor: true }).setScrollFactor(0)
       .on('pointerdown', () => this.photobook.toggle());
     this.cameras.main.ignore(photobookBtn);
 
-    this.carrotCountText = this.add.text(VW - 12, 12, '', {
-      fontSize: '14px', fontFamily: 'Inter', resolution: 4, color: '#ff8833', fontStyle: 'bold',
+    this.carrotCountText = createText(this, VW - 12, 12, '', {
+      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#ff8833', fontStyle: 'bold',
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(50);
     this.cameras.main.ignore(this.carrotCountText);
     this.updateCarrotCounter();
 
-    this.promptText = this.add.text(0, 0, '', {
-      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#ffdd88',
+    this.promptText = createText(this, 0, 0, '', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#ffdd88',
     }).setOrigin(0.5).setDepth(100).setAlpha(0);
     this.hudCam.ignore(this.promptText);
   }
@@ -321,8 +321,8 @@ export class TavernScene extends Phaser.Scene {
   private createActionButton(): void {
     this.actionBtnBg = this.add.graphics().setScrollFactor(0).setDepth(50);
     this.cameras.main.ignore(this.actionBtnBg);
-    this.actionBtnText = this.add.text(CX, VH - 90, '', {
-      fontSize: '28px', fontFamily: 'Inter', resolution: 4,
+    this.actionBtnText = createText(this, CX, VH - 90, '', {
+      fontSize: fs(28), fontFamily: 'Inter', resolution: 4,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(51);
     this.cameras.main.ignore(this.actionBtnText);
     const hit = this.add.rectangle(CX, VH - 90, 64, 64, 0x000000, 0)
@@ -684,13 +684,13 @@ export class TavernScene extends Phaser.Scene {
     overlayBg.strokeRoundedRect(CX - 170, CY - 65, 340, 130, 10);
     this.cameras.main.ignore(overlayBg);
 
-    const overlayText = this.add.text(CX, CY - 30, `${npc.name} says:`, {
-      fontSize: '13px', fontFamily: 'Inter', resolution: 4, color: '#ccaa66', fontStyle: 'bold',
+    const overlayText = createText(this, CX, CY - 30, `${npc.name} says:`, {
+      fontSize: fs(13), fontFamily: 'Inter', resolution: 4, color: '#ccaa66', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
     this.cameras.main.ignore(overlayText);
 
-    const speechText = this.add.text(CX, CY + 2, `"${greeting}"`, {
-      fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', align: 'center',
+    const speechText = createText(this, CX, CY + 2, `"${greeting}"`, {
+      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', align: 'center',
       wordWrap: { width: 290 },
     }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
     this.cameras.main.ignore(speechText);
@@ -713,8 +713,8 @@ export class TavernScene extends Phaser.Scene {
       }
     }
 
-    const closeHint = this.add.text(CX, CY + 48, '[SPACE / ESC] close', {
-      fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#6a5a4a',
+    const closeHint = createText(this, CX, CY + 48, '[SPACE / ESC] close', {
+      fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#6a5a4a',
     }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
     this.cameras.main.ignore(closeHint);
 
@@ -752,15 +752,15 @@ export class TavernScene extends Phaser.Scene {
     container.add(sprite);
 
     if (qty > 1) {
-      const badge = this.add.text(30, 26, `x${qty}`, {
-        fontSize: '9px', fontFamily: 'Inter', resolution: 4, color: '#ffdd88',
+      const badge = createText(this, 30, 26, `x${qty}`, {
+        fontSize: fs(9), fontFamily: 'Inter', resolution: 4, color: '#ffdd88',
       }).setOrigin(1, 1);
       container.add(badge);
     }
 
     const labelText = prefix ? `${prefix}: ${itemDisplayName(id)}` : itemDisplayName(id);
-    const label = this.add.text(38, 10, labelText, {
-      fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
+    const label = createText(this, 38, 10, labelText, {
+      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
     });
     container.add(label);
 

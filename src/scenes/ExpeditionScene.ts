@@ -19,7 +19,7 @@ import {
   HALF_W, HALF_H, worldWidth, worldHeight,
 } from '../systems/IsoUtils';
 import { VW, VH, CX, CY } from '../systems/Viewport';
-import { textStyle } from '../systems/Font';
+import { textStyle, fs, createText } from '../systems/Font';
 
 const BIOMES = ['FOREST', 'CAVE', 'ICE', 'LAVA', 'RUINS'];
 
@@ -153,6 +153,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private isMining: boolean = false;
   private pendingMineTx: number = -1;
   private pendingMineTy: number = -1;
+  private stepsTaken: number = 0;
   private stairTargetX: number = -1;
   private stairTargetY: number = -1;
   private stairAction: 'ascend' | 'descend' | null = null;
@@ -228,8 +229,8 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private createPopup(text: string, x: number, y: number, color: string, opts?: { duration?: number; moveY?: number; scaleFrom?: number; scaleTo?: number }): void {
-    const popup = this.add.text(x, y, text, {
-      fontSize: '16px', fontFamily: 'Inter', resolution: 2, color, fontStyle: 'bold',
+    const popup = createText(this, x, y, text, {
+      fontSize: fs(16), fontFamily: 'Inter', resolution: 4, color, fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(DEPTH.POPUP).setScrollFactor(0);
     this.cameras.main.ignore(popup);
     const tween: any = { targets: popup, y: y + (opts?.moveY ?? -40), alpha: 0, duration: opts?.duration ?? 1200, ease: 'Quad.easeOut', onComplete: () => popup.destroy() };
@@ -257,6 +258,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const staminaMax = this.debugMode ? 10000 : Math.floor((100 + gameState.maxStaminaBonus + bootStaminaBonus) * (1 + gameState.staminaPercentBonus / 100));
     this.rocksBrokenThisRun = 0;
     this.stairsSpawned = false;
+    this.stepsTaken = 0;
     this.floorEntry = true;
     this.stamina = new StaminaSystem(staminaMax);
     this.stamina.onChange = (prev, current) => {
@@ -309,8 +311,8 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.ignore(this.minimapGfx);
     this.cameras.main.ignore(this.minimapDot);
 
-    this.interactPrompt = this.add.text(0, 0, '', {
-      fontSize: '12px', fontFamily: 'Inter', resolution: 2, color: '#ffdd88',
+    this.interactPrompt = createText(this, 0, 0, '', {
+      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#ffdd88',
     }).setOrigin(0.5).setAlpha(0).setDepth(DEPTH.INTERACT_PROMPT);
     this.hudCam.ignore(this.interactPrompt);
 
@@ -709,13 +711,13 @@ export class ExpeditionScene extends Phaser.Scene {
     this.staminaAnimGfx = this.add.graphics().setScrollFactor(0).setDepth(212.5);
     this.cameras.main.ignore(this.staminaAnimGfx);
 
-    this.staminaValueText = this.add.text(VW - 8, 10, '', {
-      fontSize: '11px', fontFamily: 'Inter', resolution: 2, color: '#ffffff',
+    this.staminaValueText = createText(this, VW - 8, 10, '', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#ffffff',
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(211);
     this.cameras.main.ignore(this.staminaValueText);
 
-    this.carrotCountText = this.add.text(CX, 85, '', {
-      fontSize: '14px', fontFamily: 'Inter', resolution: 2, color: '#ff8833', fontStyle: 'bold',
+    this.carrotCountText = createText(this, CX, 85, '', {
+      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#ff8833', fontStyle: 'bold',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD_BG);
     this.cameras.main.ignore(this.carrotCountText);
     this.updateCarrotCounter();
@@ -723,8 +725,8 @@ export class ExpeditionScene extends Phaser.Scene {
     this.drawStaminaBar();
 
     // === BOTTOM-CENTER: Depth ===
-    this.depthTextCentered = this.add.text(CX, VH - 36, `Depth: ${this.expeditionState.depth}`, {
-      fontSize: '14px', fontFamily: 'Inter', resolution: 2, color: '#ffffff', fontStyle: 'bold',
+    this.depthTextCentered = createText(this, CX, VH - 36, `Depth: ${this.expeditionState.depth}`, {
+      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#ffffff', fontStyle: 'bold',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.depthTextCentered);
 
@@ -741,8 +743,8 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.ignore(this.pickaxeSprite);
     this.pickaxeRing = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD + 1);
     this.cameras.main.ignore(this.pickaxeRing);
-    this.pickaxeUsesText = this.add.text(60, 99, '', {
-      fontSize: '12px', fontFamily: 'Inter', resolution: 2, color: '#cccccc', align: 'center',
+    this.pickaxeUsesText = createText(this, 60, 99, '', {
+      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#cccccc', align: 'center',
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.pickaxeUsesText);
 
@@ -762,8 +764,8 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.ignore(this.invBtnSprite);
     this.invBtnRing = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD + 1);
     this.cameras.main.ignore(this.invBtnRing);
-    this.invSlotText = this.add.text(invCx, invCy + 16, '', {
-      fontSize: '9px', fontFamily: 'Inter', resolution: 2, color: '#cccccc', align: 'center',
+    this.invSlotText = createText(this, invCx, invCy + 16, '', {
+      fontSize: fs(9), fontFamily: 'Inter', resolution: 4, color: '#cccccc', align: 'center',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.invSlotText);
 
@@ -785,8 +787,8 @@ export class ExpeditionScene extends Phaser.Scene {
     this.escapeSprite = this.add.image(0, 0, 'item_teleport_scroll')
       .setScrollFactor(0).setDepth(DEPTH.HUD).setInteractive({ useHandCursor: true }).setData('isUI', true);
     this.cameras.main.ignore(this.escapeSprite);
-    this.escapeLabel = this.add.text(0, 0, '', {
-      fontSize: '11px', fontFamily: 'Inter', resolution: 2, color: '#cccccc',
+    this.escapeLabel = createText(this, 0, 0, '', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#cccccc',
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.escapeLabel);
@@ -799,8 +801,8 @@ export class ExpeditionScene extends Phaser.Scene {
       if (this.isModalActive) return;
       this.tryUseConsumable('stamina_potion');
     });
-    this.potionCountText = this.add.text(0, 0, '', {
-      fontSize: '12px', fontFamily: 'Inter', resolution: 2, color: '#ffdd88',
+    this.potionCountText = createText(this, 0, 0, '', {
+      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#ffdd88',
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.potionCountText);
@@ -813,8 +815,8 @@ export class ExpeditionScene extends Phaser.Scene {
       if (this.isModalActive) return;
       this.tryUseConsumable('mining_bomb');
     });
-    this.bombCountText = this.add.text(0, 0, '', {
-      fontSize: '12px', fontFamily: 'Inter', resolution: 2, color: '#ffdd88',
+    this.bombCountText = createText(this, 0, 0, '', {
+      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#ffdd88',
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.bombCountText);
@@ -836,8 +838,8 @@ export class ExpeditionScene extends Phaser.Scene {
     const x = CX, y = VH - 90, size = 64;
     this.actionBtnBg = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.actionBtnBg);
-    this.actionBtnText = this.add.text(x, y, '', {
-      fontSize: '24px', fontFamily: 'Inter', resolution: 2,
+    this.actionBtnText = createText(this, x, y, '', {
+      fontSize: fs(24), fontFamily: 'Inter', resolution: 4,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD + 1);
     this.cameras.main.ignore(this.actionBtnText);
 
@@ -1939,23 +1941,23 @@ export class ExpeditionScene extends Phaser.Scene {
     bg.strokeRoundedRect(cx - 180, cy - 55, 360, 145, 10);
     this.cameras.main.ignore(bg);
 
-    const text = this.add.text(cx, cy - 20, 'Use stairs?', {
-      fontSize: '20px', fontFamily: 'Inter', resolution: 2, color: '#ffffff',
+    const text = createText(this, cx, cy - 20, 'Use stairs?', {
+      fontSize: fs(20), fontFamily: 'Inter', resolution: 4, color: '#ffffff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
     this.cameras.main.ignore(text);
 
-    const hint = this.add.text(cx, cy + 10, `[SPACE] ${action}  [ESC] Cancel`, {
-      fontSize: '12px', fontFamily: 'Inter', resolution: 2, color: '#aaaaaa',
+    const hint = createText(this, cx, cy + 10, `[SPACE] ${action}  [ESC] Cancel`, {
+      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#aaaaaa',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
     this.cameras.main.ignore(hint);
 
-    const proceedBtn = this.add.text(cx - 70, cy + 48, `[ ${action} ]`, {
-      fontSize: '14px', fontFamily: 'Inter', resolution: 2, color: '#66dd66',
+    const proceedBtn = createText(this, cx - 70, cy + 48, `[ ${action} ]`, {
+      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#66dd66',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
     this.cameras.main.ignore(proceedBtn);
 
-    const cancelBtn = this.add.text(cx + 70, cy + 48, '[ Cancel ]', {
-      fontSize: '14px', fontFamily: 'Inter', resolution: 2, color: '#cc6666',
+    const cancelBtn = createText(this, cx + 70, cy + 48, '[ Cancel ]', {
+      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#cc6666',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
     this.cameras.main.ignore(cancelBtn);
 
@@ -2154,6 +2156,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.playerX = nx;
     this.playerY = ny;
+    this.stepsTaken++;
     this.floorEntry = false;
 
     const target = gridToIso(nx, ny);
@@ -2511,11 +2514,11 @@ export class ExpeditionScene extends Phaser.Scene {
   private createItemPopup(tx: number, ty: number, resource: string): void {
     const label = resource.replace(/_/g, ' ');
     const p = gridToIso(tx, ty);
-    const popup = this.add.text(
+    const popup = createText(this, 
       p.x,
       p.y - 24,
       `+1 ${label}`,
-      { fontSize: '13px', fontFamily: 'Inter', resolution: 2, color: '#ffcc44', fontStyle: 'bold' }
+      { fontSize: fs(13), fontFamily: 'Inter', resolution: 4, color: '#ffcc44', fontStyle: 'bold' }
     ).setOrigin(0.5).setDepth(DEPTH.ITEM_POPUP);
     this.hudCam.ignore(popup);
 
@@ -2629,9 +2632,14 @@ export class ExpeditionScene extends Phaser.Scene {
     if (this.expeditionState.depth > gameState.maxDepthReached) {
       gameState.maxDepthReached = this.expeditionState.depth;
     }
+    let farmYield = 0;
+    if (gameState.restoredBuildings.has('farm') && gameState.farmPlanted > 0) {
+      farmYield = Math.floor(this.stepsTaken * gameState.farmPlanted / 100);
+      gameState.farmHarvest += farmYield;
+    }
     gameState.save();
 
-    gameState.lastRunResult = { itemsObtained: obtained, itemsLost: lost, extractType, depth: this.expeditionState.depth, villagersRescued: gameState.runVillagersRescued, recipesDiscovered: gameState.runRecipesDiscovered };
+    gameState.lastRunResult = { itemsObtained: obtained, itemsLost: lost, extractType, depth: this.expeditionState.depth, villagersRescued: gameState.runVillagersRescued, recipesDiscovered: gameState.runRecipesDiscovered, stepsTaken: this.stepsTaken, farmYield };
 
     if (extractType === 'emergency') {
       gameState.exhaustionCount++;
@@ -2691,10 +2699,10 @@ export class ExpeditionScene extends Phaser.Scene {
     ).setDepth(DEPTH.OVERLAY).setScrollFactor(0);
     this.cameras.main.ignore(overlay);
 
-    const exhaustionText = this.add.text(
+    const exhaustionText = createText(this, 
       cx, cy,
       'EXHAUSTED\nTeleporting home...',
-      { fontSize: '24px', fontFamily: 'Inter', resolution: 2, color: '#cc4444', align: 'center' }
+      { fontSize: fs(24), fontFamily: 'Inter', resolution: 4, color: '#cc4444', align: 'center' }
     ).setOrigin(0.5).setDepth(DEPTH.OVERLAY_TEXT).setScrollFactor(0);
     this.cameras.main.ignore(exhaustionText);
 
@@ -2716,10 +2724,10 @@ export class ExpeditionScene extends Phaser.Scene {
     const cx = this.cameras.main.width / 2;
     const cy = this.cameras.main.height / 2;
 
-    const safeExtractText = this.add.text(
+    const safeExtractText = createText(this, 
       cx, cy,
       'Returning to Homeland...',
-      { fontSize: '20px', fontFamily: 'Inter', resolution: 2, color: '#44cc66' }
+      { fontSize: fs(20), fontFamily: 'Inter', resolution: 4, color: '#44cc66' }
     ).setOrigin(0.5).setDepth(DEPTH.OVERLAY_TEXT).setScrollFactor(0);
     this.cameras.main.ignore(safeExtractText);
 
@@ -2748,10 +2756,10 @@ export class ExpeditionScene extends Phaser.Scene {
     const cx = this.cameras.main.width / 2;
     const cy = this.cameras.main.height / 2;
 
-    const emergencyText = this.add.text(
+    const emergencyText = createText(this, 
       cx, cy,
       'Giving Up...\nLosing some items...',
-      { fontSize: '18px', fontFamily: 'Inter', resolution: 2, color: '#cc8844', align: 'center' }
+      { fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#cc8844', align: 'center' }
     ).setOrigin(0.5).setDepth(DEPTH.OVERLAY_TEXT).setScrollFactor(0);
     this.cameras.main.ignore(emergencyText);
 
@@ -3102,14 +3110,14 @@ export class ExpeditionScene extends Phaser.Scene {
     container.add(sprite);
 
     if (qty > 1) {
-      const badge = this.add.text(30, 26, `x${qty}`, {
-        fontSize: '9px', fontFamily: 'Inter', resolution: 2, color: '#ffdd88',
+      const badge = createText(this, 30, 26, `x${qty}`, {
+        fontSize: fs(9), fontFamily: 'Inter', resolution: 4, color: '#ffdd88',
       }).setOrigin(1, 1);
       container.add(badge);
     }
 
-    const label = this.add.text(38, 10, itemDisplayName(id), {
-      fontSize: '14px', fontFamily: 'Inter', resolution: 2, color: '#e8d5b7',
+    const label = createText(this, 38, 10, itemDisplayName(id), {
+      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
     });
     container.add(label);
 

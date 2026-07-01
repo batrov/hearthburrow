@@ -4,7 +4,7 @@ import { getRecipe } from '../systems/DataRegistry';
 import { audio } from '../systems/AudioSystem';
 import { BasePanel } from './BasePanel';
 import { VW, VH, CX } from '../systems/Viewport';
-import { textStyle } from '../systems/Font';
+import { textStyle, fs, createText } from '../systems/Font';
 
 const RECIPE_INFO: Record<string, { desc: string; unlock?: string }> = {
   pickaxe_2: { desc: 'Bronze Pickaxe — 5 runs, mines bronze ore' },
@@ -86,8 +86,8 @@ export class CraftingPanel extends BasePanel {
 
     this.createOverlay();
 
-    this.titleText = scene.add.text(CX, 36, 'Crafting Station', {
-      fontSize: '18px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
+    this.titleText = createText(scene, CX, 36, 'Crafting Station', {
+      fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
@@ -97,14 +97,14 @@ export class CraftingPanel extends BasePanel {
     this.scrollbarGfx = scene.add.graphics();
     this.container.add(this.scrollbarGfx);
 
-    this.descriptionText = scene.add.text(CX, VH - 70, '', {
-      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#b8a898',
+    this.descriptionText = createText(scene, CX, VH - 70, '', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b8a898',
       align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.descriptionText);
 
-    this.hintText = scene.add.text(CX, VH - 44, '[W/S] Select  [SPACE] Craft  [ESC] Close', {
-      fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#5a4a6a',
+    this.hintText = createText(scene, CX, VH - 44, '[W/S] Select  [SPACE] Craft  [ESC] Close', {
+      fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
@@ -236,16 +236,16 @@ export class CraftingPanel extends BasePanel {
         card.add(icon);
       }
     } else {
-      const placeholder = this.scene.add.text(28, 26, '?', {
-        fontSize: '20px', fontFamily: 'Inter', resolution: 4, color: '#5a6a7a',
+      const placeholder = createText(this.scene, 28, 26, '?', {
+        fontSize: fs(20), fontFamily: 'Inter', resolution: 4, color: '#5a6a7a',
       }).setOrigin(0.5);
       card.add(placeholder);
     }
 
     const nameColor = CARD_NAME_COLOR[state];
     const nameStr = discovered ? r.name : '???';
-    const nameText = this.scene.add.text(56, 14, nameStr, {
-      fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: nameColor, fontStyle: 'bold',
+    const nameText = createText(this.scene, 56, 14, nameStr, {
+      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: nameColor, fontStyle: 'bold',
     });
     card.add(nameText);
 
@@ -256,8 +256,8 @@ export class CraftingPanel extends BasePanel {
     else if (!discovered) { indicator = '?'; indColor = '#6a7a9a'; }
 
     if (indicator) {
-      const ind = this.scene.add.text(CARD_W - 12, 14, indicator, {
-        fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: indColor, fontStyle: 'bold',
+      const ind = createText(this.scene, CARD_W - 12, 14, indicator, {
+        fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: indColor, fontStyle: 'bold',
       }).setOrigin(1, 0);
       card.add(ind);
     }
@@ -269,17 +269,17 @@ export class CraftingPanel extends BasePanel {
         const have = gameState.inventory.count(matId);
         const sufficient = have >= need;
         const matColor = sufficient ? '#b8b8b8' : '#cc6644';
-        const matText = this.scene.add.text(56, 42 + mi * 14,
+        const matText = createText(this.scene, 56, 42 + mi * 14,
           `\u2022 ${itemDisplayName(matId).padEnd(17)} ${String(have).padStart(2)}/${need}${sufficient ? ' \u2714' : ''}`, {
-          fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: matColor,
+          fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: matColor,
         });
         card.add(matText);
       }
     } else {
       const info = RECIPE_INFO[r.id];
       if (info?.unlock) {
-        const hint = this.scene.add.text(56, 42, `(Unlock: ${info.unlock})`, {
-          fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#5a6a7a',
+        const hint = createText(this.scene, 56, 42, `(Unlock: ${info.unlock})`, {
+          fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#5a6a7a',
         });
         card.add(hint);
       }
@@ -422,10 +422,10 @@ export class CraftingPanel extends BasePanel {
   }
 
   private showCraftSuccess(itemId: string): void {
-    const popup = this.scene.add.text(
+    const popup = createText(this.scene, 
       CX, VH / 2,
       `Crafted: ${itemDisplayName(itemId)}`,
-      { fontSize: '16px', fontFamily: 'Inter', resolution: 4, color: '#44cc66', fontStyle: 'bold' }
+      { fontSize: fs(16), fontFamily: 'Inter', resolution: 4, color: '#44cc66', fontStyle: 'bold' }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(250);
 
     this.scene.tweens.add({
@@ -440,10 +440,10 @@ export class CraftingPanel extends BasePanel {
   }
 
   private showNoCraft(): void {
-    const popup = this.scene.add.text(
+    const popup = createText(this.scene, 
       CX, VH / 2,
       'No craftable recipe \u2014 need more materials!',
-      { fontSize: '14px', fontFamily: 'Inter', resolution: 4, color: '#cc6644' }
+      { fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#cc6644' }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(250);
 
     this.scene.tweens.add({
@@ -457,10 +457,10 @@ export class CraftingPanel extends BasePanel {
   }
 
   private showHowToUnlock(hint: string): void {
-    const popup = this.scene.add.text(
+    const popup = createText(this.scene, 
       CX, VH / 2,
       `??? \u2014 ${hint}`,
-      { fontSize: '14px', fontFamily: 'Inter', resolution: 4, color: '#aa8844' }
+      { fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#aa8844' }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(250);
 
     this.scene.tweens.add({

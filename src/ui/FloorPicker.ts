@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { VW, VH, CX } from '../systems/Viewport';
-import { textStyle } from '../systems/Font';
+import { textStyle, fs, createText } from '../systems/Font';
 
 export class FloorPicker {
   private scene: Phaser.Scene;
@@ -40,8 +40,8 @@ export class FloorPicker {
     this.popupBg = scene.add.graphics();
     this.container.add(this.popupBg);
 
-    this.titleText = scene.add.text(CX, 170, 'Select Start Floor', {
-      fontSize: '18px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
+    this.titleText = createText(scene, CX, 170, 'Select Start Floor', {
+      fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
@@ -49,8 +49,8 @@ export class FloorPicker {
       const bg = scene.add.graphics();
       this.container.add(bg);
 
-      const text = scene.add.text(0, 0, '', {
-        fontSize: '14px', fontFamily: 'Inter', resolution: 4, color: '#c8b898',
+      const text = createText(scene, 0, 0, '', {
+        fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#c8b898',
       });
       text.setVisible(false);
       this.container.add(text);
@@ -63,8 +63,8 @@ export class FloorPicker {
       this.rows.push({ bg, text, zone });
     }
 
-    this.footerText = scene.add.text(CX, 520, '[W/S] select  [SPACE] confirm  [ESC] cancel', {
-      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#8a7a9a',
+    this.footerText = createText(scene, CX, 520, '[W/S] select  [SPACE] confirm  [ESC] cancel', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#8a7a9a',
     }).setOrigin(0.5);
     this.container.add(this.footerText);
   }

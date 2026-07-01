@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { gameState, NPC_PERSONALITIES } from '../systems/GameState';
 import { BasePanel } from './BasePanel';
 import { VW, VH, CX } from '../systems/Viewport';
-import { textStyle } from '../systems/Font';
+import { textStyle, fs, createText } from '../systems/Font';
 
 export class NPCPhotobookPanel extends BasePanel {
   private titleText: Phaser.GameObjects.Text;
@@ -18,13 +18,13 @@ export class NPCPhotobookPanel extends BasePanel {
     this.createOverlay();
     this.overlay.setData('isUI', true);
 
-    this.titleText = scene.add.text(CX, 28, 'NPC Photobook', {
-      fontSize: '18px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
+    this.titleText = createText(scene, CX, 28, 'NPC Photobook', {
+      fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
-    this.contentText = scene.add.text(CX, 68, '', {
-      fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#c8b898',
+    this.contentText = createText(scene, CX, 68, '', {
+      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#c8b898',
       align: 'center', lineSpacing: 6,
     }).setOrigin(0.5, 0);
     this.contentText.setInteractive();
@@ -40,13 +40,13 @@ export class NPCPhotobookPanel extends BasePanel {
     });
     this.container.add(this.contentText);
 
-    this.hintText = scene.add.text(CX, VH - 38, '', {
-      fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#5a4a6a',
+    this.hintText = createText(scene, CX, VH - 38, '', {
+      fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
-    const upBtn = scene.add.text(CX, 62, '▲', {
-      fontSize: '18px', fontFamily: 'Inter', resolution: 4, color: '#886644',
+    const upBtn = createText(scene, CX, 62, '▲', {
+      fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#886644',
     }).setOrigin(0.5).setDepth(210).setScrollFactor(0);
     this.container.add(upBtn);
     const upHit = scene.add.rectangle(CX, 62, 60, 44, 0xffffff, 0)
@@ -54,8 +54,8 @@ export class NPCPhotobookPanel extends BasePanel {
     upHit.on('pointerdown', () => { this.handleInput('W'); this.dirty = true; });
     this.container.add(upHit);
 
-    const downBtn = scene.add.text(CX, VH - 56, '▼', {
-      fontSize: '18px', fontFamily: 'Inter', resolution: 4, color: '#886644',
+    const downBtn = createText(scene, CX, VH - 56, '▼', {
+      fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#886644',
     }).setOrigin(0.5).setDepth(210).setScrollFactor(0);
     this.container.add(downBtn);
     const downHit = scene.add.rectangle(CX, VH - 56, 60, 44, 0xffffff, 0)

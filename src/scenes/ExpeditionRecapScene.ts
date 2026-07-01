@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { gameState, itemDisplayName, itemIconKey, itemIdFromDisplayName } from '../systems/GameState';
 import { VW, VH, CX, CY } from '../systems/Viewport';
-import { textStyle } from '../systems/Font';
+import { textStyle, fs, createText } from '../systems/Font';
 
 export class ExpeditionRecapScene extends Phaser.Scene {
   private scrollY: number = 0;
@@ -26,16 +26,16 @@ export class ExpeditionRecapScene extends Phaser.Scene {
 
     const isEmergency = result.extractType === 'emergency';
 
-    this.add.text(CX, 28, 'Expedition Results', {
-      fontSize: '20px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
+    createText(this, CX, 28, 'Expedition Results', {
+      fontSize: fs(20), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    this.add.text(CX, 50, isEmergency ? 'Emergency Extraction' : 'Safe Return', {
-      fontSize: '13px', fontFamily: 'Inter', resolution: 4, color: isEmergency ? '#cc4444' : '#44cc66',
+    createText(this, CX, 50, isEmergency ? 'Emergency Extraction' : 'Safe Return', {
+      fontSize: fs(13), fontFamily: 'Inter', resolution: 4, color: isEmergency ? '#cc4444' : '#44cc66',
     }).setOrigin(0.5);
 
-    this.add.text(CX, 68, `Depth Reached: ${result.depth}`, {
-      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#7a8a9a',
+    createText(this, CX, 68, `Depth Reached: ${result.depth}`, {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#7a8a9a',
     }).setOrigin(0.5);
 
     const panelX = 12, panelW = VW - 24, panelY = 80, panelH = VH - 180;
@@ -61,8 +61,8 @@ export class ExpeditionRecapScene extends Phaser.Scene {
     const netItems = this.computeNetItems(result.itemsObtained, result.itemsLost);
 
     if (netItems.length > 0) {
-      this.add.text(leftX, contentY, 'Items Collected', {
-        fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#88dd88', fontStyle: 'bold',
+      createText(this, leftX, contentY, 'Items Collected', {
+        fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#88dd88', fontStyle: 'bold',
       });
       contentY += 20;
 
@@ -71,8 +71,8 @@ export class ExpeditionRecapScene extends Phaser.Scene {
     }
 
     if (result.itemsLost.length > 0) {
-      this.add.text(leftX, contentY, 'Items Lost', {
-        fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#dd6666', fontStyle: 'bold',
+      createText(this, leftX, contentY, 'Items Lost', {
+        fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#dd6666', fontStyle: 'bold',
       });
       contentY += 20;
 
@@ -82,8 +82,8 @@ export class ExpeditionRecapScene extends Phaser.Scene {
 
     const rescued = result.villagersRescued;
     if (rescued.length > 0) {
-      this.add.text(leftX, contentY, 'Rescued', {
-        fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#44cc66', fontStyle: 'bold',
+      createText(this, leftX, contentY, 'Rescued', {
+        fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#44cc66', fontStyle: 'bold',
       });
       contentY += 18;
 
@@ -96,8 +96,8 @@ export class ExpeditionRecapScene extends Phaser.Scene {
         if (this.textures.exists(iconKey)) {
           this.add.image(rx, contentY + 6, iconKey).setScale(0.45);
         }
-        this.add.text(rx + 10, contentY, v.name, {
-          fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#c8b898',
+        createText(this, rx + 10, contentY, v.name, {
+          fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#c8b898',
         });
         rx += entryW;
       }
@@ -106,8 +106,8 @@ export class ExpeditionRecapScene extends Phaser.Scene {
 
     const recipes = result.recipesDiscovered;
     if (recipes.length > 0) {
-      this.add.text(leftX, contentY, 'Discovered', {
-        fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#88ddff', fontStyle: 'bold',
+      createText(this, leftX, contentY, 'Discovered', {
+        fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#88ddff', fontStyle: 'bold',
       });
       contentY += 18;
 
@@ -120,11 +120,18 @@ export class ExpeditionRecapScene extends Phaser.Scene {
         if (itemId && this.textures.exists(itemIconKey(itemId))) {
           this.add.image(rx, contentY + 6, itemIconKey(itemId)).setScale(0.45);
         }
-        this.add.text(rx + (itemId ? 10 : 0), contentY, name, {
-          fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#b8b8c8',
+        createText(this, rx + (itemId ? 10 : 0), contentY, name, {
+          fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b8b8c8',
         });
         rx += entryW;
       }
+      contentY += 20;
+    }
+
+    if (result.farmYield > 0) {
+      createText(this, leftX, contentY, `Farm grew ${result.farmYield} carrots!`, {
+        fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#88dd88',
+      });
       contentY += 20;
     }
 
@@ -134,13 +141,13 @@ export class ExpeditionRecapScene extends Phaser.Scene {
 
     const hintY = panelY + panelH + 10;
     if (gameState.currentRunSeed) {
-      this.add.text(CX, hintY - 10, `Seed: ${gameState.currentRunSeed}`, {
-        fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#5a5a6a',
+      createText(this, CX, hintY - 10, `Seed: ${gameState.currentRunSeed}`, {
+        fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#5a5a6a',
       }).setOrigin(0.5);
     }
 
-    this.add.text(CX, hintY + 4, '[SPACE] Return   [W/S] Scroll', {
-      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
+    createText(this, CX, hintY + 4, '[SPACE] Return   [W/S] Scroll', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
     }).setOrigin(0.5);
 
     const btnX = CX - 80, btnY = hintY + 20, btnW = 160, btnH = 28;
@@ -150,8 +157,8 @@ export class ExpeditionRecapScene extends Phaser.Scene {
     btnBg.lineStyle(1, 0x5a4a7a, 0.6);
     btnBg.strokeRoundedRect(btnX, btnY, btnW, btnH, 6);
 
-    const btnText = this.add.text(btnX + btnW / 2, btnY + btnH / 2, 'Return to Homeland', {
-      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#b8a8d8',
+    const btnText = createText(this, btnX + btnW / 2, btnY + btnH / 2, 'Return to Homeland', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b8a8d8',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     btnText.on('pointerover', () => btnText.setColor('#e8d8ff'));
     btnText.on('pointerout', () => btnText.setColor('#b8a8d8'));
@@ -178,12 +185,6 @@ export class ExpeditionRecapScene extends Phaser.Scene {
   }
 
   private returnToHomeland(): void {
-    const result = gameState.lastRunResult;
-    if (result && gameState.restoredBuildings.has('farm') && gameState.farmPlanted > 0) {
-      const yieldPer = Math.max(1, Math.floor(gameState.farmPlanted / 2));
-      gameState.farmHarvest += yieldPer;
-      gameState.save();
-    }
     this.cameras.main.fadeOut(300, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.start('HomelandScene');
@@ -235,12 +236,12 @@ export class ExpeditionRecapScene extends Phaser.Scene {
       const iconKey = itemIconKey(item.id);
       this.add.image(x, y + 6, iconKey).setScale(0.6);
 
-      this.add.text(x + 16, y, itemDisplayName(item.id), {
-        fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: nameColor,
+      createText(this, x + 16, y, itemDisplayName(item.id), {
+        fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: nameColor,
       });
 
-      const qtyText = this.add.text(x + 16 + labelW, y, 'x0', {
-        fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: qtyColor,
+      const qtyText = createText(this, x + 16 + labelW, y, 'x0', {
+        fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: qtyColor,
       });
 
       const data = { count: 0 };

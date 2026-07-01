@@ -4,7 +4,7 @@ import { gameState, itemDisplayName, itemIconKey } from '../systems/GameState';
 import { canRestore } from '../systems/BuildingSystem';
 import { getBuilding } from '../systems/DataRegistry';
 import { CX, CY } from '../systems/Viewport';
-import { textStyle } from '../systems/Font';
+import { textStyle, fs, createText } from '../systems/Font';
 
 export class RestorePanel extends BasePanel {
   private contentContainer: Phaser.GameObjects.Container;
@@ -55,20 +55,20 @@ export class RestorePanel extends BasePanel {
     const textTop = CY - totalTextH / 2;
 
     this.contentContainer.add(
-      this.scene.add.text(CX, textTop + 0 * lineH + lineH / 2, building.name, {
-        fontSize: '14px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
+      createText(this.scene, CX, textTop + 0 * lineH + lineH / 2, building.name, {
+        fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
       }).setOrigin(0.5)
     );
 
     this.contentContainer.add(
-      this.scene.add.text(CX, textTop + 1 * lineH + lineH / 2, building.description, {
-        fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#a08559',
+      createText(this.scene, CX, textTop + 1 * lineH + lineH / 2, building.description, {
+        fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#a08559',
       }).setOrigin(0.5)
     );
 
     this.contentContainer.add(
-      this.scene.add.text(CX, textTop + 2 * lineH + lineH / 2, 'Required Materials:', {
-        fontSize: '14px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
+      createText(this.scene, CX, textTop + 2 * lineH + lineH / 2, 'Required Materials:', {
+        fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
       }).setOrigin(0.5)
     );
 
@@ -89,8 +89,8 @@ export class RestorePanel extends BasePanel {
       }
 
       this.contentContainer.add(
-        this.scene.add.text(textX, y, `${itemDisplayName(id)}: ${have}/${qty}`, {
-          fontSize: '14px', fontFamily: 'Inter', resolution: 4, color,
+        createText(this.scene, textX, y, `${itemDisplayName(id)}: ${have}/${qty}`, {
+          fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color,
         }).setOrigin(0, 0.5)
       );
     }
@@ -105,8 +105,8 @@ export class RestorePanel extends BasePanel {
       restoreBg.strokeRoundedRect(CX - 90, btnY - 12, 80, 24, 4);
       this.contentContainer.add(restoreBg);
 
-      const restoreText = this.scene.add.text(CX - 50, btnY, 'RESTORE', {
-        fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#88ff88',
+      const restoreText = createText(this.scene, CX - 50, btnY, 'RESTORE', {
+        fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#88ff88',
       }).setOrigin(0.5).setInteractive({ useHandCursor: true });
       this.contentContainer.add(restoreText);
 
@@ -117,8 +117,8 @@ export class RestorePanel extends BasePanel {
       cancelBg.strokeRoundedRect(CX + 10, btnY - 12, 80, 24, 4);
       this.contentContainer.add(cancelBg);
 
-      const cancelText = this.scene.add.text(CX + 50, btnY, 'CANCEL', {
-        fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#b8a8d8',
+      const cancelText = createText(this.scene, CX + 50, btnY, 'CANCEL', {
+        fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b8a8d8',
       }).setOrigin(0.5).setInteractive({ useHandCursor: true });
       this.contentContainer.add(cancelText);
 
@@ -138,8 +138,8 @@ export class RestorePanel extends BasePanel {
       cancelBg.strokeRoundedRect(CX - 50, btnY - 12, 100, 24, 4);
       this.contentContainer.add(cancelBg);
 
-      const cancelText = this.scene.add.text(CX, btnY, 'CANCEL', {
-        fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#b8a8d8',
+      const cancelText = createText(this.scene, CX, btnY, 'CANCEL', {
+        fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b8a8d8',
       }).setOrigin(0.5).setInteractive({ useHandCursor: true });
       this.contentContainer.add(cancelText);
 

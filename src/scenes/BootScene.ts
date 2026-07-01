@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { gameState, GameState } from '../systems/GameState';
 import { audio } from '../systems/AudioSystem';
 import { generateAll } from '../systems/TextureGenerator';
-import { textStyle } from '../systems/Font';
+import { textStyle, fs, createText } from '../systems/Font';
 
 export class BootScene extends Phaser.Scene {
   private loadingBar!: Phaser.GameObjects.Graphics;
@@ -141,8 +141,8 @@ export class BootScene extends Phaser.Scene {
 
     this.loadingBar = this.add.graphics();
 
-    this.progressText = this.add.text(cx, barY + barHeight + 12, 'Loading...', {
-      fontSize: '14px',
+    this.progressText = createText(this, cx, barY + barHeight + 12, 'Loading...', {
+      fontSize: fs(14),
       fontFamily: 'Inter', resolution: 4,
       color: '#6a5a4a',
     }).setOrigin(0.5);
@@ -182,15 +182,6 @@ export class BootScene extends Phaser.Scene {
     // Generate procedural fallbacks for any textures that didn't load (missing PNGs)
     generateAll(this);
 
-    if (!GameState.storageAvailable) {
-      this.add.text(cx, cy + 130, '⚠ Storage unavailable — progress will not be saved.\nUse a non-private browser to keep your progress.', {
-        fontSize: '13px',
-        fontFamily: 'Inter', resolution: 4,
-        color: '#ff6644',
-        align: 'center',
-      }).setOrigin(0.5);
-    }
-
     const proceed = () => {
       this.tweens.killTweensOf(this.progressText);
       this.cameras.main.fadeOut(400, 0, 0, 0);
@@ -199,9 +190,38 @@ export class BootScene extends Phaser.Scene {
       });
     };
 
-    this.input.once('pointerdown', proceed);
-    this.input.keyboard?.on('keydown-SPACE', proceed);
-    this.input.keyboard?.on('keydown-ENTER', proceed);
+    if (!GameState.storageAvailable) {
+      const overlay = this.add.rectangle(cx, cy, 960, 640, 0x000000, 0.85)
+        .setScrollFactor(0).setDepth(1000).setInteractive();
+      const text = createText(this, cx, cy,
+        '⚠ Storage Unavailable\n\n' +
+        'Safari blocks local storage for embedded games on iOS.\n' +
+        'Progress will NOT be saved in this tab.\n\n' +
+        'To enable saving:\n' +
+        '• Tap the "Pop Out" button on Itch.io\n' +
+        '  to open in a new window, or\n' +
+        '• Open in a non-Safari browser\n\n' +
+        'Tap anywhere to dismiss and continue anyway.',
+        {
+          fontSize: fs(14),
+          fontFamily: 'Inter', resolution: 4,
+          color: '#ffaa44',
+          align: 'center',
+          lineSpacing: 4,
+        }
+      ).setOrigin(0.5).setDepth(1001);
+      overlay.on('pointerdown', () => {
+        overlay.destroy();
+        text.destroy();
+        this.input.once('pointerdown', proceed);
+        this.input.keyboard?.on('keydown-SPACE', proceed);
+        this.input.keyboard?.on('keydown-ENTER', proceed);
+      });
+    } else {
+      this.input.once('pointerdown', proceed);
+      this.input.keyboard?.on('keydown-SPACE', proceed);
+      this.input.keyboard?.on('keydown-ENTER', proceed);
+    }
 
     this.time.delayedCall(3000, () => {
       if (this.scene.isActive('BootScene')) {

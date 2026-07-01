@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { itemIconKey, itemDisplayName } from '../systems/GameState';
 import { VW, VH, CX } from '../systems/Viewport';
-import { textStyle } from '../systems/Font';
+import { textStyle, fs, createText } from '../systems/Font';
 
 export class ConsumablePicker {
   private scene: Phaser.Scene;
@@ -54,38 +54,38 @@ export class ConsumablePicker {
     this.icon = scene.add.image(CX, 220, 'item_stamina_potion').setScale(2);
     this.container.add(this.icon);
 
-    this.nameText = scene.add.text(CX, 268, '', {
-      fontSize: '16px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
+    this.nameText = createText(scene, CX, 268, '', {
+      fontSize: fs(16), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.nameText);
 
-    this.descText = scene.add.text(CX, 296, '', {
-      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#b8a898',
+    this.descText = createText(scene, CX, 296, '', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b8a898',
     }).setOrigin(0.5);
     this.container.add(this.descText);
 
-    this.stashText = scene.add.text(CX, 326, '', {
-      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#888888',
+    this.stashText = createText(scene, CX, 326, '', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#888888',
     }).setOrigin(0.5);
     this.container.add(this.stashText);
 
-    this.qtyText = scene.add.text(CX, 370, '', {
-      fontSize: '24px', fontFamily: 'Inter', resolution: 4, color: '#ffddaa',
+    this.qtyText = createText(scene, CX, 370, '', {
+      fontSize: fs(24), fontFamily: 'Inter', resolution: 4, color: '#ffddaa',
     }).setOrigin(0.5);
     this.container.add(this.qtyText);
 
-    this.minusBtn = scene.add.text(CX - 60, 370, '[−]', {
-      fontSize: '22px', fontFamily: 'Inter', resolution: 4, color: '#cc8888',
+    this.minusBtn = createText(scene, CX - 60, 370, '[−]', {
+      fontSize: fs(22), fontFamily: 'Inter', resolution: 4, color: '#cc8888',
     }).setOrigin(0.5);
     this.container.add(this.minusBtn);
 
-    this.plusBtn = scene.add.text(CX + 60, 370, '[+]', {
-      fontSize: '22px', fontFamily: 'Inter', resolution: 4, color: '#88cc88',
+    this.plusBtn = createText(scene, CX + 60, 370, '[+]', {
+      fontSize: fs(22), fontFamily: 'Inter', resolution: 4, color: '#88cc88',
     }).setOrigin(0.5);
     this.container.add(this.plusBtn);
 
-    this.footerText = scene.add.text(CX, 440, '[← →] adjust  [SPACE] confirm  [ESC] cancel', {
-      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#8a7a9a',
+    this.footerText = createText(scene, CX, 440, '[← →] adjust  [SPACE] confirm  [ESC] cancel', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#8a7a9a',
     }).setOrigin(0.5);
     this.container.add(this.footerText);
   }

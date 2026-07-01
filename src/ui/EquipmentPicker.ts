@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { itemIconKey } from '../systems/GameState';
 import { VW, VH, CX, CY } from '../systems/Viewport';
-import { textStyle } from '../systems/Font';
+import { textStyle, fs, createText } from '../systems/Font';
 
 export interface PickerOption {
   id: string;
@@ -57,8 +57,8 @@ export class EquipmentPicker {
     this.popupBg = scene.add.graphics();
     this.container.add(this.popupBg);
 
-    this.titleText = scene.add.text(CX, 170, '', {
-      fontSize: '20px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
+    this.titleText = createText(scene, CX, 170, '', {
+      fontSize: fs(20), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
@@ -70,14 +70,14 @@ export class EquipmentPicker {
       icon.setVisible(false);
       this.container.add(icon);
 
-      const nameText = scene.add.text(0, 0, '', {
-        fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#c8b898',
+      const nameText = createText(scene, 0, 0, '', {
+        fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#c8b898',
       });
       nameText.setVisible(false);
       this.container.add(nameText);
 
-      const descText = scene.add.text(0, 0, '', {
-        fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#888888',
+      const descText = createText(scene, 0, 0, '', {
+        fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#888888',
       });
       descText.setVisible(false);
       this.container.add(descText);
@@ -90,8 +90,8 @@ export class EquipmentPicker {
       this.rows.push({ bg, icon, nameText, descText, zone });
     }
 
-    this.footerText = scene.add.text(CX, 520, '[W/S] select  [SPACE] equip  [ESC] cancel', {
-      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#8a7a9a',
+    this.footerText = createText(scene, CX, 520, '[W/S] select  [SPACE] equip  [ESC] cancel', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#8a7a9a',
     }).setOrigin(0.5);
     this.container.add(this.footerText);
   }

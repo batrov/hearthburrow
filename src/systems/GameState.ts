@@ -251,6 +251,8 @@ export interface RunResult {
   depth: number;
   villagersRescued: { variant: number; name: string }[];
   recipesDiscovered: string[];
+  stepsTaken: number;
+  farmYield: number;
 }
 
 const ITEM_NAMES: Record<string, string> = {
@@ -324,7 +326,8 @@ export class GameState {
       localStorage.setItem(k, '1');
       localStorage.removeItem(k);
       return true;
-    } catch {
+    } catch (e) {
+      console.warn('[GameState] localStorage unavailable:', e);
       return false;
     }
   })();
@@ -700,8 +703,8 @@ export class GameState {
     };
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-    } catch {
-      // storage full or unavailable
+    } catch (e) {
+      console.warn('[GameState] Save failed:', e);
     }
   }
 
@@ -774,8 +777,8 @@ export class GameState {
           this.crafting.discover(id);
         }
       }
-    } catch {
-      // corrupt save, start fresh
+    } catch (e) {
+      console.warn('[GameState] Load failed — corrupt save, starting fresh:', e);
     }
   }
 }

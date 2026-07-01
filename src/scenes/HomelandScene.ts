@@ -18,7 +18,7 @@ import {
   HALF_W, HALF_H, worldWidth, worldHeight,
 } from '../systems/IsoUtils';
 import { VW, VH, CX, CY } from '../systems/Viewport';
-import { textStyle } from '../systems/Font';
+import { textStyle, fs, createText } from '../systems/Font';
 
 interface HubBuildingDef {
   id: string;
@@ -281,8 +281,8 @@ export class HomelandScene extends Phaser.Scene {
     this.cameras.main.ignore(this.researchPanel.container);
     this.cameras.main.ignore(this.farmPanel.container);
 
-    this.carrotCountText = this.add.text(VW - 12, 12, '', {
-      fontSize: '14px', fontFamily: 'Inter', resolution: 4, color: '#ff8833', fontStyle: 'bold',
+    this.carrotCountText = createText(this, VW - 12, 12, '', {
+      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#ff8833', fontStyle: 'bold',
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(55);
     this.cameras.main.ignore(this.carrotCountText);
     this.updateCarrotCounter();
@@ -350,8 +350,8 @@ export class HomelandScene extends Phaser.Scene {
       this.hudCam.ignore(img);
       this.buildingImages.set(b.buildingId || b.id, img);
 
-      const label = this.add.text(c.x, c.y - 200, b.label, {
-        fontSize: '16px', fontFamily: 'Inter', resolution: 4, color: ul ? '#e8d5b7' : '#6a5a4a',
+      const label = createText(this, c.x, c.y - 200, b.label, {
+        fontSize: fs(16), fontFamily: 'Inter', resolution: 4, color: ul ? '#e8d5b7' : '#6a5a4a',
       }).setOrigin(0.5).setAlpha(alpha).setDepth(7);
       this.hudCam.ignore(label);
       this.buildingLabels.push(label);
@@ -389,13 +389,13 @@ export class HomelandScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
     });
 
-    const gateLabel = this.add.text(c.x, c.y - 60, 'FORGOTTEN DEPTHS', {
-      fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#7a6a9a',
+    const gateLabel = createText(this, c.x, c.y - 60, 'FORGOTTEN DEPTHS', {
+      fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#7a6a9a',
     }).setOrigin(0.5).setDepth(7);
     this.hudCam.ignore(gateLabel);
 
-    const descendText = this.add.text(c.x, c.y + 24, '[SPACE] Descend', {
-      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#8a7aba',
+    const descendText = createText(this, c.x, c.y + 24, '[SPACE] Descend', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#8a7aba',
     }).setOrigin(0.5).setDepth(7);
     this.hudCam.ignore(descendText);
     descendText.setInteractive({ useHandCursor: true }).setData('isUI', true);
@@ -441,8 +441,8 @@ export class HomelandScene extends Phaser.Scene {
       this.player.setOrigin(cfg.originX ?? 0.5, cfg.originY ?? 0.5);
     }
     if (cfg.scale !== undefined) this.player.setScale(cfg.scale);
-    this.playerLabel = this.add.text(p.x, p.y - 30, 'You', {
-      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#aaddff',
+    this.playerLabel = createText(this, p.x, p.y - 30, 'You', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#aaddff',
     }).setOrigin(0.5);
     this.hudCam.ignore(this.playerLabel);
     this.updatePlayerSprite();
@@ -468,8 +468,8 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private createInteractionUI(): void {
-    this.promptText = this.add.text(0, 0, '', {
-      fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#ffdd88',
+    this.promptText = createText(this, 0, 0, '', {
+      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#ffdd88',
     }).setOrigin(0.5).setAlpha(0).setDepth(55);
     this.hudCam.ignore(this.promptText);
   }
@@ -478,8 +478,8 @@ export class HomelandScene extends Phaser.Scene {
     const x = CX, y = VH - 90, size = 64;
     this.actionBtnBg = this.add.graphics().setScrollFactor(0).setDepth(50);
     this.cameras.main.ignore(this.actionBtnBg);
-    this.actionBtnText = this.add.text(x, y, '', {
-      fontSize: '24px', fontFamily: 'Inter', resolution: 4,
+    this.actionBtnText = createText(this, x, y, '', {
+      fontSize: fs(24), fontFamily: 'Inter', resolution: 4,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(51);
     this.cameras.main.ignore(this.actionBtnText);
 
@@ -1010,8 +1010,8 @@ export class HomelandScene extends Phaser.Scene {
     bg.strokeRoundedRect(-160, -60, 320, 120, 10);
     container.add(bg);
 
-    const title = this.add.text(0, -40, `Constructing ${building?.name ?? ''}...`, {
-      fontSize: '16px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
+    const title = createText(this, 0, -40, `Constructing ${building?.name ?? ''}...`, {
+      fontSize: fs(16), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
     }).setOrigin(0.5);
     container.add(title);
 
@@ -1025,8 +1025,8 @@ export class HomelandScene extends Phaser.Scene {
     const barFill = this.add.graphics();
     container.add(barFill);
 
-    const statusText = this.add.text(0, 20, 'Building... 0%', {
-      fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#8a9aaa',
+    const statusText = createText(this, 0, 20, 'Building... 0%', {
+      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#8a9aaa',
     }).setOrigin(0.5);
     container.add(statusText);
 
@@ -1066,8 +1066,8 @@ export class HomelandScene extends Phaser.Scene {
           audio.playBuildComplete();
 
           const name = building?.name ?? buildingId.replace(/_/g, ' ');
-          const popup = this.add.text(CX, CY, `${name} Restored!`, {
-            fontSize: '18px', fontFamily: 'Inter', resolution: 4, color: '#44cc66', fontStyle: 'bold', align: 'center',
+          const popup = createText(this, CX, CY, `${name} Restored!`, {
+            fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#44cc66', fontStyle: 'bold', align: 'center',
           }).setOrigin(0.5).setScrollFactor(0).setDepth(250);
           this.cameras.main.ignore(popup);
 

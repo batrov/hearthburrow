@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { audio } from '../systems/AudioSystem';
 import { BasePanel } from './BasePanel';
 import { VW, VH, CX } from '../systems/Viewport';
-import { textStyle } from '../systems/Font';
+import { textStyle, fs, createText } from '../systems/Font';
 
 export interface EventChoice {
   label: string;
@@ -31,25 +31,25 @@ export class EventPanel extends BasePanel {
     this.overlay!.setData('isUI', true);
     this.addTouchZones();
 
-    this.titleText = scene.add.text(CX, 120, '', {
-      fontSize: '18px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
+    this.titleText = createText(scene, CX, 120, '', {
+      fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
-    this.descText = scene.add.text(CX, 160, '', {
-      fontSize: '13px', fontFamily: 'Inter', resolution: 4, color: '#b8a898',
+    this.descText = createText(scene, CX, 160, '', {
+      fontSize: fs(13), fontFamily: 'Inter', resolution: 4, color: '#b8a898',
       align: 'center', wordWrap: { width: 320 }, lineSpacing: 4,
     }).setOrigin(0.5, 0);
     this.container.add(this.descText);
 
-    this.choicesText = scene.add.text(CX, 260, '', {
-      fontSize: '14px', fontFamily: 'Inter', resolution: 4, color: '#c8b898',
+    this.choicesText = createText(scene, CX, 260, '', {
+      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#c8b898',
       align: 'left', lineSpacing: 10,
     }).setOrigin(0.5, 0);
     this.container.add(this.choicesText);
 
-    this.hintText = scene.add.text(CX, VH - 60, '', {
-      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#5a4a6a',
+    this.hintText = createText(scene, CX, VH - 60, '', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 

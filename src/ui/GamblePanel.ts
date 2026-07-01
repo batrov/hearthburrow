@@ -3,7 +3,7 @@ import { BasePanel } from './BasePanel';
 import { audio } from '../systems/AudioSystem';
 import { itemIconKey } from '../systems/GameState';
 import { VW, VH, CX, CY } from '../systems/Viewport';
-import { textStyle } from '../systems/Font';
+import { textStyle, fs, createText } from '../systems/Font';
 
 export interface RouletteSegment {
   label: string;
@@ -64,26 +64,26 @@ export class GamblePanel extends BasePanel {
     this.pointerGfx = scene.add.graphics();
     this.container.add(this.pointerGfx);
 
-    this.titleText = scene.add.text(CX, 180, '', {
-      fontSize: '16px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
+    this.titleText = createText(scene, CX, 180, '', {
+      fontSize: fs(16), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
-    this.subtitleText = scene.add.text(CX, 206, '', {
-      fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
+    this.subtitleText = createText(scene, CX, 206, '', {
+      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
     }).setOrigin(0.5);
     this.container.add(this.subtitleText);
 
-    this.hintText = scene.add.text(CX, CY + 20, '', {
-      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
+    this.hintText = createText(scene, CX, CY + 20, '', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
     this.resultBg = scene.add.graphics();
     this.container.add(this.resultBg);
 
-    this.resultText = scene.add.text(CX, this.wheelCY, '', {
-      fontSize: '18px', fontFamily: 'Inter', resolution: 4, color: '#ffffff', fontStyle: 'bold',
+    this.resultText = createText(scene, CX, this.wheelCY, '', {
+      fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#ffffff', fontStyle: 'bold',
       align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.resultText);
@@ -113,8 +113,8 @@ export class GamblePanel extends BasePanel {
     this.legendGfx = scene.add.graphics();
     this.container.add(this.legendGfx);
 
-    this.legendTitle = scene.add.text(CX, 430, 'Rewards (% chance)', {
-      fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#8a7a6a', fontStyle: 'bold',
+    this.legendTitle = createText(scene, CX, 430, 'Rewards (% chance)', {
+      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#8a7a6a', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.legendTitle);
   }
@@ -127,8 +127,8 @@ export class GamblePanel extends BasePanel {
     this.spinBtnGfx = scene.add.graphics();
     this.container.add(this.spinBtnGfx);
 
-    this.spinBtnText = scene.add.text(spinX + bw / 2, by + bh / 2, 'Spin!', {
-      fontSize: '14px', fontFamily: 'Inter', resolution: 4, color: '#ffffff', fontStyle: 'bold',
+    this.spinBtnText = createText(scene, spinX + bw / 2, by + bh / 2, 'Spin!', {
+      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#ffffff', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.spinBtnText);
 
@@ -139,8 +139,8 @@ export class GamblePanel extends BasePanel {
     this.walkBtnGfx = scene.add.graphics();
     this.container.add(this.walkBtnGfx);
 
-    this.walkBtnText = scene.add.text(walkX + bw / 2, by + bh / 2, 'Walk away', {
-      fontSize: '14px', fontFamily: 'Inter', resolution: 4, color: '#ffffff',
+    this.walkBtnText = createText(scene, walkX + bw / 2, by + bh / 2, 'Walk away', {
+      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#ffffff',
     }).setOrigin(0.5);
     this.container.add(this.walkBtnText);
 
@@ -234,11 +234,11 @@ export class GamblePanel extends BasePanel {
         const midAngle = currentAngle + segAngle / 2;
         const pctDist = this.RADIUS * 0.82;
         const pct = Math.round((seg.weight / totalWeight) * 100);
-        const txt = this.scene.add.text(
+        const txt = createText(this.scene, 
           Math.cos(midAngle) * pctDist,
           Math.sin(midAngle) * pctDist,
           `${pct}%`,
-          { fontSize: '8px', fontFamily: 'Inter', resolution: 4, color: '#ffffff' },
+          { fontSize: fs(8), fontFamily: 'Inter', resolution: 4, color: '#ffffff' },
         ).setOrigin(0.5).setDepth(1);
         this.wheelContainer.add(txt);
         this.wheelPctTexts.push(txt);
@@ -279,8 +279,8 @@ export class GamblePanel extends BasePanel {
         this.legendGfx.fillRect(x, y + 2, 10, 10);
 
         const pct = Math.round((seg.weight / totalWeight) * 100);
-        const txt = this.scene.add.text(x + 14, y, `${seg.label}  ${pct}%`, {
-          fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#b0a090',
+        const txt = createText(this.scene, x + 14, y, `${seg.label}  ${pct}%`, {
+          fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b0a090',
         });
         this.container.add(txt);
         this.legendLines.push(txt);

@@ -4,7 +4,7 @@ import { itemDisplayName, itemIconKey } from '../systems/GameState';
 import { BasePanel } from './BasePanel';
 import { isConsumable } from '../systems/DataRegistry';
 import { VW, VH, CX } from '../systems/Viewport';
-import { textStyle } from '../systems/Font';
+import { textStyle, fs, createText } from '../systems/Font';
 
 const ITEM_INFO: Record<string, { desc: string }> = {
   stone: { desc: 'Common stone. Used for building and basic crafting.' },
@@ -70,37 +70,37 @@ export class InventoryPanel extends BasePanel {
 
     this.createOverlay();
 
-    this.titleText = scene.add.text(CX, 28, title, {
-      fontSize: '18px', fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
+    this.titleText = createText(scene, CX, 28, title, {
+      fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
-    this.warnText = scene.add.text(CX, 50, '', {
-      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#ff6644', fontStyle: 'bold',
+    this.warnText = createText(scene, CX, 50, '', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#ff6644', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.warnText);
 
     this.itemRows = scene.add.container(0, 0);
     this.container.add(this.itemRows);
 
-    this.hintText = scene.add.text(CX, VH - 40, '', {
-      fontSize: '10px', fontFamily: 'Inter', resolution: 4, color: '#5a4a6a',
+    this.hintText = createText(scene, CX, VH - 40, '', {
+      fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
-    this.descriptionText = scene.add.text(CX, VH - 100, '', {
-      fontSize: '11px', fontFamily: 'Inter', resolution: 4, color: '#8a8a9a',
+    this.descriptionText = createText(scene, CX, VH - 100, '', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#8a8a9a',
       align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.descriptionText);
 
-    this.useBtn = scene.add.text(CX - 50, VH - 70, '[ USE ]', {
-      fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#b8a888',
+    this.useBtn = createText(scene, CX - 50, VH - 70, '[ USE ]', {
+      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#b8a888',
     }).setOrigin(0.5).setVisible(false);
     this.container.add(this.useBtn);
 
-    this.trashBtn = scene.add.text(CX + 50, VH - 70, '[ TRASH ]', {
-      fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#b8a888',
+    this.trashBtn = createText(scene, CX + 50, VH - 70, '[ TRASH ]', {
+      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#b8a888',
     }).setOrigin(0.5).setVisible(false);
     this.container.add(this.trashBtn);
 
@@ -205,20 +205,20 @@ export class InventoryPanel extends BasePanel {
       const icon = this.scene.add.image(CX - 28, y, itemIconKey(item.id)).setScale(0.7);
       row.add(icon);
       if (item.qty > 1) {
-        row.add(this.scene.add.text(CX - 18, y + 10, `${item.qty}`, {
-          fontSize: '9px', fontFamily: 'Inter', resolution: 4, color: '#ffffff',
+        row.add(createText(this.scene, CX - 18, y + 10, `${item.qty}`, {
+          fontSize: fs(9), fontFamily: 'Inter', resolution: 4, color: '#ffffff',
           stroke: '#000000', strokeThickness: 2,
         }).setOrigin(1, 1));
       }
-      const text = this.scene.add.text(CX - 14, y, `${cursor} ${item.name.padEnd(16)} ${item.qty}`, {
-        fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#c8b898',
+      const text = createText(this.scene, CX - 14, y, `${cursor} ${item.name.padEnd(16)} ${item.qty}`, {
+        fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#c8b898',
       }).setOrigin(0, 0.5);
       row.add([icon, text]);
       this.itemRows.add(row);
     }
     if (this.items.length === 0) {
-      const emptyText = this.scene.add.text(CX, startY, '  (empty)', {
-        fontSize: '12px', fontFamily: 'Inter', resolution: 4, color: '#6a7a9a',
+      const emptyText = createText(this.scene, CX, startY, '  (empty)', {
+        fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#6a7a9a',
       });
       this.itemRows.add(emptyText);
     }
