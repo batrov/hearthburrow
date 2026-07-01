@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { gameState, itemDisplayName, itemIconKey, itemIdFromDisplayName } from '../systems/GameState';
 import { VW, VH, CX, CY } from '../systems/Viewport';
+import { viewportManager } from '../systems/ViewportManager';
 import { textStyle, fs, createText } from '../systems/Font';
 import { SCENES } from '../constants/scenes';
 
@@ -10,6 +11,7 @@ export class ExpeditionRecapScene extends Phaser.Scene {
   private contentContainer!: Phaser.GameObjects.Container;
   private scrollbar!: Phaser.GameObjects.Graphics;
   private readonly SCROLL_SPEED = 28;
+  private _onViewportResize?: () => void;
 
   constructor() {
     super({ key: SCENES.RECAP });
@@ -22,24 +24,37 @@ export class ExpeditionRecapScene extends Phaser.Scene {
       return;
     }
 
+    // This scene's layout is entirely local variables computed fresh in
+    // create(), with no persistent object refs to reposition on resize (the
+    // scroll position is the only state, and losing it on a rare resize event
+    // is an acceptable trade-off for a one-shot results screen). Restarting
+    // re-runs create() with the current live VW()/VH(), which recomputes every
+    // layout variable and scroll bound correctly — simpler and less error-prone
+    // than threading every local variable into stored fields for reposition.
+    this._onViewportResize = () => this.scene.restart();
+    viewportManager.onResize(this._onViewportResize);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      if (this._onViewportResize) viewportManager.offResize(this._onViewportResize);
+    });
+
     this.cameras.main.fadeIn(400, 0, 0, 0);
     this.cameras.main.setBackgroundColor('#0a0a1a');
 
     const isEmergency = result.extractType === 'emergency';
 
-    createText(this, CX, 28, 'Expedition Results', {
+    createText(this, CX(), 28, 'Expedition Results', {
       fontSize: fs(20), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    createText(this, CX, 50, isEmergency ? 'Emergency Extraction' : 'Safe Return', {
+    createText(this, CX(), 50, isEmergency ? 'Emergency Extraction' : 'Safe Return', {
       fontSize: fs(13), fontFamily: 'Inter', resolution: 4, color: isEmergency ? '#cc4444' : '#44cc66',
     }).setOrigin(0.5);
 
-    createText(this, CX, 68, `Depth Reached: ${result.depth}`, {
+    createText(this, CX(), 68, `Depth Reached: ${result.depth}`, {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#7a8a9a',
     }).setOrigin(0.5);
 
-    const panelX = 12, panelW = VW - 24, panelY = 80, panelH = VH - 180;
+    const panelX = 12, panelW = VW() - 24, panelY = 80, panelH = VH() - 180;
     const lineH = 22;
     const leftX = panelX + 16;
     const viewportX = panelX + 6;
@@ -142,16 +157,16 @@ export class ExpeditionRecapScene extends Phaser.Scene {
 
     const hintY = panelY + panelH + 10;
     if (gameState.currentRunSeed) {
-      createText(this, CX, hintY - 10, `Seed: ${gameState.currentRunSeed}`, {
+      createText(this, CX(), hintY - 10, `Seed: ${gameState.currentRunSeed}`, {
         fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#5a5a6a',
       }).setOrigin(0.5);
     }
 
-    createText(this, CX, hintY + 4, '[SPACE] Return   [W/S] Scroll', {
+    createText(this, CX(), hintY + 4, '[SPACE] Return   [W/S] Scroll', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
     }).setOrigin(0.5);
 
-    const btnX = CX - 80, btnY = hintY + 20, btnW = 160, btnH = 28;
+    const btnX = CX() - 80, btnY = hintY + 20, btnW = 160, btnH = 28;
     const btnBg = this.add.graphics();
     btnBg.fillStyle(0x1a1a2e, 0.9);
     btnBg.fillRoundedRect(btnX, btnY, btnW, btnH, 6);
@@ -198,7 +213,7 @@ export class ExpeditionRecapScene extends Phaser.Scene {
 
     const barH = Math.max(16, vh * (vh / (vh + this.maxScroll)));
     const barY = vy + (this.scrollY / this.maxScroll) * (vh - barH);
-    const barX = vx + VW - 40;
+    const barX = vx + VW() - 40;
 
     this.scrollbar.fillStyle(0x5a5a7a, 0.5);
     this.scrollbar.fillRoundedRect(barX, barY, 4, barH, 2);

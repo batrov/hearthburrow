@@ -81,6 +81,20 @@ export class GatePanel extends BasePanel {
   private embarkBtn!: Phaser.GameObjects.Text;
   private embarkBtnZone!: Phaser.GameObjects.Rectangle;
 
+  // Equipment slot grid, CX()-relative (tuned originally for CX()=195 at
+  // VW()=390) so the rightmost slots don't clip off-screen at the narrowest
+  // clamped width.
+  private equipYX(): { x: number; y: number }[] {
+    const cx = CX();
+    return [
+      { x: cx - 5, y: 205 },
+      { x: cx + 90, y: 179 },
+      { x: cx + 157, y: 179 },
+      { x: cx + 90, y: 231 },
+      { x: cx + 157, y: 231 },
+    ];
+  }
+
   private equipPicker: EquipmentPicker;
   private consumablePicker: ConsumablePicker;
   private floorPicker: FloorPicker;
@@ -102,12 +116,12 @@ export class GatePanel extends BasePanel {
     this.bg = this.scene.add.graphics();
     this.container.add(this.bg);
 
-    this.panelBlocker = this.scene.add.rectangle(CX, VH / 2, VW, VH, 0x000000, 0)
+    this.panelBlocker = this.scene.add.rectangle(CX(), VH() / 2, VW(), VH(), 0x000000, 0)
       .setScrollFactor(0).setData('isUI', true).setInteractive();
     this.panelBlocker.on('pointerdown', () => {});
     this.container.add(this.panelBlocker);
 
-    this.title = createText(this.scene, CX, 20, 'Expedition Loadout', {
+    this.title = createText(this.scene, CX(), 20, 'Expedition Loadout', {
       fontSize: fs(16), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.title);
@@ -124,13 +138,7 @@ export class GatePanel extends BasePanel {
       this.statTexts.push(t);
     }
 
-    const equipYX: { x: number; y: number }[] = [
-      { x: 190, y: 205 },
-      { x: 285, y: 179 },
-      { x: 352, y: 179 },
-      { x: 285, y: 231 },
-      { x: 352, y: 231 },
-    ];
+    const equipYX = this.equipYX();
     for (let i = 0; i < 5; i++) {
       const bg = this.scene.add.graphics();
       this.container.add(bg);
@@ -151,14 +159,14 @@ export class GatePanel extends BasePanel {
       this.equipSlots.push({ bg, icon, badge, zone });
     }
 
-    this.container.add(createText(this.scene, CX, 138, 'EQUIPMENT', {
+    this.container.add(createText(this.scene, CX(), 138, 'EQUIPMENT', {
       fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
     }).setOrigin(0.5));
 
     const consYX = [
-      { x: CX - 76, y: 302 },
-      { x: CX, y: 302 },
-      { x: CX + 76, y: 302 },
+      { x: CX() - 76, y: 302 },
+      { x: CX(), y: 302 },
+      { x: CX() + 76, y: 302 },
     ];
     for (let i = 0; i < 3; i++) {
       const bg = this.scene.add.graphics();
@@ -178,34 +186,34 @@ export class GatePanel extends BasePanel {
       this.consSlots.push({ bg, icon, badge, zone });
     }
 
-    this.container.add(createText(this.scene, CX, 270, 'CONSUMABLES', {
+    this.container.add(createText(this.scene, CX(), 270, 'CONSUMABLES', {
       fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
     }).setOrigin(0.5));
 
     for (let i = 0; i < 4; i++) {
-      const t = createText(this.scene, CX, 362 + i * 22, '', {
+      const t = createText(this.scene, CX(), 362 + i * 22, '', {
         fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b8a898',
       }).setOrigin(0.5);
       this.container.add(t);
       this.settingsTexts.push(t);
-      const zone = this.scene.add.rectangle(CX, 350 + i * 22, 260, 44, 0xffffff, 0)
+      const zone = this.scene.add.rectangle(CX(), 350 + i * 22, 260, 44, 0xffffff, 0)
         .setScrollFactor(0);
       zone.setVisible(false);
       this.container.add(zone);
       this.settingsZones.push(zone);
     }
 
-    this.container.add(createText(this.scene, CX, 344, 'SETTINGS', {
+    this.container.add(createText(this.scene, CX(), 344, 'SETTINGS', {
       fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
     }).setOrigin(0.5));
 
-    this.embarkBtn = createText(this.scene, CX, 462, '[  EMBARK  ]', {
+    this.embarkBtn = createText(this.scene, CX(), 462, '[  EMBARK  ]', {
       fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#ffcc44',
       backgroundColor: '#442a1acc', padding: { x: 16, y: 4 },
     }).setOrigin(0.5).setScrollFactor(0);
     this.embarkBtn.setVisible(false);
     this.container.add(this.embarkBtn);
-    this.embarkBtnZone = this.scene.add.rectangle(CX, 442, 140, 44, 0xffffff, 0)
+    this.embarkBtnZone = this.scene.add.rectangle(CX(), 442, 140, 44, 0xffffff, 0)
       .setScrollFactor(0).setInteractive({ useHandCursor: true });
     this.embarkBtnZone.on('pointerdown', () => this.embark());
     this.embarkBtnZone.setVisible(false);
@@ -215,14 +223,14 @@ export class GatePanel extends BasePanel {
     this.container.add(this.descBg);
 
     for (let i = 0; i < 2; i++) {
-      const t = createText(this.scene, CX, 472 + i * 16, '', {
+      const t = createText(this.scene, CX(), 472 + i * 16, '', {
         fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#c8b898',
       }).setOrigin(0.5);
       this.container.add(t);
       this.descLines.push(t);
     }
 
-    this.footerText = createText(this.scene, CX, VH - 30, '', {
+    this.footerText = createText(this.scene, CX(), VH() - 30, '', {
       fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#8a7a9a', align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.footerText);
@@ -339,9 +347,9 @@ export class GatePanel extends BasePanel {
   private renderBackground(): void {
     this.bg.clear();
     this.bg.fillStyle(0x0a0a1a, 0.88);
-    this.bg.fillRect(0, 0, VW, VH);
+    this.bg.fillRect(0, 0, VW(), VH());
     this.bg.lineStyle(1, 0x3a3a4a, 0.4);
-    this.bg.strokeRect(4, 4, VW - 8, VH - 8);
+    this.bg.strokeRect(4, 4, VW() - 8, VH() - 8);
   }
 
   private renderStats(): void {
@@ -365,13 +373,7 @@ export class GatePanel extends BasePanel {
   }
 
   private renderEquipmentSlots(): void {
-    const equipYX: { x: number; y: number }[] = [
-      { x: 190, y: 205 },
-      { x: 285, y: 179 },
-      { x: 352, y: 179 },
-      { x: 285, y: 231 },
-      { x: 352, y: 231 },
-    ];
+    const equipYX = this.equipYX();
     for (let i = 0; i < 5; i++) {
       const slot = this.equipSlots[i];
       const isSelected = this.gateTab === i;
@@ -456,9 +458,9 @@ export class GatePanel extends BasePanel {
 
   private renderConsumableSlots(): void {
     const consYX = [
-      { x: CX - 76, y: 302 },
-      { x: CX, y: 302 },
-      { x: CX + 76, y: 302 },
+      { x: CX() - 76, y: 302 },
+      { x: CX(), y: 302 },
+      { x: CX() + 76, y: 302 },
     ];
     for (let i = 0; i < 3; i++) {
       const slot = this.consSlots[i];
@@ -518,15 +520,15 @@ export class GatePanel extends BasePanel {
   private renderDescription(): void {
     this.descBg.clear();
     this.descBg.fillStyle(0x1a1a2a, 0.7);
-    this.descBg.fillRoundedRect(CX - 170, 494, 340, 34, 5);
+    this.descBg.fillRoundedRect(CX() - 170, 494, 340, 34, 5);
     this.descBg.lineStyle(1, 0x3a3a5a);
-    this.descBg.strokeRoundedRect(CX - 170, 494, 340, 34, 5);
+    this.descBg.strokeRoundedRect(CX() - 170, 494, 340, 34, 5);
 
     const lines = this.getDescriptionLines();
     for (let i = 0; i < 2; i++) {
       this.descLines[i].setText(lines[i] ?? '');
       this.descLines[i].setColor(i === 0 ? '#e8d5b7' : '#999999');
-      this.descLines[i].setPosition(CX, 502 + i * 16);
+      this.descLines[i].setPosition(CX(), 502 + i * 16);
     }
   }
 
@@ -882,6 +884,31 @@ export class GatePanel extends BasePanel {
       debug: this.debugMode,
       startFloor: this.selectedElevatorFloor,
     });
+  }
+
+  /**
+   * GatePanel's content is almost entirely top-anchored (title through
+   * description sit within ~530px of fixed offsets, well under the shortest
+   * clamped viewport height), so it doesn't overlap/clip across the
+   * phone-plausible clamp range without a full rebase. The one genuine staleness
+   * risk is the handful of elements sized/positioned once at construction from
+   * VW()/VH() (panelBlocker, footerText) — reposition those, then re-render if
+   * visible (render() already reads CX()/VW() live on every call).
+   */
+  onViewportResize(): void {
+    super.onViewportResize();
+    this.panelBlocker.setPosition(CX(), VH() / 2).setSize(VW(), VH());
+    this.footerText.setPosition(CX(), VH() - 30);
+
+    const equipYX = this.equipYX();
+    for (let i = 0; i < 5; i++) {
+      const slot = this.equipSlots[i];
+      slot.icon.setPosition(equipYX[i].x, equipYX[i].y);
+      slot.badge.setPosition(equipYX[i].x, equipYX[i].y + 26);
+      slot.zone.setPosition(equipYX[i].x, equipYX[i].y);
+    }
+
+    if (this._visible) this.render();
   }
 
   destroy(): void {

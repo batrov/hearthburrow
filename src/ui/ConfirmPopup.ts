@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { VW, VH, CX } from '../systems/Viewport';
+import { VW, VH, CX, CY } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
 
 export class ConfirmPopup {
@@ -25,16 +25,24 @@ export class ConfirmPopup {
 
   private selectedYes = true;
 
+  // Fixed-size modal box, always centered via CY() — box top is `CY() - BOX_H/2`,
+  // every internal element's Y is rebased from that live box top rather than a
+  // literal absolute value, so the popup stays centered at any clamped viewport height.
+  private static readonly BOX_W = 320;
+  private static readonly BOX_H = 220;
+
+  private boxTop(): number { return CY() - ConfirmPopup.BOX_H / 2; }
+
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
     this.container = scene.add.container(0, 0).setDepth(250).setScrollFactor(0).setVisible(false);
 
     this.overlay = scene.add.graphics();
     this.overlay.fillStyle(0x000000, 0.55);
-    this.overlay.fillRect(0, 0, VW, VH);
+    this.overlay.fillRect(0, 0, VW(), VH());
     this.container.add(this.overlay);
 
-    this.blocker = scene.add.rectangle(CX, VH / 2, VW, VH, 0x000000, 0)
+    this.blocker = scene.add.rectangle(CX(), VH() / 2, VW(), VH(), 0x000000, 0)
       .setScrollFactor(0)
       .setInteractive()
       .setData('isUI', true);
@@ -44,38 +52,65 @@ export class ConfirmPopup {
     this.popupBg = scene.add.graphics();
     this.container.add(this.popupBg);
 
-    this.messageText = createText(scene, CX, 200, '', {
+    const boxTop = this.boxTop();
+
+    this.messageText = createText(scene, CX(), boxTop + 50, '', {
       fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#ff8844', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.messageText);
 
-    this.subText = createText(scene, CX, 230, '', {
+    this.subText = createText(scene, CX(), boxTop + 80, '', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b8a898',
     }).setOrigin(0.5);
     this.container.add(this.subText);
 
-    this.yesBtn = createText(scene, CX - 60, 280, '[ YES ]', {
+    this.yesBtn = createText(scene, CX() - 60, boxTop + 130, '[ YES ]', {
       fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#cc6666',
       backgroundColor: '#3a1a1acc', padding: { x: 12, y: 4 },
     }).setOrigin(0.5);
     this.container.add(this.yesBtn);
-    const yesZone = scene.add.rectangle(CX - 60, 280, 80, 44, 0xffffff, 0).setScrollFactor(0).setDepth(251);
+    const yesZone = scene.add.rectangle(CX() - 60, boxTop + 130, 80, 44, 0xffffff, 0).setScrollFactor(0).setDepth(251);
     this.container.add(yesZone);
     this.yesBtnZone = yesZone;
 
-    this.noBtn = createText(scene, CX + 60, 280, '[Cancel]', {
+    this.noBtn = createText(scene, CX() + 60, boxTop + 130, '[Cancel]', {
       fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#aaaacc',
       backgroundColor: '#1a1a3acc', padding: { x: 10, y: 4 },
     }).setOrigin(0.5);
     this.container.add(this.noBtn);
-    const noZone = scene.add.rectangle(CX + 60, 280, 90, 44, 0xffffff, 0).setScrollFactor(0).setDepth(251);
+    const noZone = scene.add.rectangle(CX() + 60, boxTop + 130, 90, 44, 0xffffff, 0).setScrollFactor(0).setDepth(251);
     this.container.add(noZone);
     this.noBtnZone = noZone;
 
-    this.footerText = createText(scene, CX, 340, '[← →] switch  [SPACE] confirm  [ESC] cancel', {
+    this.footerText = createText(scene, CX(), boxTop + 190, '[← →] switch  [SPACE] confirm  [ESC] cancel', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#8a7a9a',
     }).setOrigin(0.5);
     this.container.add(this.footerText);
+  }
+
+  /** Called by the owning scene's relayout(). Repositions in place; never toggles visibility. */
+  onViewportResize(): void {
+    this.overlay.clear();
+    this.overlay.fillStyle(0x000000, 0.55);
+    this.overlay.fillRect(0, 0, VW(), VH());
+    this.blocker.setPosition(CX(), VH() / 2).setSize(VW(), VH());
+
+    const boxTop = this.boxTop();
+    this.messageText.setPosition(CX(), boxTop + 50);
+    this.subText.setPosition(CX(), boxTop + 80);
+    this.yesBtn.setPosition(CX() - 60, boxTop + 130);
+    this.yesBtnZone.setPosition(CX() - 60, boxTop + 130);
+    this.noBtn.setPosition(CX() + 60, boxTop + 130);
+    this.noBtnZone.setPosition(CX() + 60, boxTop + 130);
+    this.footerText.setPosition(CX(), boxTop + 190);
+
+    if (this.visible) {
+      this.popupBg.clear();
+      this.popupBg.fillStyle(0x0a0a1a, 0.95);
+      this.popupBg.fillRoundedRect(CX() - ConfirmPopup.BOX_W / 2, boxTop, ConfirmPopup.BOX_W, ConfirmPopup.BOX_H, 10);
+      this.popupBg.lineStyle(2, 0x6a5a8a);
+      this.popupBg.strokeRoundedRect(CX() - ConfirmPopup.BOX_W / 2, boxTop, ConfirmPopup.BOX_W, ConfirmPopup.BOX_H, 10);
+    }
   }
 
   show(
@@ -90,11 +125,12 @@ export class ConfirmPopup {
     this.onCancelCb = onCancel ?? null;
     this.selectedYes = false;
 
+    const boxTop = this.boxTop();
     this.popupBg.clear();
     this.popupBg.fillStyle(0x0a0a1a, 0.95);
-    this.popupBg.fillRoundedRect(CX - 160, 150, 320, 220, 10);
+    this.popupBg.fillRoundedRect(CX() - ConfirmPopup.BOX_W / 2, boxTop, ConfirmPopup.BOX_W, ConfirmPopup.BOX_H, 10);
     this.popupBg.lineStyle(2, 0x6a5a8a);
-    this.popupBg.strokeRoundedRect(CX - 160, 150, 320, 220, 10);
+    this.popupBg.strokeRoundedRect(CX() - ConfirmPopup.BOX_W / 2, boxTop, ConfirmPopup.BOX_W, ConfirmPopup.BOX_H, 10);
 
     this.keyHandler = (e: KeyboardEvent) => {
       switch (e.key) {
@@ -107,19 +143,20 @@ export class ConfirmPopup {
     this.scene.input.keyboard!.on('keydown', this.keyHandler);
 
     this.clickHandler = (p: Phaser.Input.Pointer) => {
-      const popX = CX - 160, popY = 150, popW = 320, popH = 220;
+      const boxTop = this.boxTop();
+      const popX = CX() - ConfirmPopup.BOX_W / 2, popY = boxTop, popW = ConfirmPopup.BOX_W, popH = ConfirmPopup.BOX_H;
       if (p.x < popX || p.x > popX + popW || p.y < popY || p.y > popY + popH) {
         this.hide();
         return;
       }
-      const yesX = CX - 60, yesY = 280, yesW = 80, yesH = 44;
+      const yesX = CX() - 60, yesY = boxTop + 130, yesW = 80, yesH = 44;
       if (p.x >= yesX - yesW / 2 && p.x <= yesX + yesW / 2 &&
           p.y >= yesY - yesH / 2 && p.y <= yesY + yesH / 2) {
         this.selectedYes = true;
         this.confirm();
         return;
       }
-      const noX = CX + 60, noY = 280, noW = 90, noH = 44;
+      const noX = CX() + 60, noY = boxTop + 130, noW = 90, noH = 44;
       if (p.x >= noX - noW / 2 && p.x <= noX + noW / 2 &&
           p.y >= noY - noH / 2 && p.y <= noY + noH / 2) {
         this.selectedYes = false;

@@ -17,7 +17,7 @@ interface ResearchNode {
   effect: { type: string; value: number };
 }
 
-const BRANCH_COLS = [CX - 100, CX, CX + 100];
+function branchCols(): number[] { return [CX() - 100, CX(), CX() + 100]; }
 const ROWS_Y = [100, 175, 250, 325];
 const VIEWPORT_TOP = 60;
 const VIEWPORT_BOTTOM = 410;
@@ -102,12 +102,12 @@ export class ResearchPanel extends BasePanel {
     }).setDepth(207).setScrollFactor(0).setVisible(false);
     this.container.add(this.descCost);
 
-    this.descStatus = createText(scene, CX + 160, 440 + 6, '', {
+    this.descStatus = createText(scene, CX() + 160, 440 + 6, '', {
       fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#88dd88',
     }).setDepth(207).setScrollFactor(0).setOrigin(1, 0);
     this.container.add(this.descStatus);
 
-    this.hintText = createText(scene, CX, VH - 30, '[W/S] Scroll  [A/D] Nav  [SPACE] Research  [Click] Focus', {
+    this.hintText = createText(scene, CX(), VH() - 30, '[W/S] Scroll  [A/D] Nav  [SPACE] Research  [Click] Focus', {
       fontSize: fs(9), fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
     }).setOrigin(0.5).setDepth(207).setScrollFactor(0);
     this.container.add(this.hintText);
@@ -203,10 +203,10 @@ export class ResearchPanel extends BasePanel {
 
     const bg = this.scene.add.graphics();
     bg.fillStyle(0x0a0a1a, 0.85);
-    bg.fillRect(0, 0, VW, VH);
+    bg.fillRect(0, 0, VW(), VH());
     this.promptContainer.add(bg);
 
-    const px = CX, py = 340, pw = 300, ph = 160;
+    const px = CX(), py = 340, pw = 300, ph = 160;
     const box = this.scene.add.graphics();
     box.fillStyle(0x16162a, 0.95);
     box.fillRoundedRect(px - pw / 2, py - ph / 2, pw, ph, 8);
@@ -347,7 +347,7 @@ export class ResearchPanel extends BasePanel {
   private drawConnectors(): void {
     const g = this.treeGfx;
     for (let col = 0; col < 3; col++) {
-      const cx = BRANCH_COLS[col];
+      const cx = branchCols()[col];
       g.lineStyle(1, 0x3a3a4a, 0.5);
       g.lineBetween(cx, 75, cx, ROWS_Y[0] + 20);
       for (let row = 0; row < 3; row++) {
@@ -365,7 +365,7 @@ export class ResearchPanel extends BasePanel {
     const branchKeys = ['mining', 'combat', 'survival'];
     const branchColors = ['#e8c87a', '#e87a7a', '#7ac8e8'];
     for (let col = 0; col < 3; col++) {
-      const label = createText(this.scene, BRANCH_COLS[col], 68, branchKeys[col].toUpperCase(), {
+      const label = createText(this.scene, branchCols()[col], 68, branchKeys[col].toUpperCase(), {
         fontSize: fs(9), fontFamily: 'Inter', resolution: 4, color: branchColors[col], fontStyle: 'bold',
       }).setOrigin(0.5);
       this.scrollContainer.add(label);
@@ -379,7 +379,7 @@ export class ResearchPanel extends BasePanel {
         const node = getNode(row, col);
         if (!node) continue;
 
-        const x = BRANCH_COLS[col];
+        const x = branchCols()[col];
         const y = ROWS_Y[row];
         const level = gameState.getResearchLevel(node.id);
         const prereqDone = !node.prereqId || gameState.getResearchLevel(node.prereqId) >= 1;
@@ -404,7 +404,7 @@ export class ResearchPanel extends BasePanel {
   }
 
   private drawSelection(): void {
-    const x = BRANCH_COLS[this.focusCol];
+    const x = branchCols()[this.focusCol];
     const y = ROWS_Y[this.focusRow];
     this.selectionGfx.lineStyle(2, 0xffffff, 0.8);
     this.selectionGfx.strokeRect(x - 18, y - 18, 36, 36);
@@ -419,7 +419,7 @@ export class ResearchPanel extends BasePanel {
     const level = gameState.getResearchLevel(node.id);
     const prereqDone = !node.prereqId || gameState.getResearchLevel(node.prereqId) >= 1;
 
-    const bx = 16, by = 430, bw = VW - 32, bh = 60;
+    const bx = 16, by = 430, bw = VW() - 32, bh = 60;
     this.descBg.clear();
     this.descBg.fillStyle(0x12121e, 0.85);
     this.descBg.fillRoundedRect(bx, by, bw, bh, 5);
@@ -480,14 +480,14 @@ export class ResearchPanel extends BasePanel {
     const barH = Math.max(16, vh * (vh / (vh + this.maxScroll)));
     const barY = VIEWPORT_TOP + (this.scrollY / this.maxScroll) * (vh - barH);
     this.scrollbar.fillStyle(0x5a5a7a, 0.5);
-    this.scrollbar.fillRoundedRect(VW - 6, barY, 3, barH, 2);
+    this.scrollbar.fillRoundedRect(VW() - 6, barY, 3, barH, 2);
   }
 
   private createClickZones(): void {
     for (let row = 0; row < 4; row++) {
       for (let col = 0; col < 3; col++) {
         if (!getNode(row, col)) continue;
-        const x = BRANCH_COLS[col];
+        const x = branchCols()[col];
         const y = ROWS_Y[row];
         const zone = this.scene.add.zone(x, y, 44, 44)
           .setDepth(210)
@@ -517,6 +517,19 @@ export class ResearchPanel extends BasePanel {
     this.state = 'idle';
     this.pendingNode = null;
     super.hide();
+  }
+
+  /**
+   * show() already calls render() fresh (which reads branchCols()/CX() live),
+   * so re-showing after a resize is already correct. Only the handful of
+   * elements positioned once in the constructor from CX()/VH() need an
+   * explicit reposition here.
+   */
+  onViewportResize(): void {
+    super.onViewportResize();
+    this.descStatus.setPosition(CX() + 160, 440 + 6);
+    this.hintText.setPosition(CX(), VH() - 30);
+    if (this._visible) this.render();
   }
 
   destroy(): void {

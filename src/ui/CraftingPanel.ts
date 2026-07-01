@@ -30,12 +30,12 @@ const RECIPE_INFO: Record<string, { desc: string; unlock?: string }> = {
   miners_potion: { desc: 'Permanently +5 max stamina (consumed on craft)', unlock: 'Rescue a villager and talk to them at the Tavern' },
 };
 
-const CARD_W = VW - 40;
+function cardW(): number { return VW() - 40; }
 const CARD_H = 86;
 const CARD_GAP = 6;
 const CARD_X = 20;
 const LIST_TOP = 72;
-const LIST_BTM = VH - 96;
+function listBtm(): number { return VH() - 96; }
 const SCROLL_SPEED = 28;
 
 type CardState = 'canCraft' | 'craftedBefore' | 'discovered' | 'undiscovered';
@@ -86,7 +86,7 @@ export class CraftingPanel extends BasePanel {
 
     this.createOverlay();
 
-    this.titleText = createText(scene, CX, 36, 'Crafting Station', {
+    this.titleText = createText(scene, CX(), 36, 'Crafting Station', {
       fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
@@ -97,13 +97,13 @@ export class CraftingPanel extends BasePanel {
     this.scrollbarGfx = scene.add.graphics();
     this.container.add(this.scrollbarGfx);
 
-    this.descriptionText = createText(scene, CX, VH - 70, '', {
+    this.descriptionText = createText(scene, CX(), VH() - 70, '', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b8a898',
       align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.descriptionText);
 
-    this.hintText = createText(scene, CX, VH - 44, '[W/S] Select  [SPACE] Craft  [ESC] Close', {
+    this.hintText = createText(scene, CX(), VH() - 44, '[W/S] Select  [SPACE] Craft  [ESC] Close', {
       fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
@@ -174,9 +174,9 @@ export class CraftingPanel extends BasePanel {
     const pad = 16;
     this.overlay.clear();
     this.overlay.fillStyle(0x0a0a1a, 0.88);
-    this.overlay.fillRect(0, 0, VW, VH);
+    this.overlay.fillRect(0, 0, VW(), VH());
     this.overlay.lineStyle(1, 0x3a3a4a, 0.5);
-    this.overlay.strokeRect(pad, 60, VW - pad * 2, VH - 60 - pad);
+    this.overlay.strokeRect(pad, 60, VW() - pad * 2, VH() - 60 - pad);
 
     const discovered = gameState.crafting.getDiscoveredRecipes();
     const undiscovered = gameState.crafting.getUndiscoveredRecipes();
@@ -190,7 +190,7 @@ export class CraftingPanel extends BasePanel {
     }
 
     this.rebuildCards();
-    this.maxScroll = Math.max(0, this.recipes.length * (CARD_H + CARD_GAP) - (LIST_BTM - LIST_TOP));
+    this.maxScroll = Math.max(0, this.recipes.length * (CARD_H + CARD_GAP) - (listBtm() - LIST_TOP));
     this.scrollOffset = Phaser.Math.Clamp(this.scrollOffset, 0, this.maxScroll);
     this.syncContent();
   }
@@ -256,7 +256,7 @@ export class CraftingPanel extends BasePanel {
     else if (!discovered) { indicator = '?'; indColor = '#6a7a9a'; }
 
     if (indicator) {
-      const ind = createText(this.scene, CARD_W - 12, 14, indicator, {
+      const ind = createText(this.scene, cardW() - 12, 14, indicator, {
         fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: indColor, fontStyle: 'bold',
       }).setOrigin(1, 0);
       card.add(ind);
@@ -296,9 +296,9 @@ export class CraftingPanel extends BasePanel {
     const bw = selected ? 2 : 1;
 
     bg.fillStyle(fill, 1);
-    bg.fillRoundedRect(0, 0, CARD_W, CARD_H, 6);
+    bg.fillRoundedRect(0, 0, cardW(), CARD_H, 6);
     bg.lineStyle(bw, border, 0.8);
-    bg.strokeRoundedRect(0, 0, CARD_W, CARD_H, 6);
+    bg.strokeRoundedRect(0, 0, cardW(), CARD_H, 6);
 
     if (selected) {
       bg.fillStyle(border, 0.4);
@@ -310,12 +310,12 @@ export class CraftingPanel extends BasePanel {
     const cardTop = this.selectedIndex * (CARD_H + CARD_GAP);
     const cardBottom = cardTop + CARD_H;
     const viewTop = this.scrollOffset;
-    const viewBottom = this.scrollOffset + (LIST_BTM - LIST_TOP);
+    const viewBottom = this.scrollOffset + (listBtm() - LIST_TOP);
 
     if (cardTop < viewTop) {
       this.scrollOffset = cardTop;
     } else if (cardBottom > viewBottom) {
-      this.scrollOffset = cardBottom - (LIST_BTM - LIST_TOP);
+      this.scrollOffset = cardBottom - (listBtm() - LIST_TOP);
     }
 
     this.scrollOffset = Phaser.Math.Clamp(this.scrollOffset, 0, this.maxScroll);
@@ -340,9 +340,9 @@ export class CraftingPanel extends BasePanel {
     this.scrollbarGfx.clear();
     if (this.maxScroll <= 0) return;
 
-    const sbX = VW - 20;
+    const sbX = VW() - 20;
     const sbY = LIST_TOP;
-    const sbH = LIST_BTM - LIST_TOP;
+    const sbH = listBtm() - LIST_TOP;
     const barH = Math.max(12, sbH * (sbH / (sbH + this.maxScroll)));
     const barY = sbY + (this.scrollOffset / this.maxScroll) * (sbH - barH);
 
@@ -378,8 +378,8 @@ export class CraftingPanel extends BasePanel {
   }
 
   private onPointerDown(pointer: Phaser.Input.Pointer): void {
-    if (pointer.x < 16 || pointer.x > VW - 16) return;
-    if (pointer.y < LIST_TOP || pointer.y > LIST_BTM) return;
+    if (pointer.x < 16 || pointer.x > VW() - 16) return;
+    if (pointer.y < LIST_TOP || pointer.y > listBtm()) return;
 
     this.pointerStartY = pointer.y;
     this.pointerStartScroll = this.scrollOffset;
@@ -423,7 +423,7 @@ export class CraftingPanel extends BasePanel {
 
   private showCraftSuccess(itemId: string): void {
     const popup = createText(this.scene, 
-      CX, VH / 2,
+      CX(), VH() / 2,
       `Crafted: ${itemDisplayName(itemId)}`,
       { fontSize: fs(16), fontFamily: 'Inter', resolution: 4, color: '#44cc66', fontStyle: 'bold' }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(250);
@@ -441,7 +441,7 @@ export class CraftingPanel extends BasePanel {
 
   private showNoCraft(): void {
     const popup = createText(this.scene, 
-      CX, VH / 2,
+      CX(), VH() / 2,
       'No craftable recipe \u2014 need more materials!',
       { fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#cc6644' }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(250);
@@ -458,7 +458,7 @@ export class CraftingPanel extends BasePanel {
 
   private showHowToUnlock(hint: string): void {
     const popup = createText(this.scene, 
-      CX, VH / 2,
+      CX(), VH() / 2,
       `??? \u2014 ${hint}`,
       { fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#aa8844' }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(250);
@@ -471,5 +471,16 @@ export class CraftingPanel extends BasePanel {
       ease: 'Quad.easeOut',
       onComplete: () => popup.destroy(),
     });
+  }
+
+  /** refresh() (called by show()) already redraws overlay/cards live from
+   * cardW()/listBtm()/VW()/VH(); only the constructor-positioned texts need
+   * an explicit reposition here. */
+  onViewportResize(): void {
+    super.onViewportResize();
+    this.titleText.setPosition(CX(), 36);
+    this.descriptionText.setPosition(CX(), VH() - 70);
+    this.hintText.setPosition(CX(), VH() - 44);
+    if (this._visible) this.refresh();
   }
 }

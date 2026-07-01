@@ -18,7 +18,8 @@ import {
   gridToIso, isoToGrid, findPath, interactiveDepth,
   HALF_W, HALF_H, worldWidth, worldHeight,
 } from '../systems/IsoUtils';
-import { VW, VH, CX, CY } from '../systems/Viewport';
+import { VW, VH, CX, CY, actionButtonCenter, actionButtonGlowBoxTopLeft, ACTION_BTN_SIZE } from '../systems/Viewport';
+import { viewportManager } from '../systems/ViewportManager';
 import { textStyle, fs, createText } from '../systems/Font';
 
 interface HubBuildingDef {
@@ -217,6 +218,8 @@ export class HomelandScene extends Phaser.Scene {
   private isMoving: boolean = false;
   private actionBtnBg!: Phaser.GameObjects.Graphics;
   private actionBtnText!: Phaser.GameObjects.Text;
+  private actionBtnHit!: Phaser.GameObjects.Rectangle;
+  private _onViewportResize?: () => void;
   private buildingInfoPanel!: BuildingInfoPanel;
   private restorePanel!: RestorePanel;
   private gatePanel!: GatePanel;
@@ -245,7 +248,7 @@ export class HomelandScene extends Phaser.Scene {
     this.cameras.main.fadeIn(400, 0, 0, 0);
     this.cameras.main.setBackgroundColor('#334621');
 
-    this.hudCam = this.cameras.add(0, 0, VW, VH, false, 'hud');
+    this.hudCam = this.cameras.add(0, 0, VW(), VH(), false, 'hud');
     this.hudCam.setZoom(1);
 
     this.currentBuilding = null;
@@ -292,11 +295,41 @@ export class HomelandScene extends Phaser.Scene {
     this.cameras.main.ignore(this.researchPanel.container);
     this.cameras.main.ignore(this.farmPanel.container);
 
-    this.carrotCountText = createText(this, VW - 12, 12, '', {
+    this.carrotCountText = createText(this, VW() - 12, 12, '', {
       fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#ff8833', fontStyle: 'bold',
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(55);
     this.cameras.main.ignore(this.carrotCountText);
     this.updateCarrotCounter();
+
+    this.relayout();
+    this._onViewportResize = () => this.relayout();
+    viewportManager.onResize(this._onViewportResize);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      if (this._onViewportResize) viewportManager.offResize(this._onViewportResize);
+    });
+  }
+
+  /**
+   * Re-applies position/size to already-created HUD objects using the current
+   * live viewport. Called once at the end of create() and again on every live
+   * resize. Must only reposition — never create/destroy objects.
+   */
+  private relayout(): void {
+    this.carrotCountText.setPosition(VW() - 12, 12);
+
+    const { x, y } = actionButtonCenter();
+    this.actionBtnText.setPosition(x, y);
+    this.actionBtnHit?.setPosition(x, y);
+    this.updateActionButton();
+
+    this.buildingInfoPanel?.onViewportResize();
+    this.restorePanel?.onViewportResize();
+    this.gatePanel?.onViewportResize();
+    this.inventoryPanel?.onViewportResize();
+    this.craftingPanel?.onViewportResize();
+    this.tradePanel?.onViewportResize();
+    this.researchPanel?.onViewportResize();
+    this.farmPanel?.onViewportResize();
   }
 
   private updateCarrotCounter(): void {
@@ -478,7 +511,7 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private createActionButton(): void {
-    const x = CX, y = VH - 90, size = 64;
+    const { x, y } = actionButtonCenter(), size = ACTION_BTN_SIZE;
     this.actionBtnBg = this.add.graphics().setScrollFactor(0).setDepth(50);
     this.cameras.main.ignore(this.actionBtnBg);
     this.actionBtnText = createText(this, x, y, '', {
@@ -491,6 +524,7 @@ export class HomelandScene extends Phaser.Scene {
     this.cameras.main.ignore(hit);
     hit.setInteractive({ useHandCursor: true });
     hit.on('pointerdown', () => this.handleActionButton());
+    this.actionBtnHit = hit;
   }
 
   private setupInput(): void {
@@ -953,7 +987,7 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private updateActionButton(): void {
-    const bx = CX - 32, by = VH - 122;
+    const { x: bx, y: by } = actionButtonGlowBoxTopLeft();
     const show = (icon: string, color: string) => {
       this.actionBtnBg.clear();
       this.actionBtnBg.fillStyle(0x0a0a1a, 0.75);
@@ -994,7 +1028,7 @@ export class HomelandScene extends Phaser.Scene {
     const building = getBuilding(buildingId);
     this.closePanel();
 
-    const container = this.add.container(CX, CY).setScrollFactor(0).setDepth(250);
+    const container = this.add.container(CX(), CY()).setScrollFactor(0).setDepth(250);
     this.cameras.main.ignore(container);
 
     const bg = this.add.graphics();
@@ -1060,7 +1094,7 @@ export class HomelandScene extends Phaser.Scene {
           audio.playBuildComplete();
 
           const name = building?.name ?? buildingId.replace(/_/g, ' ');
-          const popup = createText(this, CX, CY, `${name} Restored!`, {
+          const popup = createText(this, CX(), CY(), `${name} Restored!`, {
             fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#44cc66', fontStyle: 'bold', align: 'center',
           }).setOrigin(0.5).setScrollFactor(0).setDepth(250);
           this.cameras.main.ignore(popup);

@@ -10,7 +10,8 @@ import {
 import { NPCPhotobookPanel } from '../ui/NPCPhotobookPanel';
 import { SCENES } from '../constants/scenes';
 import { AnalogStickInput } from '../ui/AnalogStickInput';
-import { VW, VH, CX, CY } from '../systems/Viewport';
+import { VW, VH, CX, CY, actionButtonCenter, actionButtonGlowBoxTopLeft, ACTION_BTN_SIZE } from '../systems/Viewport';
+import { viewportManager } from '../systems/ViewportManager';
 import { textStyle, fs, createText } from '../systems/Font';
 
 const TAVERN_COLS = 12;
@@ -74,7 +75,13 @@ export class TavernScene extends Phaser.Scene {
   private bgm: Phaser.Sound.BaseSound | null = null;
   private actionBtnBg!: Phaser.GameObjects.Graphics;
   private actionBtnText!: Phaser.GameObjects.Text;
+  private actionBtnHit!: Phaser.GameObjects.Rectangle;
   private carrotCountText!: Phaser.GameObjects.Text;
+  private titleText!: Phaser.GameObjects.Text;
+  private countText!: Phaser.GameObjects.Text;
+  private exitBtn!: Phaser.GameObjects.Text;
+  private photobookBtn!: Phaser.GameObjects.Text;
+  private _onViewportResize?: () => void;
 
   constructor() {
     super({ key: SCENES.TAVERN });
@@ -84,7 +91,7 @@ export class TavernScene extends Phaser.Scene {
     this.cameras.main.fadeIn(300, 0, 0, 0);
     this.cameras.main.setBackgroundColor('#211304');
 
-    this.hudCam = this.cameras.add(0, 0, VW, VH, false, 'hud');
+    this.hudCam = this.cameras.add(0, 0, VW(), VH(), false, 'hud');
     this.hudCam.setZoom(1);
 
     this.greetingActive = false;
@@ -116,6 +123,33 @@ export class TavernScene extends Phaser.Scene {
 
     this.bgm = this.sound.add('music_tavern', { loop: true, volume: 0.3 });
     this.bgm.play();
+
+    this.relayout();
+    this._onViewportResize = () => this.relayout();
+    viewportManager.onResize(this._onViewportResize);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      if (this._onViewportResize) viewportManager.offResize(this._onViewportResize);
+    });
+  }
+
+  /**
+   * Re-applies position/size to already-created HUD objects using the current
+   * live viewport. Called once at the end of create() and again on every live
+   * resize. Must only reposition — never create/destroy objects.
+   */
+  private relayout(): void {
+    this.titleText.setPosition(CX(), 12);
+    this.countText.setPosition(CX(), VH() - 32);
+    this.exitBtn.setPosition(VW() - 12, VH() - 12);
+    this.photobookBtn.setPosition(12, VH() - 12);
+    this.carrotCountText.setPosition(VW() - 12, 12);
+
+    const { x, y } = actionButtonCenter();
+    this.actionBtnText.setPosition(x, y);
+    this.actionBtnHit?.setPosition(x, y);
+    this.updateActionButton();
+
+    this.photobook?.onViewportResize();
   }
 
   private drawTavern(): void {
@@ -280,30 +314,30 @@ export class TavernScene extends Phaser.Scene {
   }
 
   private createUI(): void {
-    const title = createText(this, CX, 12, 'THE COZY TAVERN', {
+    this.titleText = createText(this, CX(), 12, 'THE COZY TAVERN', {
       fontSize: fs(16), fontFamily: 'Inter', resolution: 4, color: '#cc8844', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(50).setScrollFactor(0);
-    this.cameras.main.ignore(title);
+    this.cameras.main.ignore(this.titleText);
 
     const rescued = gameState.rescuedVillagers;
-    const countText = createText(this, CX, VH - 32, `${rescued.length} / 20 villagers resting here  [P] Photobook`, {
+    this.countText = createText(this, CX(), VH() - 32, `${rescued.length} / 20 villagers resting here  [P] Photobook`, {
       fontSize: fs(9), fontFamily: 'Inter', resolution: 4, color: '#7a6a5a',
     }).setOrigin(0.5).setDepth(50).setScrollFactor(0);
-    this.cameras.main.ignore(countText);
+    this.cameras.main.ignore(this.countText);
 
-    const exitBtn = createText(this, VW - 12, VH - 12, '[EXIT]', {
+    this.exitBtn = createText(this, VW() - 12, VH() - 12, '[EXIT]', {
       fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#ff8844',
     }).setOrigin(1, 1).setDepth(50).setInteractive({ useHandCursor: true }).setScrollFactor(0)
       .on('pointerdown', () => this.leave());
-    this.cameras.main.ignore(exitBtn);
+    this.cameras.main.ignore(this.exitBtn);
 
-    const photobookBtn = createText(this, 12, VH - 12, '[PHOTOBOOK]', {
+    this.photobookBtn = createText(this, 12, VH() - 12, '[PHOTOBOOK]', {
       fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#7a6a5a',
     }).setOrigin(0, 1).setDepth(50).setInteractive({ useHandCursor: true }).setScrollFactor(0)
       .on('pointerdown', () => this.photobook.toggle());
-    this.cameras.main.ignore(photobookBtn);
+    this.cameras.main.ignore(this.photobookBtn);
 
-    this.carrotCountText = createText(this, VW - 12, 12, '', {
+    this.carrotCountText = createText(this, VW() - 12, 12, '', {
       fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#ff8833', fontStyle: 'bold',
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(50);
     this.cameras.main.ignore(this.carrotCountText);
@@ -322,13 +356,15 @@ export class TavernScene extends Phaser.Scene {
   private createActionButton(): void {
     this.actionBtnBg = this.add.graphics().setScrollFactor(0).setDepth(50);
     this.cameras.main.ignore(this.actionBtnBg);
-    this.actionBtnText = createText(this, CX, VH - 90, '', {
+    const { x, y } = actionButtonCenter();
+    this.actionBtnText = createText(this, x, y, '', {
       fontSize: fs(28), fontFamily: 'Inter', resolution: 4,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(51);
     this.cameras.main.ignore(this.actionBtnText);
-    const hit = this.add.rectangle(CX, VH - 90, 64, 64, 0x000000, 0)
+    const hit = this.add.rectangle(x, y, ACTION_BTN_SIZE, ACTION_BTN_SIZE, 0x000000, 0)
       .setScrollFactor(0).setDepth(52).setData('isUI', true);
     this.cameras.main.ignore(hit);
+    this.actionBtnHit = hit;
     hit.setInteractive({ useHandCursor: true });
     hit.on('pointerdown', () => {
       if (this.adjacentNPC) {
@@ -680,17 +716,17 @@ export class TavernScene extends Phaser.Scene {
 
     const overlayBg = this.add.graphics().setDepth(200).setScrollFactor(0);
     overlayBg.fillStyle(0x0a0a1a, 0.85);
-    overlayBg.fillRoundedRect(CX - 170, CY - 65, 340, 130, 10);
+    overlayBg.fillRoundedRect(CX() - 170, CY() - 65, 340, 130, 10);
     overlayBg.lineStyle(1, 0x6a5a8a, 0.5);
-    overlayBg.strokeRoundedRect(CX - 170, CY - 65, 340, 130, 10);
+    overlayBg.strokeRoundedRect(CX() - 170, CY() - 65, 340, 130, 10);
     this.cameras.main.ignore(overlayBg);
 
-    const overlayText = createText(this, CX, CY - 30, `${npc.name} says:`, {
+    const overlayText = createText(this, CX(), CY() - 30, `${npc.name} says:`, {
       fontSize: fs(13), fontFamily: 'Inter', resolution: 4, color: '#ccaa66', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
     this.cameras.main.ignore(overlayText);
 
-    const speechText = createText(this, CX, CY + 2, `"${greeting}"`, {
+    const speechText = createText(this, CX(), CY() + 2, `"${greeting}"`, {
       fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', align: 'center',
       wordWrap: { width: 290 },
     }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
@@ -714,7 +750,7 @@ export class TavernScene extends Phaser.Scene {
       }
     }
 
-    const closeHint = createText(this, CX, CY + 48, '[SPACE / ESC] close', {
+    const closeHint = createText(this, CX(), CY() + 48, '[SPACE / ESC] close', {
       fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#6a5a4a',
     }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
     this.cameras.main.ignore(closeHint);
@@ -806,7 +842,7 @@ export class TavernScene extends Phaser.Scene {
   }
 
   private updateActionButton(): void {
-    const bx = CX - 32, by = VH - 122;
+    const { x: bx, y: by } = actionButtonGlowBoxTopLeft();
     if (this.adjacentNPC && !this.isModalActive) {
       this.actionBtnBg.clear();
       this.actionBtnBg.fillStyle(0x0a0a1a, 0.75);

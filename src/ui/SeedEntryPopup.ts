@@ -31,10 +31,10 @@ export class SeedEntryPopup {
 
     this.overlay = scene.add.graphics();
     this.overlay.fillStyle(0x000000, 0.55);
-    this.overlay.fillRect(0, 0, VW, VH);
+    this.overlay.fillRect(0, 0, VW(), VH());
     this.container.add(this.overlay);
 
-    this.blocker = scene.add.rectangle(CX, VH / 2, VW, VH, 0x000000, 0)
+    this.blocker = scene.add.rectangle(CX(), VH() / 2, VW(), VH(), 0x000000, 0)
       .setScrollFactor(0)
       .setInteractive()
       .setData('isUI', true);
@@ -44,32 +44,32 @@ export class SeedEntryPopup {
     this.popupBg = scene.add.graphics();
     this.container.add(this.popupBg);
 
-    this.titleText = createText(scene, CX, 170, 'Enter Run Seed', {
+    this.titleText = createText(scene, CX(), 170, 'Enter Run Seed', {
       fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
-    this.seedText = createText(scene, CX, 225, '', {
+    this.seedText = createText(scene, CX(), 225, '', {
       fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#88cc88',
     }).setOrigin(0.5);
     this.container.add(this.seedText);
 
-    this.cursorText = createText(scene, CX, 225, '|', {
+    this.cursorText = createText(scene, CX(), 225, '|', {
       fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#88cc88',
     }).setOrigin(0.5);
     this.cursorText.setVisible(false);
     this.container.add(this.cursorText);
 
-    this.randomizeBtn = createText(scene, CX, 270, '[ RANDOMIZE ]', {
+    this.randomizeBtn = createText(scene, CX(), 270, '[ RANDOMIZE ]', {
       fontSize: fs(13), fontFamily: 'Inter', resolution: 4, color: '#88aa88',
     }).setOrigin(0.5);
     this.container.add(this.randomizeBtn);
-    const randZone = scene.add.rectangle(CX, 270, 130, 44, 0xffffff, 0)
+    const randZone = scene.add.rectangle(CX(), 270, 130, 44, 0xffffff, 0)
       .setScrollFactor(0).setDepth(251);
     this.container.add(randZone);
     this.randomizeZone = randZone;
 
-    this.hintText = createText(scene, CX, 308, '', {
+    this.hintText = createText(scene, CX(), 308, '', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#8a7a9a', align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
@@ -86,9 +86,9 @@ export class SeedEntryPopup {
 
     this.popupBg.clear();
     this.popupBg.fillStyle(0x0a0a1a, 0.95);
-    this.popupBg.fillRoundedRect(CX - 160, 140, 320, 200, 10);
+    this.popupBg.fillRoundedRect(CX() - 160, 140, 320, 200, 10);
     this.popupBg.lineStyle(2, 0x6a5a8a);
-    this.popupBg.strokeRoundedRect(CX - 160, 140, 320, 200, 10);
+    this.popupBg.strokeRoundedRect(CX() - 160, 140, 320, 200, 10);
 
     this.hintText.setText('Type to edit  [SPACE] done  [ESC] cancel');
 
@@ -112,7 +112,7 @@ export class SeedEntryPopup {
     this.scene.input.keyboard!.on('keydown', this.keyHandler);
 
     this.clickHandler = (p: Phaser.Input.Pointer) => {
-      const insidePopup = p.x >= CX - 160 && p.x <= CX + 160 && p.y >= 140 && p.y <= 340;
+      const insidePopup = p.x >= CX() - 160 && p.x <= CX() + 160 && p.y >= 140 && p.y <= 340;
       if (!insidePopup) {
         this.confirm();
         return;
@@ -146,7 +146,7 @@ export class SeedEntryPopup {
     this.seedText.setColor(this.currentSeed ? '#88cc88' : '#666666');
 
     const seedW = this.seedText.width;
-    this.cursorText.setPosition(CX + seedW / 2 + 4, 225);
+    this.cursorText.setPosition(CX() + seedW / 2 + 4, 225);
     this.cursorText.setVisible(true);
   }
 

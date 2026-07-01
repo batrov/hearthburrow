@@ -34,7 +34,7 @@ export class TradePanel extends BasePanel {
 
     this.createOverlay();
 
-    this.text = createText(scene, CX, 44, '', {
+    this.text = createText(scene, CX(), 44, '', {
       fontSize: fs(13), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
       align: 'center', lineSpacing: 4,
     }).setOrigin(0.5, 0);
@@ -97,10 +97,10 @@ export class TradePanel extends BasePanel {
   private render(): void {
     this.overlay!.clear();
     this.overlay!.fillStyle(0x0a0a1a, 0.92);
-    this.overlay!.fillRect(0, 0, VW, VH);
+    this.overlay!.fillRect(0, 0, VW(), VH());
     const pad = 16;
     this.overlay!.lineStyle(1, 0x3a3a4a, 0.5);
-    this.overlay!.strokeRect(pad, pad, VW - pad * 2, VH - pad * 2);
+    this.overlay!.strokeRect(pad, pad, VW() - pad * 2, VH() - pad * 2);
 
     this.clickZones.forEach(z => z.destroy());
     this.clickZones = [];
@@ -136,12 +136,12 @@ export class TradePanel extends BasePanel {
       row.add(createText(this.scene, 46, y, `${cursor} ${label}`, {
         fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
       }).setOrigin(0, 0.5));
-      row.add(createText(this.scene, CX + 20, y, `${item.priceQty}${haveText}`, {
+      row.add(createText(this.scene, CX() + 20, y, `${item.priceQty}${haveText}`, {
         fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
       }).setOrigin(0, 0.5));
       this.itemRows.add(row);
 
-      const zone = this.scene.add.zone(CX, y, VW - 32, 40)
+      const zone = this.scene.add.zone(CX(), y, VW() - 32, 40)
         .setDepth(210)
         .setScrollFactor(0)
         .setInteractive();

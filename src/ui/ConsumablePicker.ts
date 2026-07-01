@@ -39,10 +39,10 @@ export class ConsumablePicker {
 
     this.overlay = scene.add.graphics();
     this.overlay.fillStyle(0x000000, 0.55);
-    this.overlay.fillRect(0, 0, VW, VH);
+    this.overlay.fillRect(0, 0, VW(), VH());
     this.container.add(this.overlay);
 
-    this.blocker = scene.add.rectangle(CX, VH / 2, VW, VH, 0x000000, 0)
+    this.blocker = scene.add.rectangle(CX(), VH() / 2, VW(), VH(), 0x000000, 0)
       .setScrollFactor(0)
       .setInteractive();
     this.blocker.on('pointerdown', () => {});
@@ -51,40 +51,40 @@ export class ConsumablePicker {
     this.popupBg = scene.add.graphics();
     this.container.add(this.popupBg);
 
-    this.icon = scene.add.image(CX, 220, 'item_stamina_potion').setScale(2);
+    this.icon = scene.add.image(CX(), 220, 'item_stamina_potion').setScale(2);
     this.container.add(this.icon);
 
-    this.nameText = createText(scene, CX, 268, '', {
+    this.nameText = createText(scene, CX(), 268, '', {
       fontSize: fs(16), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.nameText);
 
-    this.descText = createText(scene, CX, 296, '', {
+    this.descText = createText(scene, CX(), 296, '', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b8a898',
     }).setOrigin(0.5);
     this.container.add(this.descText);
 
-    this.stashText = createText(scene, CX, 326, '', {
+    this.stashText = createText(scene, CX(), 326, '', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#888888',
     }).setOrigin(0.5);
     this.container.add(this.stashText);
 
-    this.qtyText = createText(scene, CX, 370, '', {
+    this.qtyText = createText(scene, CX(), 370, '', {
       fontSize: fs(24), fontFamily: 'Inter', resolution: 4, color: '#ffddaa',
     }).setOrigin(0.5);
     this.container.add(this.qtyText);
 
-    this.minusBtn = createText(scene, CX - 60, 370, '[−]', {
+    this.minusBtn = createText(scene, CX() - 60, 370, '[−]', {
       fontSize: fs(22), fontFamily: 'Inter', resolution: 4, color: '#cc8888',
     }).setOrigin(0.5);
     this.container.add(this.minusBtn);
 
-    this.plusBtn = createText(scene, CX + 60, 370, '[+]', {
+    this.plusBtn = createText(scene, CX() + 60, 370, '[+]', {
       fontSize: fs(22), fontFamily: 'Inter', resolution: 4, color: '#88cc88',
     }).setOrigin(0.5);
     this.container.add(this.plusBtn);
 
-    this.footerText = createText(scene, CX, 440, '[← →] adjust  [SPACE] confirm  [ESC] cancel', {
+    this.footerText = createText(scene, CX(), 440, '[← →] adjust  [SPACE] confirm  [ESC] cancel', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#8a7a9a',
     }).setOrigin(0.5);
     this.container.add(this.footerText);
@@ -113,17 +113,17 @@ export class ConsumablePicker {
 
     this.clickHandler = (p: Phaser.Input.Pointer) => {
       const popH = 310;
-      const popY = Math.floor((VH - popH) / 2);
-      const insidePopup = p.x >= CX - 150 && p.x <= CX + 150 && p.y >= popY && p.y <= popY + popH;
+      const popY = Math.floor((VH() - popH) / 2);
+      const insidePopup = p.x >= CX() - 150 && p.x <= CX() + 150 && p.y >= popY && p.y <= popY + popH;
       if (!insidePopup) {
         this.confirm();
         return;
       }
       const btnY = popY + 198;
       const hw = 22, hh = 22;
-      if (p.x >= CX - 60 - hw && p.x <= CX - 60 + hw && p.y >= btnY - hh && p.y <= btnY + hh) {
+      if (p.x >= CX() - 60 - hw && p.x <= CX() - 60 + hw && p.y >= btnY - hh && p.y <= btnY + hh) {
         this.adjustQty(-1);
-      } else if (p.x >= CX + 60 - hw && p.x <= CX + 60 + hw && p.y >= btnY - hh && p.y <= btnY + hh) {
+      } else if (p.x >= CX() + 60 - hw && p.x <= CX() + 60 + hw && p.y >= btnY - hh && p.y <= btnY + hh) {
         this.adjustQty(1);
       }
     };
@@ -142,39 +142,39 @@ export class ConsumablePicker {
 
   private render(): void {
     const popH = 310;
-    const popY = Math.floor((VH - popH) / 2);
+    const popY = Math.floor((VH() - popH) / 2);
 
     this.popupBg.clear();
     this.popupBg.fillStyle(0x0a0a1a, 0.95);
-    this.popupBg.fillRoundedRect(CX - 160, popY, 320, popH, 10);
+    this.popupBg.fillRoundedRect(CX() - 160, popY, 320, popH, 10);
     this.popupBg.lineStyle(2, 0x6a5a8a);
-    this.popupBg.strokeRoundedRect(CX - 160, popY, 320, popH, 10);
+    this.popupBg.strokeRoundedRect(CX() - 160, popY, 320, popH, 10);
 
     const iconKey = itemIconKey(this.consumableId);
     if (this.scene.textures.exists(iconKey)) {
       this.icon.setTexture(iconKey);
     }
-    this.icon.setPosition(CX, popY + 55);
+    this.icon.setPosition(CX(), popY + 55);
 
     this.nameText.setText(itemDisplayName(this.consumableId));
-    this.nameText.setPosition(CX, popY + 100);
+    this.nameText.setPosition(CX(), popY + 100);
 
     this.descText.setText(this.DESC_MAP[this.consumableId] ?? '');
-    this.descText.setPosition(CX, popY + 128);
+    this.descText.setPosition(CX(), popY + 128);
 
     this.stashText.setText(`In stash: ${this.maxQty}`);
-    this.stashText.setPosition(CX, popY + 155);
+    this.stashText.setPosition(CX(), popY + 155);
 
     this.qtyText.setText(`${this.currentQty}`);
-    this.qtyText.setPosition(CX, popY + 198);
+    this.qtyText.setPosition(CX(), popY + 198);
 
-    this.minusBtn.setPosition(CX - 60, popY + 198);
+    this.minusBtn.setPosition(CX() - 60, popY + 198);
     this.minusBtn.setAlpha(this.currentQty <= 0 ? 0.3 : 1);
 
-    this.plusBtn.setPosition(CX + 60, popY + 198);
+    this.plusBtn.setPosition(CX() + 60, popY + 198);
     this.plusBtn.setAlpha(this.currentQty >= this.maxQty ? 0.3 : 1);
 
-    this.footerText.setPosition(CX, popY + popH - 18);
+    this.footerText.setPosition(CX(), popY + popH - 18);
   }
 
   private adjustQty(delta: number): void {

@@ -19,7 +19,11 @@ import {
   tileSortKey, drawDiamondAt, interactiveDepth,
   HALF_W, HALF_H, worldWidth, worldHeight,
 } from '../systems/IsoUtils';
-import { VW, VH, CX, CY } from '../systems/Viewport';
+import {
+  VW, VH, CX, CY, anchorBottom, anchorRight,
+  actionButtonCenter, actionButtonGlowBoxTopLeft, ACTION_BTN_SIZE,
+} from '../systems/Viewport';
+import { viewportManager } from '../systems/ViewportManager';
 import { textStyle, fs, createText } from '../systems/Font';
 
 const BIOMES = ['FOREST', 'CAVE', 'ICE', 'LAVA', 'RUINS'];
@@ -55,6 +59,19 @@ const DEPTH = {
   INTERACT_PROMPT: 55, OVERLAY: 100, OVERLAY_TEXT: 101,
   POPUP: 200, CLICK_ZONES: 210, ANALOG: 250,
 };
+
+// Top-left HUD stack (stamina block -> pickaxe block/minimap row) is built by
+// accumulating offsets from the top edge, so the blocks can never drift out of
+// alignment with each other regardless of viewport size.
+const HUD_TOP_SAFE = 4;
+const STAMINA_BLOCK_H = 68;
+const TOPLEFT_GAP = 6;
+
+// Bottom-right HUD stack (potion -> bomb -> escape) is built by accumulating
+// offsets from the bottom edge, so the three icons can never overlap by
+// construction regardless of viewport height.
+const ACTION_ICON_GAP = 42;
+const ESCAPE_BOTTOM_OFFSET = 46;
 
 type BossMechanic = 'shrink' | 'accelerate' | 'fake_zone' | 'invert';
 
@@ -120,6 +137,11 @@ export class ExpeditionScene extends Phaser.Scene {
   private invBtnSprite!: Phaser.GameObjects.Image;
   private invBtnRing!: Phaser.GameObjects.Graphics;
   private invSlotText!: Phaser.GameObjects.Text;
+  private pickBg!: Phaser.GameObjects.Graphics;
+  private invBg!: Phaser.GameObjects.Graphics;
+  private invZone!: Phaser.GameObjects.Rectangle;
+  private actionBtnHit!: Phaser.GameObjects.Rectangle;
+  private _onViewportResize?: () => void;
   private minimapX: number = 0;
   private minimapY: number = 0;
   private minimapW: number = 0;
@@ -249,7 +271,7 @@ export class ExpeditionScene extends Phaser.Scene {
   create(): void {
     this.cameras.main.fadeIn(500, 0, 0, 0);
 
-    this.hudCam = this.cameras.add(0, 0, VW, VH, false, 'hud');
+    this.hudCam = this.cameras.add(0, 0, VW(), VH(), false, 'hud');
     this.hudCam.setZoom(1);
 
     this.exhausted = false;
@@ -340,6 +362,13 @@ export class ExpeditionScene extends Phaser.Scene {
     this.revealSurroundings();
     this.updateDarkness();
     this.updateBiomeBackground();
+
+    this.relayout();
+    this._onViewportResize = () => this.relayout();
+    viewportManager.onResize(this._onViewportResize);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      if (this._onViewportResize) viewportManager.offResize(this._onViewportResize);
+    });
   }
 
   private updateBiomeBackground(): void {
@@ -691,20 +720,22 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private createHUD(): void {
+    const staminaY = HUD_TOP_SAFE;
+    const pickaxeY = staminaY + STAMINA_BLOCK_H + TOPLEFT_GAP;
+
     // === TOP-LEFT: Stamina Block (portrait + bar + value) ===
     this.staminaBg = this.add.graphics();
     this.staminaBg.fillStyle(0x0a0a1a, 0.75);
-    this.staminaBg.fillRoundedRect(4, 4, VW - 8, 68, 6);
+    this.staminaBg.fillRoundedRect(4, staminaY, VW() - 8, STAMINA_BLOCK_H, 6);
     this.staminaBg.setScrollFactor(0).setDepth(211);
     this.cameras.main.ignore(this.staminaBg);
 
-    this.portraitSprite = this.add.image(42, VH, 'portrait')
+    this.portraitSprite = this.add.image(42, staminaY + 84, 'portrait')
       .setScrollFactor(0).setDepth(213);
     this.cameras.main.ignore(this.portraitSprite);
     this.portraitSprite.setCrop(54, 0, 108, 108);
     this.portraitSprite.setDisplaySize(200, 200);
     this.portraitSprite.setFlipX(true);
-    this.portraitSprite.setY(88);
 
     this.staminaBarGfx = this.add.graphics().setScrollFactor(0).setDepth(212);
     this.cameras.main.ignore(this.staminaBarGfx);
@@ -712,12 +743,12 @@ export class ExpeditionScene extends Phaser.Scene {
     this.staminaAnimGfx = this.add.graphics().setScrollFactor(0).setDepth(212.5);
     this.cameras.main.ignore(this.staminaAnimGfx);
 
-    this.staminaValueText = createText(this, VW - 8, 10, '', {
+    this.staminaValueText = createText(this, VW() - 8, staminaY + 6, '', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#ffffff',
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(211);
     this.cameras.main.ignore(this.staminaValueText);
 
-    this.carrotCountText = createText(this, CX, 85, '', {
+    this.carrotCountText = createText(this, CX(), pickaxeY + 7, '', {
       fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#ff8833', fontStyle: 'bold',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD_BG);
     this.cameras.main.ignore(this.carrotCountText);
@@ -726,7 +757,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.drawStaminaBar();
 
     // === BOTTOM-CENTER: Depth ===
-    this.depthTextCentered = createText(this, CX, VH - 36, `Depth: ${this.expeditionState.depth}`, {
+    this.depthTextCentered = createText(this, CX(), anchorBottom(36), `Depth: ${this.expeditionState.depth}`, {
       fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#ffffff', fontStyle: 'bold',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.depthTextCentered);
@@ -734,17 +765,18 @@ export class ExpeditionScene extends Phaser.Scene {
     // === LEFT-TOP: Pickaxe Block (below stamina) ===
     const pickBg = this.add.graphics();
     pickBg.fillStyle(0x0a0a1a, 0.75);
-    pickBg.fillRoundedRect(4, 78, 80, 42, 4);
+    pickBg.fillRoundedRect(4, pickaxeY, 80, 42, 4);
     pickBg.setScrollFactor(0).setDepth(DEPTH.HUD_BG);
     this.cameras.main.ignore(pickBg);
+    this.pickBg = pickBg;
 
     const tier = gameState.currentPickaxeTier;
-    this.pickaxeSprite = this.add.image(30, 99, `item_pickaxe_${tier}`)
+    this.pickaxeSprite = this.add.image(30, pickaxeY + 21, `item_pickaxe_${tier}`)
       .setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.pickaxeSprite);
     this.pickaxeRing = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD + 1);
     this.cameras.main.ignore(this.pickaxeRing);
-    this.pickaxeUsesText = createText(this, 60, 99, '', {
+    this.pickaxeUsesText = createText(this, 60, pickaxeY + 21, '', {
       fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#cccccc', align: 'center',
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.pickaxeUsesText);
@@ -754,12 +786,13 @@ export class ExpeditionScene extends Phaser.Scene {
     // === BOTTOM-LEFT: Inventory Button ===
     const invBg = this.add.graphics();
     invBg.fillStyle(0x0a0a1a, 0.75);
-    invBg.fillRoundedRect(6, VH - 78, 68, 72, 6);
+    invBg.fillRoundedRect(6, anchorBottom(78), 68, 72, 6);
     invBg.setScrollFactor(0).setDepth(DEPTH.HUD_BG);
     this.cameras.main.ignore(invBg);
+    this.invBg = invBg;
 
     const invCx = 40;
-    const invCy = VH - 42;
+    const invCy = anchorBottom(42);
     this.invBtnSprite = this.add.image(invCx, invCy - 4, 'item_inventory_bag')
       .setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.invBtnSprite);
@@ -779,6 +812,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.analog.reset();
       this.inventoryPanel.toggle();
     });
+    this.invZone = invZone;
 
     this.drawInventoryButton();
 
@@ -835,8 +869,61 @@ export class ExpeditionScene extends Phaser.Scene {
     this.createActionButton();
   }
 
+  /**
+   * Re-applies position/size to already-created HUD objects using the current
+   * live viewport. Called once at the end of create() and again on every live
+   * resize. Must only reposition — never create/destroy objects or toggle
+   * panel visibility.
+   */
+  private relayout(): void {
+    const staminaY = HUD_TOP_SAFE;
+    const pickaxeY = staminaY + STAMINA_BLOCK_H + TOPLEFT_GAP;
+
+    this.staminaBg.clear();
+    this.staminaBg.fillStyle(0x0a0a1a, 0.75);
+    this.staminaBg.fillRoundedRect(4, staminaY, VW() - 8, STAMINA_BLOCK_H, 6);
+    this.portraitSprite.setPosition(42, staminaY + 84);
+    this.staminaValueText.setPosition(VW() - 8, staminaY + 6);
+    this.carrotCountText.setPosition(CX(), pickaxeY + 7);
+    this.depthTextCentered.setPosition(CX(), anchorBottom(36));
+    this.drawStaminaBar();
+
+    this.pickBg.clear();
+    this.pickBg.fillStyle(0x0a0a1a, 0.75);
+    this.pickBg.fillRoundedRect(4, pickaxeY, 80, 42, 4);
+    this.pickaxeSprite.setPosition(30, pickaxeY + 21);
+    this.pickaxeUsesText.setPosition(60, pickaxeY + 21);
+    this.drawPickaxeRing();
+
+    this.invBg.clear();
+    this.invBg.fillStyle(0x0a0a1a, 0.75);
+    this.invBg.fillRoundedRect(6, anchorBottom(78), 68, 72, 6);
+    const invCx = 40;
+    const invCy = anchorBottom(42);
+    this.invBtnSprite.setPosition(invCx, invCy - 4);
+    this.invSlotText.setPosition(invCx, invCy + 16);
+    this.invZone.setPosition(invCx, invCy);
+    this.drawInventoryButton();
+
+    if (this.actionBtnText) {
+      const { x, y } = actionButtonCenter();
+      this.actionBtnText.setPosition(x, y);
+      this.actionBtnHit?.setPosition(x, y);
+      this.updateActionButton();
+    }
+
+    this.drawMinimap();
+    this.repositionActionButtons();
+
+    this.inventoryPanel?.onViewportResize();
+    this.eventPanel?.onViewportResize();
+    this.combatPanel?.onViewportResize();
+    this.gamblePanel?.onViewportResize();
+    this.confirmPopup?.onViewportResize();
+  }
+
   private createActionButton(): void {
-    const x = CX, y = VH - 90, size = 64;
+    const { x, y } = actionButtonCenter(), size = ACTION_BTN_SIZE;
     this.actionBtnBg = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD);
     this.cameras.main.ignore(this.actionBtnBg);
     this.actionBtnText = createText(this, x, y, '', {
@@ -849,10 +936,11 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.ignore(hit);
     hit.setInteractive({ useHandCursor: true });
     hit.on('pointerdown', () => this.handleActionButton());
+    this.actionBtnHit = hit;
   }
 
   private updateActionButton(): void {
-    const bx = CX - 32, by = VH - 122;
+    const { x: bx, y: by } = actionButtonGlowBoxTopLeft();
     const show = (icon: string, color: string) => {
       this.actionBtnBg.clear();
       this.actionBtnBg.fillStyle(0x0a0a1a, 0.75);
@@ -953,8 +1041,8 @@ export class ExpeditionScene extends Phaser.Scene {
     const cell = 1.5;
     const mapW = floor.cols * cell;
     const mapH = floor.rows * cell;
-    const mapX = VW - mapW - 6;
-    const mapY = 80;
+    const mapX = VW() - mapW - 6;
+    const mapY = HUD_TOP_SAFE + STAMINA_BLOCK_H + TOPLEFT_GAP;
 
     this.minimapBg.clear();
     this.minimapGfx.clear();
@@ -1018,8 +1106,8 @@ export class ExpeditionScene extends Phaser.Scene {
     const cell = 1.5;
     const mapW = floor.cols * cell;
     const mapH = floor.rows * cell;
-    const mapX = VW - mapW - 6;
-    const mapY = 80;
+    const mapX = VW() - mapW - 6;
+    const mapY = HUD_TOP_SAFE + STAMINA_BLOCK_H + TOPLEFT_GAP;
     this.minimapDot.setPosition(mapX + this.playerX * cell + cell / 2, mapY + this.playerY * cell + cell / 2);
   }
 
@@ -1027,8 +1115,8 @@ export class ExpeditionScene extends Phaser.Scene {
     this.staminaBarGfx.clear();
 
     const x = 80;
-    const y = 32;
-    const w = VW - 100;
+    const y = HUD_TOP_SAFE + 28;
+    const w = VW() - 100;
     const h = 24;
     const ratio = this.stamina.ratio;
 
@@ -1046,7 +1134,7 @@ export class ExpeditionScene extends Phaser.Scene {
     if (fromRatio === toRatio) return;
     this.staminaAnimGfx.clear();
 
-    const x = 80, y = 32, w = VW - 100, h = 24;
+    const x = 80, y = HUD_TOP_SAFE + 28, w = VW() - 100, h = 24;
     const fillW = w - 2;
     const fromFill = fillW * fromRatio;
     const toFill = fillW * toRatio;
@@ -1095,7 +1183,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const ratio = max > 0 ? used / max : 0;
 
     const cx = 40;
-    const cy = VH - 42;
+    const cy = anchorBottom(42);
     const radius = 16;
     const color = ratio <= 0.75 ? 0x44cc66 : ratio <= 0.9 ? 0xccaa44 : 0xcc4444;
 
@@ -1111,7 +1199,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.pickaxeRing.clear();
 
     const pickCx = 30;
-    const pickCy = 99;
+    const pickCy = HUD_TOP_SAFE + STAMINA_BLOCK_H + TOPLEFT_GAP + 21;
     const radius = 14;
     const tier = gameState.currentPickaxeTier;
     const runsLeft = gameState.remainingPickaxeRuns(tier);
@@ -1157,15 +1245,20 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private repositionActionButtons(): void {
-    // Bottom-right vertical stack: potion → bomb → escape
-    const cx = VW - 40;
-    this.potionImg.setPosition(cx, VH - 130);
+    // Bottom-right vertical stack: potion → bomb → escape, built by accumulating
+    // offsets from the bottom edge so the three icons can never overlap.
+    const cx = anchorRight(40);
+    const escapeY = anchorBottom(ESCAPE_BOTTOM_OFFSET);
+    const bombY = escapeY - ACTION_ICON_GAP;
+    const potionY = bombY - ACTION_ICON_GAP;
+
+    this.potionImg.setPosition(cx, potionY);
     this.potionCountText.setPosition(this.potionImg.x + 14, this.potionImg.y - 14);
 
-    this.bombImg.setPosition(cx, VH - 88);
+    this.bombImg.setPosition(cx, bombY);
     this.bombCountText.setPosition(this.bombImg.x + 14, this.bombImg.y - 14);
 
-    this.escapeSprite.setPosition(cx, VH - 46);
+    this.escapeSprite.setPosition(cx, escapeY);
     this.escapeLabel.setPosition(this.escapeSprite.x, this.escapeSprite.y + 16);
   }
 
@@ -1931,13 +2024,13 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private showStairPrompt(): void {
-    const cx = CX;
-    const cy = CY;
+    const cx = CX();
+    const cy = CY();
     const action = this.stairAction === 'ascend' ? 'Ascend' : 'Descend';
 
     const bg = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.OVERLAY);
     bg.fillStyle(0x0a0a1a, 0.9);
-    bg.fillRect(0, 0, VW, VH);
+    bg.fillRect(0, 0, VW(), VH());
     bg.lineStyle(2, 0x5a4a7a, 0.6);
     bg.strokeRoundedRect(cx - 180, cy - 55, 360, 145, 10);
     this.cameras.main.ignore(bg);
@@ -3095,7 +3188,7 @@ export class ExpeditionScene extends Phaser.Scene {
     if (this.activeObtainPopups.length >= 3) return;
 
     const anchorX = 18;
-    const anchorY = VH - 90;
+    const anchorY = VH() - 90;
     const popY = anchorY - this.activeObtainPopups.length * 36;
     const container = this.add.container(anchorX, popY).setScrollFactor(0).setDepth(DEPTH.HUD + 2);
     this.cameras.main.ignore(container);
@@ -3232,7 +3325,7 @@ export class ExpeditionScene extends Phaser.Scene {
         this.cameras.main.ignore(sprite);
         this.tweens.add({
           targets: sprite,
-          x: CX,
+          x: CX(),
           y: 85,
           scale: 0.4,
           alpha: 0.7,
@@ -3262,7 +3355,7 @@ export class ExpeditionScene extends Phaser.Scene {
     sprite.cameraFilter &= ~this.hudCam.id;
     this.cameras.main.ignore(sprite);
     const targetX = 40;
-    const targetY = VH - 42;
+    const targetY = VH() - 42;
     this.tweens.add({
       targets: sprite,
       x: targetX,

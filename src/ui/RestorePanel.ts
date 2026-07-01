@@ -45,35 +45,35 @@ export class RestorePanel extends BasePanel {
 
     this.overlay.clear();
     this.overlay.fillStyle(0x0a0a1a, 0.85);
-    this.overlay.fillRoundedRect(CX - 180, CY - 110, 360, 220, 10);
+    this.overlay.fillRoundedRect(CX() - 180, CY() - 110, 360, 220, 10);
     this.overlay.lineStyle(2, 0x6a5a8a, 1);
-    this.overlay.strokeRoundedRect(CX - 180, CY - 110, 360, 220, 10);
+    this.overlay.strokeRoundedRect(CX() - 180, CY() - 110, 360, 220, 10);
 
     const lineH = 26;
     const totalLines = 5 + costEntries.length;
     const totalTextH = totalLines * lineH;
-    const textTop = CY - totalTextH / 2;
+    const textTop = CY() - totalTextH / 2;
 
     this.contentContainer.add(
-      createText(this.scene, CX, textTop + 0 * lineH + lineH / 2, building.name, {
+      createText(this.scene, CX(), textTop + 0 * lineH + lineH / 2, building.name, {
         fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
       }).setOrigin(0.5)
     );
 
     this.contentContainer.add(
-      createText(this.scene, CX, textTop + 1 * lineH + lineH / 2, building.description, {
+      createText(this.scene, CX(), textTop + 1 * lineH + lineH / 2, building.description, {
         fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#a08559',
       }).setOrigin(0.5)
     );
 
     this.contentContainer.add(
-      createText(this.scene, CX, textTop + 2 * lineH + lineH / 2, 'Required Materials:', {
+      createText(this.scene, CX(), textTop + 2 * lineH + lineH / 2, 'Required Materials:', {
         fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
       }).setOrigin(0.5)
     );
 
-    const spriteX = CX - 60;
-    const textX = CX - 46;
+    const spriteX = CX() - 60;
+    const textX = CX() - 46;
 
     for (let i = 0; i < costEntries.length; i++) {
       const [id, qty] = costEntries[i];
@@ -100,24 +100,24 @@ export class RestorePanel extends BasePanel {
     if (canAfford) {
       const restoreBg = this.scene.add.graphics();
       restoreBg.fillStyle(0x1a3a1a, 0.9);
-      restoreBg.fillRoundedRect(CX - 90, btnY - 12, 80, 24, 4);
+      restoreBg.fillRoundedRect(CX() - 90, btnY - 12, 80, 24, 4);
       restoreBg.lineStyle(1, 0x44aa44, 0.6);
-      restoreBg.strokeRoundedRect(CX - 90, btnY - 12, 80, 24, 4);
+      restoreBg.strokeRoundedRect(CX() - 90, btnY - 12, 80, 24, 4);
       this.contentContainer.add(restoreBg);
 
-      const restoreText = createText(this.scene, CX - 50, btnY, 'RESTORE', {
+      const restoreText = createText(this.scene, CX() - 50, btnY, 'RESTORE', {
         fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#88ff88',
       }).setOrigin(0.5).setInteractive({ useHandCursor: true });
       this.contentContainer.add(restoreText);
 
       const cancelBg = this.scene.add.graphics();
       cancelBg.fillStyle(0x1a1a2e, 0.9);
-      cancelBg.fillRoundedRect(CX + 10, btnY - 12, 80, 24, 4);
+      cancelBg.fillRoundedRect(CX() + 10, btnY - 12, 80, 24, 4);
       cancelBg.lineStyle(1, 0x5a4a7a, 0.6);
-      cancelBg.strokeRoundedRect(CX + 10, btnY - 12, 80, 24, 4);
+      cancelBg.strokeRoundedRect(CX() + 10, btnY - 12, 80, 24, 4);
       this.contentContainer.add(cancelBg);
 
-      const cancelText = createText(this.scene, CX + 50, btnY, 'CANCEL', {
+      const cancelText = createText(this.scene, CX() + 50, btnY, 'CANCEL', {
         fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b8a8d8',
       }).setOrigin(0.5).setInteractive({ useHandCursor: true });
       this.contentContainer.add(cancelText);
@@ -133,12 +133,12 @@ export class RestorePanel extends BasePanel {
     } else {
       const cancelBg = this.scene.add.graphics();
       cancelBg.fillStyle(0x1a1a2e, 0.9);
-      cancelBg.fillRoundedRect(CX - 50, btnY - 12, 100, 24, 4);
+      cancelBg.fillRoundedRect(CX() - 50, btnY - 12, 100, 24, 4);
       cancelBg.lineStyle(1, 0x5a4a7a, 0.6);
-      cancelBg.strokeRoundedRect(CX - 50, btnY - 12, 100, 24, 4);
+      cancelBg.strokeRoundedRect(CX() - 50, btnY - 12, 100, 24, 4);
       this.contentContainer.add(cancelBg);
 
-      const cancelText = createText(this.scene, CX, btnY, 'CANCEL', {
+      const cancelText = createText(this.scene, CX(), btnY, 'CANCEL', {
         fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b8a8d8',
       }).setOrigin(0.5).setInteractive({ useHandCursor: true });
       this.contentContainer.add(cancelText);

@@ -3,7 +3,7 @@ import { InventorySystem } from '../systems/InventorySystem';
 import { itemDisplayName, itemIconKey } from '../systems/GameState';
 import { BasePanel } from './BasePanel';
 import { isConsumable } from '../systems/DataRegistry';
-import { VW, VH, CX } from '../systems/Viewport';
+import { VW, VH, CX, anchorBottom } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
 
 const ITEM_INFO: Record<string, { desc: string }> = {
@@ -56,6 +56,17 @@ export class InventoryPanel extends BasePanel {
   private trashBtnZone: Phaser.GameObjects.Rectangle;
   private dirty: boolean = true;
 
+  // List area top (below title+warn text) is a fixed chrome height; the bottom
+  // boundary is derived from the button row above so rows never overlap the
+  // USE/TRASH buttons or description text, at any clamped viewport height.
+  private static readonly LIST_TOP = 72;
+  private listBottom(): number { return anchorBottom(100); }
+  private rowHeight(): number {
+    const available = this.listBottom() - InventoryPanel.LIST_TOP;
+    const count = Math.max(1, this.items.length);
+    return Math.min(20, available / count);
+  }
+
   constructor(
     scene: Phaser.Scene,
     inventory: InventorySystem,
@@ -70,12 +81,12 @@ export class InventoryPanel extends BasePanel {
 
     this.createOverlay();
 
-    this.titleText = createText(scene, CX, 28, title, {
+    this.titleText = createText(scene, CX(), 28, title, {
       fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
-    this.warnText = createText(scene, CX, 50, '', {
+    this.warnText = createText(scene, CX(), 50, '', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#ff6644', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.warnText);
@@ -83,28 +94,28 @@ export class InventoryPanel extends BasePanel {
     this.itemRows = scene.add.container(0, 0);
     this.container.add(this.itemRows);
 
-    this.hintText = createText(scene, CX, VH - 40, '', {
+    this.hintText = createText(scene, CX(), VH() - 40, '', {
       fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
-    this.descriptionText = createText(scene, CX, VH - 100, '', {
+    this.descriptionText = createText(scene, CX(), VH() - 100, '', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#8a8a9a',
       align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.descriptionText);
 
-    this.useBtn = createText(scene, CX - 50, VH - 70, '[ USE ]', {
+    this.useBtn = createText(scene, CX() - 50, VH() - 70, '[ USE ]', {
       fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#b8a888',
     }).setOrigin(0.5).setVisible(false);
     this.container.add(this.useBtn);
 
-    this.trashBtn = createText(scene, CX + 50, VH - 70, '[ TRASH ]', {
+    this.trashBtn = createText(scene, CX() + 50, VH() - 70, '[ TRASH ]', {
       fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#b8a888',
     }).setOrigin(0.5).setVisible(false);
     this.container.add(this.trashBtn);
 
-    this.useBtnZone = scene.add.rectangle(CX - 50, VH - 70, 80, 44, 0xffffff, 0)
+    this.useBtnZone = scene.add.rectangle(CX() - 50, VH() - 70, 80, 44, 0xffffff, 0)
       .setDepth(210).setScrollFactor(0).setInteractive().setVisible(false);
     this.useBtnZone.on('pointerdown', () => {
       const item = this.items[this.selectionIndex];
@@ -115,7 +126,7 @@ export class InventoryPanel extends BasePanel {
     });
     this.container.add(this.useBtnZone);
 
-    this.trashBtnZone = scene.add.rectangle(CX + 50, VH - 70, 90, 44, 0xffffff, 0)
+    this.trashBtnZone = scene.add.rectangle(CX() + 50, VH() - 70, 90, 44, 0xffffff, 0)
       .setDepth(210).setScrollFactor(0).setInteractive().setVisible(false);
     this.trashBtnZone.on('pointerdown', () => {
       const item = this.items[this.selectionIndex];
@@ -196,28 +207,29 @@ export class InventoryPanel extends BasePanel {
     );
 
     this.itemRows.removeAll(true);
-    const startY = 72;
+    const startY = InventoryPanel.LIST_TOP;
+    const rowH = this.rowHeight();
     for (let i = 0; i < this.items.length; i++) {
       const item = this.items[i];
       const cursor = i === this.selectionIndex ? '▸' : ' ';
-      const y = startY + i * 20;
+      const y = startY + i * rowH;
       const row = this.scene.add.container(0, 0);
-      const icon = this.scene.add.image(CX - 28, y, itemIconKey(item.id)).setScale(0.7);
+      const icon = this.scene.add.image(CX() - 28, y, itemIconKey(item.id)).setScale(0.7);
       row.add(icon);
       if (item.qty > 1) {
-        row.add(createText(this.scene, CX - 18, y + 10, `${item.qty}`, {
+        row.add(createText(this.scene, CX() - 18, y + 10, `${item.qty}`, {
           fontSize: fs(9), fontFamily: 'Inter', resolution: 4, color: '#ffffff',
           stroke: '#000000', strokeThickness: 2,
         }).setOrigin(1, 1));
       }
-      const text = createText(this.scene, CX - 14, y, `${cursor} ${item.name.padEnd(16)} ${item.qty}`, {
+      const text = createText(this.scene, CX() - 14, y, `${cursor} ${item.name.padEnd(16)} ${item.qty}`, {
         fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#c8b898',
       }).setOrigin(0, 0.5);
       row.add([icon, text]);
       this.itemRows.add(row);
     }
     if (this.items.length === 0) {
-      const emptyText = createText(this.scene, CX, startY, '  (empty)', {
+      const emptyText = createText(this.scene, CX(), startY, '  (empty)', {
         fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#6a7a9a',
       });
       this.itemRows.add(emptyText);
@@ -226,7 +238,7 @@ export class InventoryPanel extends BasePanel {
     this.clickZones.forEach(z => z.destroy());
     this.clickZones = [];
     for (let i = 0; i < this.items.length; i++) {
-      const zone = this.scene.add.zone(CX, 72 + i * 20, VW - 40, 40)
+      const zone = this.scene.add.zone(CX(), startY + i * rowH, VW() - 40, Math.min(40, rowH))
         .setDepth(210)
         .setScrollFactor(0)
         .setInteractive();
@@ -271,12 +283,25 @@ export class InventoryPanel extends BasePanel {
 
     this.overlay.clear();
     this.overlay.fillStyle(0x0a0a1a, 0.92);
-    this.overlay.fillRect(0, 0, VW, VH);
+    this.overlay.fillRect(0, 0, VW(), VH());
 
     const pad = 16;
     this.overlay.lineStyle(1, 0x3a3a4a, 0.5);
-    this.overlay.strokeRect(pad, 60, VW - pad * 2, VH - 60 - pad);
+    this.overlay.strokeRect(pad, InventoryPanel.LIST_TOP - 12, VW() - pad * 2, this.listBottom() - (InventoryPanel.LIST_TOP - 12));
 
     this.buildItemList();
+  }
+
+  protected relayout(): void {
+    super.relayout();
+    this.titleText.setPosition(CX(), 28);
+    this.warnText.setPosition(CX(), 50);
+    this.hintText.setPosition(CX(), anchorBottom(40));
+    this.descriptionText.setPosition(CX(), anchorBottom(100));
+    this.useBtn.setPosition(CX() - 50, anchorBottom(70));
+    this.trashBtn.setPosition(CX() + 50, anchorBottom(70));
+    this.useBtnZone.setPosition(CX() - 50, anchorBottom(70));
+    this.trashBtnZone.setPosition(CX() + 50, anchorBottom(70));
+    this.dirty = true;
   }
 }
