@@ -8,7 +8,6 @@ import { SCENES } from '../constants/scenes';
 export class BootScene extends Phaser.Scene {
   private loadingBar!: Phaser.GameObjects.Graphics;
   private progressText!: Phaser.GameObjects.Text;
-  private titleText!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: SCENES.BOOT });
@@ -20,15 +19,7 @@ export class BootScene extends Phaser.Scene {
 
     this.cameras.main.setBackgroundColor('#0a0a1a');
 
-    // Show styled title text immediately before any loading
-    this.titleText = createText(this, cx, cy - 80, 'HEARTHBURROW', {
-      fontSize: fs(28),
-      fontFamily: 'Inter', resolution: 4,
-      color: '#e8d5b7',
-      fontStyle: 'bold',
-    }).setOrigin(0.5);
-
-    // Loading bar appears below the title
+    // Loading bar
     const barWidth = 300;
     const barHeight = 20;
     const barX = cx - barWidth / 2;
@@ -46,9 +37,14 @@ export class BootScene extends Phaser.Scene {
       color: '#6a5a4a',
     }).setOrigin(0.5);
 
-    // Queue all assets
+    // Queue title first so it loads early
     this.load.setPath('');
     this.load.image('title_img', 'icons/title.png');
+
+    // Show title image as soon as it finishes loading
+    this.load.once('filecomplete-image-title_img', () => {
+      this.add.image(cx, cy - 80, 'title_img').setOrigin(0.5).setScale(0.7);
+    });
 
     this.load.setPath('assets/sprites');
 
@@ -185,9 +181,7 @@ export class BootScene extends Phaser.Scene {
     const cx = this.cameras.main.centerX;
     const cy = this.cameras.main.centerY;
 
-    // Replace text title with the real loaded PNG
-    this.titleText.destroy();
-    this.add.image(cx, cy - 80, 'title_img').setOrigin(0.5).setScale(0.7);
+    // Title is already showing (loaded in preload via filecomplete event)
 
     // Generate procedural fallbacks for any textures that didn't load (missing PNGs)
     generateAll(this);
