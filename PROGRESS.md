@@ -167,6 +167,7 @@ Resolved Bugs:
 - **Facing-edge stairs detection** — `checkEventProximity` returned early when facing tile was out-of-bounds (player at map edge), skipping stairs-underfoot check. Fixed: stairs check moved before facing-tile bounds guard.
 - **Facing highlight depth** — `previewTile.destroy()` moved to top of `updateFacingHighlight()` before early return guard, preventing stale Image at same depth from accumulating.
 - **Guaranteed NPC per floor** — refactored `placeEventTiles()` to place one `trapped_villager` before random events; extracted `getFloorPositions()` and `canSpawnVillager()` helpers.
+- **CAVE boss shrink balance** — shrink rate 0.9→0.95 (10%→5% per hit), floor 20→35px, so the zone stays hittable through the full fight instead of becoming a narrow sliver by the midpoint
 
 ## ✅ NPC Personalities (June 2026)
 - **20 unique personalities** — new `NPCPersonality` interface with name, archetype, rescueLine, greetings[], description. Replaces the old flat `NPC_NAMES` array.

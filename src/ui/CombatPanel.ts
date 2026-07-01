@@ -392,7 +392,7 @@ export class CombatPanel extends BasePanel {
 
       // CAVE: shrink hit zone on each hit
       if (this.currentEnemy?.bossMechanic === 'shrink') {
-        this.currentHitZoneWidth = Math.max(20, this.currentHitZoneWidth * 0.9);
+        this.currentHitZoneWidth = Math.max(35, this.currentHitZoneWidth * 0.95);
       }
 
       // ICE: accelerate marker on each hit
