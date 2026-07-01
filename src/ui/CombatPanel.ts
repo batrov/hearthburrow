@@ -62,9 +62,17 @@ export class CombatPanel extends BasePanel {
 
   private readonly BAR_WIDTH = 300;
   private readonly BAR_HEIGHT = 16;
-  private readonly BAR_Y = 400;
+  private BAR_Y = 0;
   private readonly MARKER_SIZE = 6;
   private readonly CRIT_RATIO = 0.4;
+
+  // Fixed-size modal box, always centered via CY() — every internal Y below is
+  // rebased from this live box top so the panel stays centered at any clamped
+  // viewport height, instead of a chain of independent literal offsets.
+  private static readonly BOX_W = 320;
+  private static readonly BOX_H = 500;
+
+  private boxTop(): number { return CY() - CombatPanel.BOX_H / 2; }
 
   constructor(scene: Phaser.Scene) {
     super(scene);
@@ -73,24 +81,27 @@ export class CombatPanel extends BasePanel {
     this.overlay = scene.add.graphics();
     this.container.add(this.overlay);
 
-    this.enemyNameText = createText(scene, CX, 100, '', {
+    const boxTop = this.boxTop();
+    this.BAR_Y = boxTop + 340;
+
+    this.enemyNameText = createText(scene, CX(), boxTop + 40, '', {
       fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.enemyNameText);
 
-    this.enemySprite = scene.add.image(CX, 180, '__DEFAULT');
+    this.enemySprite = scene.add.image(CX(), boxTop + 120, '__DEFAULT');
     this.enemySprite.setOrigin(0.5);
     this.container.add(this.enemySprite);
 
     this.hpBar = scene.add.graphics();
     this.container.add(this.hpBar);
 
-    this.hpText = createText(scene, CX, 310, '', {
+    this.hpText = createText(scene, CX(), boxTop + 250, '', {
       fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#cc6666',
     }).setOrigin(0.5);
     this.container.add(this.hpText);
 
-    this.instructionText = createText(scene, CX, 340, '', {
+    this.instructionText = createText(scene, CX(), boxTop + 280, '', {
       fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#b8a898',
     }).setOrigin(0.5);
     this.container.add(this.instructionText);
@@ -101,29 +112,29 @@ export class CombatPanel extends BasePanel {
     this.hitZoneGfx = scene.add.graphics();
     this.container.add(this.hitZoneGfx);
 
-    this.barLeft = CX - this.BAR_WIDTH / 2;
-    this.barRight = CX + this.BAR_WIDTH / 2;
-    this.barCenter = CX;
+    this.barLeft = CX() - this.BAR_WIDTH / 2;
+    this.barRight = CX() + this.BAR_WIDTH / 2;
+    this.barCenter = CX();
 
     this.marker = scene.add.rectangle(this.barLeft, this.BAR_Y, this.MARKER_SIZE, this.BAR_HEIGHT + 8, 0xffdd88);
     this.marker.setDepth(201);
     this.container.add(this.marker);
 
-    this.feedbackText = createText(scene, CX, 440, '', {
+    this.feedbackText = createText(scene, CX(), boxTop + 380, '', {
       fontSize: fs(16), fontFamily: 'Inter', resolution: 4, fontStyle: 'bold', align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.feedbackText);
 
-    this.hintText = createText(scene, CX, 480, '[SPACE] Strike  |  Action button', {
+    this.hintText = createText(scene, CX(), boxTop + 420, '[SPACE] Strike  |  Action button', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
-    this.retreatBtn = createText(scene, CX, 520, '[ ESC ] Retreat', {
+    this.retreatBtn = createText(scene, CX(), boxTop + 460, '[ ESC ] Retreat', {
       fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#cc6644',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(210).setData('isUI', true).setVisible(false);
 
-    this.retreatHitZone = scene.add.rectangle(CX, 520, 200, 36, 0x000000, 0)
+    this.retreatHitZone = scene.add.rectangle(CX(), boxTop + 460, 200, 36, 0x000000, 0)
       .setScrollFactor(0).setDepth(210).setData('isUI', true).setVisible(false);
     this.retreatHitZone.setInteractive({ useHandCursor: true });
     this.retreatHitZone.on('pointerdown', () => {
@@ -132,11 +143,49 @@ export class CombatPanel extends BasePanel {
       }
     });
 
-    this.blocker = scene.add.rectangle(CX, CY, VW, VH, 0x000000, 0)
+    this.blocker = scene.add.rectangle(CX(), CY(), VW(), VH(), 0x000000, 0)
       .setScrollFactor(0).setInteractive().setData('isUI', true);
     this.container.add(this.blocker);
 
     this.confirmPopup = new ConfirmPopup(scene);
+  }
+
+  /**
+   * CombatPanel manages its own overlay/box (not BasePanel's default full-bleed
+   * overlay) and has no close button, so this overrides the base implementation
+   * entirely rather than extending it. Repositions in place; never toggles
+   * visibility. Combat is gameplay-critical and likely to be open during a
+   * resize, so this repositions immediately rather than deferring to next show().
+   */
+  onViewportResize(): void {
+    const boxTop = this.boxTop();
+    this.barLeft = CX() - this.BAR_WIDTH / 2;
+    this.barRight = CX() + this.BAR_WIDTH / 2;
+    this.barCenter = CX();
+    this.BAR_Y = boxTop + 340;
+
+    this.enemyNameText.setPosition(CX(), boxTop + 40);
+    this.enemySprite.setPosition(CX(), boxTop + 120);
+    this.hpText.setPosition(CX(), boxTop + 250);
+    this.instructionText.setPosition(CX(), boxTop + 280);
+    this.feedbackText.setPosition(CX(), boxTop + 380);
+    this.hintText.setPosition(CX(), boxTop + 420);
+    this.retreatBtn.setPosition(CX(), boxTop + 460);
+    this.retreatHitZone.setPosition(CX(), boxTop + 460);
+    this.blocker.setPosition(CX(), CY()).setSize(VW(), VH());
+
+    if (this._visible) {
+      this.overlay.clear();
+      this.overlay.fillStyle(0x0a0a1a, 0.92);
+      this.overlay.fillRect(0, 0, VW(), VH());
+      this.overlay.lineStyle(2, 0x5a4a7a, 0.6);
+      this.overlay.strokeRoundedRect(CX() - CombatPanel.BOX_W / 2, boxTop, CombatPanel.BOX_W, CombatPanel.BOX_H, 10);
+      this.drawHP();
+      if (this.currentHitZoneWidth > 0) this.drawTimingBar(this.currentHitZoneWidth);
+      if (!this.result) this.startMarker(this.currentSpeed);
+    }
+
+    this.confirmPopup.onViewportResize();
   }
 
   show(
@@ -154,9 +203,9 @@ export class CombatPanel extends BasePanel {
 
     this.overlay.clear();
     this.overlay.fillStyle(0x0a0a1a, 0.92);
-    this.overlay.fillRect(0, 0, VW, VH);
+    this.overlay.fillRect(0, 0, VW(), VH());
     this.overlay.lineStyle(2, 0x5a4a7a, 0.6);
-    this.overlay.strokeRoundedRect(CX - 160, 60, 320, 500, 10);
+    this.overlay.strokeRoundedRect(CX() - CombatPanel.BOX_W / 2, this.boxTop(), CombatPanel.BOX_W, CombatPanel.BOX_H, 10);
 
     this.enemyNameText.setText(config.name);
     this.instructionText.setText('Watch the marker — strike when it\'s in the green zone!');
@@ -196,7 +245,7 @@ export class CombatPanel extends BasePanel {
 
     // Boss entrance effects
     if (config.bossDamageMult !== undefined) {
-      const flash = this.scene.add.rectangle(CX, VH / 2, VW, VH, 0xffffff, 0)
+      const flash = this.scene.add.rectangle(CX(), VH() / 2, VW(), VH(), 0xffffff, 0)
         .setScrollFactor(0).setDepth(210);
       this.container.add(flash);
       this.scene.tweens.add({
@@ -366,7 +415,7 @@ export class CombatPanel extends BasePanel {
             ease: 'Sine.easeInOut',
           });
 
-          const killFlash = this.scene.add.rectangle(CX, VH / 2, VW, VH, 0xffffff, 0)
+          const killFlash = this.scene.add.rectangle(CX(), VH() / 2, VW(), VH(), 0xffffff, 0)
             .setScrollFactor(0).setDepth(210);
           this.container.add(killFlash);
           this.scene.tweens.add({
@@ -444,8 +493,8 @@ export class CombatPanel extends BasePanel {
     this.hpBar.clear();
     const barW = 180;
     const barH = 10;
-    const x = CX - barW / 2;
-    const y = 290;
+    const x = CX() - barW / 2;
+    const y = this.boxTop() + 230;
 
     this.hpBar.fillStyle(0x2a1a1a, 1);
     this.hpBar.fillRoundedRect(x, y, barW, barH, 3);

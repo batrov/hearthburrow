@@ -8,8 +8,13 @@ export class BasePanel {
   protected _visible: boolean = false;
   protected overlay!: Phaser.GameObjects.Graphics;
   protected _closeBtn: Phaser.GameObjects.Text | null = null;
+  private _closeBtnZone: Phaser.GameObjects.Rectangle | null = null;
+  private _closeBtnRightOffset = 0;
+  private _closeBtnY = 0;
   private _closePointerDown: ((pointer: Phaser.Input.Pointer) => void) | null = null;
   private _closePointerMove: ((pointer: Phaser.Input.Pointer) => void) | null = null;
+  /** Set by onViewportResize(); consumed (and cleared) the next time the panel is shown. */
+  protected _layoutDirty = false;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -26,6 +31,10 @@ export class BasePanel {
   }
 
   protected fadeIn(duration = 150): void {
+    if (this._layoutDirty) {
+      this.relayout();
+      this._layoutDirty = false;
+    }
     this._visible = true;
     this.container.setAlpha(0);
     this.container.setVisible(true);
@@ -55,14 +64,17 @@ export class BasePanel {
   protected createOverlay(): Phaser.GameObjects.Graphics {
     this.overlay = this.scene.add.graphics();
     this.overlay.fillStyle(0x0a0a1a, 0.92);
-    this.overlay.fillRect(0, 0, VW, VH);
+    this.overlay.fillRect(0, 0, VW(), VH());
     this.overlay.lineStyle(1, 0x3a3a4a, 0.5);
-    this.overlay.strokeRect(PANEL_PAD, PANEL_PAD, OVERLAY_W, OVERLAY_H);
+    this.overlay.strokeRect(PANEL_PAD, PANEL_PAD, OVERLAY_W(), OVERLAY_H());
     this.container.add(this.overlay);
     return this.overlay;
   }
 
-  protected addCloseButton(x = VW - 40, y = 44): Phaser.GameObjects.Text {
+  protected addCloseButton(x = VW() - 40, y = 44): Phaser.GameObjects.Text {
+    this._closeBtnRightOffset = VW() - x;
+    this._closeBtnY = y;
+
     const btn = createText(this.scene, x, y, '[X]', {
       fontSize: fs(24), fontFamily: 'Inter', resolution: 4, color: '#886666',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(220).setData('isUI', true);
@@ -71,6 +83,7 @@ export class BasePanel {
 
     const hitZone = this.scene.add.rectangle(x, y, 48, 48, 0xffffff, 0)
       .setScrollFactor(0).setDepth(220).setData('isUI', true).setVisible(false);
+    this._closeBtnZone = hitZone;
     this.scene.cameras.main.ignore(hitZone);
     hitZone.setInteractive({ useHandCursor: true });
     hitZone.on('pointerdown', () => {
@@ -110,6 +123,37 @@ export class BasePanel {
   protected setVisible(v: boolean): void {
     this._visible = v;
     this.container.setVisible(v);
+  }
+
+  /**
+   * Called by ViewportManager (via the owning scene's relayout()) after a resize.
+   * Never toggles visibility — only marks state dirty so the next show() recomputes
+   * positions, avoiding redundant work on panels that aren't currently visible and
+   * avoiding any interaction with the same-frame show/hide race.
+   */
+  onViewportResize(): void {
+    this._layoutDirty = true;
+  }
+
+  /**
+   * Re-applies position/size to already-existing overlay + close-button objects
+   * using the current live viewport. Subclasses should override to reposition their
+   * own content, calling super.relayout() first. Must only reposition — never
+   * create/destroy objects or call show()/hide().
+   */
+  protected relayout(): void {
+    if (this.overlay) {
+      this.overlay.clear();
+      this.overlay.fillStyle(0x0a0a1a, 0.92);
+      this.overlay.fillRect(0, 0, VW(), VH());
+      this.overlay.lineStyle(1, 0x3a3a4a, 0.5);
+      this.overlay.strokeRect(PANEL_PAD, PANEL_PAD, OVERLAY_W(), OVERLAY_H());
+    }
+    if (this._closeBtn) {
+      const x = VW() - this._closeBtnRightOffset;
+      this._closeBtn.setPosition(x, this._closeBtnY);
+      this._closeBtnZone?.setPosition(x, this._closeBtnY);
+    }
   }
 
   destroy(): void {

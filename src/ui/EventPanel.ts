@@ -31,24 +31,24 @@ export class EventPanel extends BasePanel {
     this.overlay!.setData('isUI', true);
     this.addTouchZones();
 
-    this.titleText = createText(scene, CX, 120, '', {
+    this.titleText = createText(scene, CX(), 120, '', {
       fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
-    this.descText = createText(scene, CX, 160, '', {
+    this.descText = createText(scene, CX(), 160, '', {
       fontSize: fs(13), fontFamily: 'Inter', resolution: 4, color: '#b8a898',
       align: 'center', wordWrap: { width: 320 }, lineSpacing: 4,
     }).setOrigin(0.5, 0);
     this.container.add(this.descText);
 
-    this.choicesText = createText(scene, CX, 260, '', {
+    this.choicesText = createText(scene, CX(), 260, '', {
       fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#c8b898',
       align: 'left', lineSpacing: 10,
     }).setOrigin(0.5, 0);
     this.container.add(this.choicesText);
 
-    this.hintText = createText(scene, CX, VH - 60, '', {
+    this.hintText = createText(scene, CX(), VH() - 60, '', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
@@ -61,7 +61,7 @@ export class EventPanel extends BasePanel {
     const startY = 250;
     const lineH = 44;
     for (let i = 0; i < 6; i++) {
-      const zone = this.scene.add.rectangle(CX, startY + i * lineH, 320, lineH, 0xffffff, 0)
+      const zone = this.scene.add.rectangle(CX(), startY + i * lineH, 320, lineH, 0xffffff, 0)
         .setInteractive({ useHandCursor: true })
         .setDepth(210).setData('isUI', true);
       const idx = i;
@@ -104,10 +104,10 @@ export class EventPanel extends BasePanel {
 
     this.overlay!.clear();
     this.overlay!.fillStyle(0x0a0a1a, 0.9);
-    this.overlay!.fillRect(0, 0, VW, VH);
+    this.overlay!.fillRect(0, 0, VW(), VH());
 
     this.overlay!.lineStyle(2, 0x5a4a7a, 0.6);
-    this.overlay!.strokeRoundedRect(CX - 170, 80, 340, VH - 160, 10);
+    this.overlay!.strokeRoundedRect(CX() - 170, 80, 340, VH() - 160, 10);
 
     this.titleText.setText(config.title);
     this.descText.setText(config.description);

@@ -18,12 +18,12 @@ export class NPCPhotobookPanel extends BasePanel {
     this.createOverlay();
     this.overlay.setData('isUI', true);
 
-    this.titleText = createText(scene, CX, 28, 'NPC Photobook', {
+    this.titleText = createText(scene, CX(), 28, 'NPC Photobook', {
       fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
-    this.contentText = createText(scene, CX, 68, '', {
+    this.contentText = createText(scene, CX(), 68, '', {
       fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#c8b898',
       align: 'center', lineSpacing: 6,
     }).setOrigin(0.5, 0);
@@ -40,30 +40,30 @@ export class NPCPhotobookPanel extends BasePanel {
     });
     this.container.add(this.contentText);
 
-    this.hintText = createText(scene, CX, VH - 38, '', {
+    this.hintText = createText(scene, CX(), VH() - 38, '', {
       fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
-    const upBtn = createText(scene, CX, 62, '▲', {
+    const upBtn = createText(scene, CX(), 62, '▲', {
       fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#886644',
     }).setOrigin(0.5).setDepth(210).setScrollFactor(0);
     this.container.add(upBtn);
-    const upHit = scene.add.rectangle(CX, 62, 60, 44, 0xffffff, 0)
+    const upHit = scene.add.rectangle(CX(), 62, 60, 44, 0xffffff, 0)
       .setInteractive({ useHandCursor: true }).setDepth(211).setScrollFactor(0);
     upHit.on('pointerdown', () => { this.handleInput('W'); this.dirty = true; });
     this.container.add(upHit);
 
-    const downBtn = createText(scene, CX, VH - 56, '▼', {
+    const downBtn = createText(scene, CX(), VH() - 56, '▼', {
       fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#886644',
     }).setOrigin(0.5).setDepth(210).setScrollFactor(0);
     this.container.add(downBtn);
-    const downHit = scene.add.rectangle(CX, VH - 56, 60, 44, 0xffffff, 0)
+    const downHit = scene.add.rectangle(CX(), VH() - 56, 60, 44, 0xffffff, 0)
       .setInteractive({ useHandCursor: true }).setDepth(211).setScrollFactor(0);
     downHit.on('pointerdown', () => { this.handleInput('S'); this.dirty = true; });
     this.container.add(downHit);
 
-    this.addCloseButton(VW - 40, 28);
+    this.addCloseButton(VW() - 40, 28);
   }
 
   handleInput(key: string): void {
@@ -99,10 +99,10 @@ export class NPCPhotobookPanel extends BasePanel {
 
     this.overlay.clear();
     this.overlay.fillStyle(0x0a0a1a, 0.92);
-    this.overlay.fillRect(0, 0, VW, VH);
+    this.overlay.fillRect(0, 0, VW(), VH());
     const pad = 16;
     this.overlay.lineStyle(1, 0x3a3a4a, 0.5);
-    this.overlay.strokeRect(pad, 56, VW - pad * 2, VH - 56 - pad);
+    this.overlay.strokeRect(pad, 56, VW() - pad * 2, VH() - 56 - pad);
 
     const rescued = gameState.rescuedVillagers;
     this.entries = rescued.map((r) => {

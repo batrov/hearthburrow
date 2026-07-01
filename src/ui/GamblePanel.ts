@@ -40,7 +40,7 @@ export class GamblePanel extends BasePanel {
   private onWalk: (() => void) | null = null;
 
   private readonly RADIUS = 70;
-  private wheelCY: number = CY - 70;
+  private wheelCY: number = 0;
 
   private legendGfx!: Phaser.GameObjects.Graphics;
   private legendTitle!: Phaser.GameObjects.Text;
@@ -56,25 +56,26 @@ export class GamblePanel extends BasePanel {
     super(scene);
 
     this.createOverlay();
+    this.wheelCY = CY() - 70;
 
     this.wheelGfx = scene.add.graphics();
-    this.wheelContainer = scene.add.container(CX, this.wheelCY, [this.wheelGfx]);
+    this.wheelContainer = scene.add.container(CX(), this.wheelCY, [this.wheelGfx]);
     this.container.add(this.wheelContainer);
 
     this.pointerGfx = scene.add.graphics();
     this.container.add(this.pointerGfx);
 
-    this.titleText = createText(scene, CX, 180, '', {
+    this.titleText = createText(scene, CX(), 180, '', {
       fontSize: fs(16), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
-    this.subtitleText = createText(scene, CX, 206, '', {
+    this.subtitleText = createText(scene, CX(), 206, '', {
       fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
     }).setOrigin(0.5);
     this.container.add(this.subtitleText);
 
-    this.hintText = createText(scene, CX, CY + 20, '', {
+    this.hintText = createText(scene, CX(), CY() + 20, '', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
@@ -82,7 +83,7 @@ export class GamblePanel extends BasePanel {
     this.resultBg = scene.add.graphics();
     this.container.add(this.resultBg);
 
-    this.resultText = createText(scene, CX, this.wheelCY, '', {
+    this.resultText = createText(scene, CX(), this.wheelCY, '', {
       fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#ffffff', fontStyle: 'bold',
       align: 'center',
     }).setOrigin(0.5);
@@ -113,7 +114,7 @@ export class GamblePanel extends BasePanel {
     this.legendGfx = scene.add.graphics();
     this.container.add(this.legendGfx);
 
-    this.legendTitle = createText(scene, CX, 430, 'Rewards (% chance)', {
+    this.legendTitle = createText(scene, CX(), 430, 'Rewards (% chance)', {
       fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#8a7a6a', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.legendTitle);
@@ -121,8 +122,8 @@ export class GamblePanel extends BasePanel {
 
   private createButtons(scene: Phaser.Scene): void {
     const by = 590, bw = 130, bh = 40, gap = 24;
-    const spinX = CX - gap / 2 - bw;
-    const walkX = CX + gap / 2;
+    const spinX = CX() - gap / 2 - bw;
+    const walkX = CX() + gap / 2;
 
     this.spinBtnGfx = scene.add.graphics();
     this.container.add(this.spinBtnGfx);
@@ -178,11 +179,15 @@ export class GamblePanel extends BasePanel {
     this.resultReward = null;
     this.wheelContainer.angle = 0;
 
+    this.wheelCY = CY() - 70;
+    this.wheelContainer.setPosition(CX(), this.wheelCY);
+    this.resultText.setPosition(CX(), this.wheelCY);
+
     this.overlay!.clear();
     this.overlay!.fillStyle(0x0a0a1a, 0.85);
-    this.overlay!.fillRect(0, 0, VW, VH);
+    this.overlay!.fillRect(0, 0, VW(), VH());
     this.overlay!.lineStyle(2, 0x5a4a7a, 0.6);
-    this.overlay!.strokeRoundedRect(CX - 155, 160, 310, 470, 12);
+    this.overlay!.strokeRoundedRect(CX() - 155, 160, 310, 470, 12);
 
     this.titleText.setText('Gambling Goblin');
     this.subtitleText.setText(`Risk ${cost} 🥕 for a spin!`).setVisible(true);
@@ -261,7 +266,7 @@ export class GamblePanel extends BasePanel {
     this.legendTitle.setVisible(true);
 
     const totalWeight = this.segments.reduce((s, seg) => s + seg.weight, 0);
-    const lx = CX - 130;
+    const lx = CX() - 130;
     const startY = 454;
     const rowH = 17;
     const colW = 130;
@@ -290,8 +295,8 @@ export class GamblePanel extends BasePanel {
 
   private drawButtons(): void {
     const bw = 130, bh = 40, gap = 24;
-    const spinX = CX - gap / 2 - bw;
-    const walkX = CX + gap / 2;
+    const spinX = CX() - gap / 2 - bw;
+    const walkX = CX() + gap / 2;
     const by = 590;
 
     if (this.canGamble) {
@@ -397,15 +402,15 @@ export class GamblePanel extends BasePanel {
     this.pointerGfx.clear();
     this.pointerGfx.fillStyle(0xffdd88, 1);
     this.pointerGfx.fillTriangle(
-      CX - 8, py - this.RADIUS - 18,
-      CX + 8, py - this.RADIUS - 18,
-      CX, py - this.RADIUS - 6,
+      CX() - 8, py - this.RADIUS - 18,
+      CX() + 8, py - this.RADIUS - 18,
+      CX(), py - this.RADIUS - 6,
     );
     this.pointerGfx.fillStyle(0xffaa44, 1);
     this.pointerGfx.fillTriangle(
-      CX - 5, py - this.RADIUS - 16,
-      CX + 5, py - this.RADIUS - 16,
-      CX, py - this.RADIUS - 8,
+      CX() - 5, py - this.RADIUS - 16,
+      CX() + 5, py - this.RADIUS - 16,
+      CX(), py - this.RADIUS - 8,
     );
   }
 
@@ -435,18 +440,18 @@ export class GamblePanel extends BasePanel {
     if (seg.reward) {
       this.resultBg.clear();
       this.resultBg.fillStyle(0x224422, 0.9);
-      this.resultBg.fillRoundedRect(CX - 110, this.wheelCY - 24, 220, 48, 8);
+      this.resultBg.fillRoundedRect(CX() - 110, this.wheelCY - 24, 220, 48, 8);
       this.resultBg.lineStyle(2, 0x44cc66, 0.8);
-      this.resultBg.strokeRoundedRect(CX - 110, this.wheelCY - 24, 220, 48, 8);
+      this.resultBg.strokeRoundedRect(CX() - 110, this.wheelCY - 24, 220, 48, 8);
       this.resultText.setText(`You won!\n${seg.reward.quantity}x ${seg.label}`);
       this.resultText.setColor('#66ee66');
       audio.playBingo();
     } else {
       this.resultBg.clear();
       this.resultBg.fillStyle(0x442222, 0.9);
-      this.resultBg.fillRoundedRect(CX - 80, this.wheelCY - 16, 160, 32, 8);
+      this.resultBg.fillRoundedRect(CX() - 80, this.wheelCY - 16, 160, 32, 8);
       this.resultBg.lineStyle(2, 0xcc4444, 0.6);
-      this.resultBg.strokeRoundedRect(CX - 80, this.wheelCY - 16, 160, 32, 8);
+      this.resultBg.strokeRoundedRect(CX() - 80, this.wheelCY - 16, 160, 32, 8);
       this.resultText.setText(`${seg.label}!`);
       this.resultText.setColor('#cc6666');
       audio.playError();
@@ -469,5 +474,37 @@ export class GamblePanel extends BasePanel {
     this._visible = false;
     this.container.setVisible(false);
     if (this._closeBtn) this._closeBtn.setVisible(false);
+  }
+
+  /**
+   * showPreview() (called every time the panel opens) already recomputes
+   * wheelCY and redraws the overlay/wheel/legend/buttons live — only the
+   * handful of texts positioned once in the constructor need an explicit
+   * reposition here.
+   */
+  onViewportResize(): void {
+    super.onViewportResize();
+    this.titleText.setPosition(CX(), 180);
+    this.subtitleText.setPosition(CX(), 206);
+    this.hintText.setPosition(CX(), CY() + 20);
+    this.legendTitle.setPosition(CX(), 430);
+
+    const by = 590, bw = 130, gap = 24;
+    const spinX = CX() - gap / 2 - bw;
+    const walkX = CX() + gap / 2;
+    this.spinBtnText.setPosition(spinX + bw / 2, by + 20);
+    this.spinBtnZone.setPosition(spinX + bw / 2, by + 20);
+    this.walkBtnText.setPosition(walkX + bw / 2, by + 20);
+    this.walkBtnZone.setPosition(walkX + bw / 2, by + 20);
+
+    if (this._visible) {
+      this.wheelCY = CY() - 70;
+      this.wheelContainer.setPosition(CX(), this.wheelCY);
+      this.resultText.setPosition(CX(), this.wheelCY);
+      this.drawWheel();
+      this.drawPointer();
+      this.drawLegend();
+      this.drawButtons();
+    }
   }
 }

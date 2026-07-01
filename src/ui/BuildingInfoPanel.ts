@@ -13,16 +13,16 @@ export class BuildingInfoPanel extends BasePanel {
     this.createOverlay();
     this.overlay.clear();
     this.overlay.fillStyle(0x0a0a1a, 0.85);
-    this.overlay.fillRoundedRect(CX - 160, CY - 80, 320, 160, 10);
+    this.overlay.fillRoundedRect(CX() - 160, CY() - 80, 320, 160, 10);
     this.overlay.lineStyle(2, 0x6a5a8a, 1);
-    this.overlay.strokeRoundedRect(CX - 160, CY - 80, 320, 160, 10);
+    this.overlay.strokeRoundedRect(CX() - 160, CY() - 80, 320, 160, 10);
 
-    this.titleText = createText(scene, CX, CY - 50, '', {
+    this.titleText = createText(scene, CX(), CY() - 50, '', {
       fontSize: fs(16), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
-    this.descText = createText(scene, CX, CY, '', {
+    this.descText = createText(scene, CX(), CY(), '', {
       fontSize: fs(13), fontFamily: 'Inter', resolution: 4, color: '#b8a898', align: 'center',
     }).setOrigin(0.5);
     this.container.add(this.descText);

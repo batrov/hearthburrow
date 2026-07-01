@@ -44,10 +44,10 @@ export class EquipmentPicker {
 
     this.overlay = scene.add.graphics();
     this.overlay.fillStyle(0x000000, 0.55);
-    this.overlay.fillRect(0, 0, VW, VH);
+    this.overlay.fillRect(0, 0, VW(), VH());
     this.container.add(this.overlay);
 
-    this.blocker = scene.add.rectangle(CX, CY, VW, VH, 0x000000, 0)
+    this.blocker = scene.add.rectangle(CX(), CY(), VW(), VH(), 0x000000, 0)
       .setScrollFactor(0)
       .setInteractive()
       .setData('isUI', true);
@@ -57,7 +57,7 @@ export class EquipmentPicker {
     this.popupBg = scene.add.graphics();
     this.container.add(this.popupBg);
 
-    this.titleText = createText(scene, CX, 170, '', {
+    this.titleText = createText(scene, CX(), 170, '', {
       fontSize: fs(20), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
@@ -90,7 +90,7 @@ export class EquipmentPicker {
       this.rows.push({ bg, icon, nameText, descText, zone });
     }
 
-    this.footerText = createText(scene, CX, 520, '[W/S] select  [SPACE] equip  [ESC] cancel', {
+    this.footerText = createText(scene, CX(), 520, '[W/S] select  [SPACE] equip  [ESC] cancel', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#8a7a9a',
     }).setOrigin(0.5);
     this.container.add(this.footerText);
@@ -124,8 +124,8 @@ export class EquipmentPicker {
     this.clickHandler = (p: Phaser.Input.Pointer) => {
       const count = Math.min(this.options.length, 7);
       const popH = 60 + count * 40 + 24;
-      const popY = Math.floor((VH - popH) / 2);
-      const popX = 20, popW = VW - 40;
+      const popY = Math.floor((VH() - popH) / 2);
+      const popX = 20, popW = VW() - 40;
       if (p.x < popX || p.x > popX + popW || p.y < popY || p.y > popY + popH) {
         this.hide();
         return;
@@ -155,9 +155,9 @@ export class EquipmentPicker {
   private render(): void {
     const count = Math.min(this.options.length, 7);
     const popH = 60 + count * 40 + 24;
-    const popY = Math.floor((VH - popH) / 2);
+    const popY = Math.floor((VH() - popH) / 2);
     const popX = 20;
-    const popW = VW - 40;
+    const popW = VW() - 40;
 
     this.popupBg.clear();
     this.popupBg.fillStyle(0x0a0a1a, 0.95);
@@ -165,8 +165,8 @@ export class EquipmentPicker {
     this.popupBg.lineStyle(2, 0x6a5a8a);
     this.popupBg.strokeRoundedRect(popX, popY, popW, popH, 10);
 
-    this.titleText.setPosition(CX, popY + 22);
-    this.footerText.setPosition(CX, popY + popH - 14);
+    this.titleText.setPosition(CX(), popY + 22);
+    this.footerText.setPosition(CX(), popY + popH - 14);
 
     const startY = popY + 48;
     for (let i = 0; i < this.rows.length; i++) {
