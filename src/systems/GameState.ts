@@ -1,5 +1,6 @@
 import { InventorySystem } from './InventorySystem';
 import { CraftingSystem } from './CraftingSystem';
+import { probeStorage } from './Platform';
 
 const SAVE_KEY = 'hearthburrow_save';
 
@@ -320,17 +321,7 @@ const MAX_EQUIP_RUNS = 5;
 
 export class GameState {
   /** Probes localStorage at module load time — catches Safari private browsing SecurityError. */
-  static readonly storageAvailable: boolean = (() => {
-    try {
-      const k = '__hb_test__';
-      localStorage.setItem(k, '1');
-      localStorage.removeItem(k);
-      return true;
-    } catch (e) {
-      console.warn('[GameState] localStorage unavailable:', e);
-      return false;
-    }
-  })();
+  static readonly storageAvailable: boolean = probeStorage();
 
   inventory: InventorySystem;
   crafting: CraftingSystem;

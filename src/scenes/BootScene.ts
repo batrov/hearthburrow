@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { gameState, GameState } from '../systems/GameState';
+import { gameState } from '../systems/GameState';
+import { getStorageStatus } from '../systems/Platform';
 import { audio } from '../systems/AudioSystem';
 import { generateAll } from '../systems/TextureGenerator';
 import { textStyle, fs, createText } from '../systems/Font';
@@ -8,6 +9,7 @@ import { SCENES } from '../constants/scenes';
 export class BootScene extends Phaser.Scene {
   private loadingBar!: Phaser.GameObjects.Graphics;
   private progressText!: Phaser.GameObjects.Text;
+  private newTabLink: HTMLAnchorElement | null = null;
 
   constructor() {
     super({ key: SCENES.BOOT });
@@ -187,6 +189,7 @@ export class BootScene extends Phaser.Scene {
     generateAll(this);
 
     const proceed = () => {
+      this.removeNewTabLink();
       this.tweens.killTweensOf(this.progressText);
       this.cameras.main.fadeOut(400, 0, 0, 0);
       this.cameras.main.once('camerafadeoutcomplete', () => {
@@ -194,37 +197,41 @@ export class BootScene extends Phaser.Scene {
       });
     };
 
-    if (!GameState.storageAvailable) {
-      const overlay = this.add.rectangle(cx, cy, 960, 640, 0x000000, 0.85)
-        .setScrollFactor(0).setDepth(1000).setInteractive();
-      const text = createText(this, cx, cy,
-        '⚠ Storage Unavailable\n\n' +
-        'Safari blocks local storage for embedded games on iOS.\n' +
-        'Progress will NOT be saved in this tab.\n\n' +
-        'To enable saving:\n' +
-        '• Tap the "Pop Out" button on Itch.io\n' +
-        '  to open in a new window, or\n' +
-        '• Open in a non-Safari browser\n\n' +
-        'Tap anywhere to dismiss and continue anyway.',
-        {
-          fontSize: fs(14),
-          fontFamily: 'Inter', resolution: 4,
-          color: '#ffaa44',
-          align: 'center',
-          lineSpacing: 4,
-        }
-      ).setOrigin(0.5).setDepth(1001);
-      overlay.on('pointerdown', () => {
-        overlay.destroy();
-        text.destroy();
-        this.input.once('pointerdown', proceed);
-        this.input.keyboard?.on('keydown-SPACE', proceed);
-        this.input.keyboard?.on('keydown-ENTER', proceed);
-      });
-    } else {
+    const armProceed = () => {
       this.input.once('pointerdown', proceed);
       this.input.keyboard?.on('keydown-SPACE', proceed);
       this.input.keyboard?.on('keydown-ENTER', proceed);
+    };
+
+    switch (getStorageStatus()) {
+      case 'blocked':
+        // localStorage throws (e.g. Safari Private Mode) — nothing can persist,
+        // and opening a new tab won't help, so just inform and let them play.
+        this.showStorageWarning(cx, cy,
+          '⚠ Storage Unavailable\n\n' +
+          'This browser is blocking local storage\n' +
+          '(e.g. Private Browsing), so progress\n' +
+          'will NOT be saved.\n\n' +
+          'Turn off Private Browsing to save.\n\n' +
+          'Tap anywhere to continue anyway.',
+          false, armProceed);
+        break;
+      case 'ephemeral':
+        // iOS embedded iframe: writes succeed but are wiped on reload. The fix
+        // is to play in a top-level tab, which the link below opens.
+        this.showStorageWarning(cx, cy,
+          "⚠ Progress Won't Save Here\n\n" +
+          "iOS doesn't save progress for games\n" +
+          'embedded in a page.\n\n' +
+          'Tap the button below to open the game\n' +
+          'in its own tab, where progress is saved.\n' +
+          '(Start fresh there — this session\n' +
+          "won't carry over.)\n\n" +
+          'Or tap anywhere else to play without saving.',
+          true, armProceed);
+        break;
+      default:
+        armProceed();
     }
 
     this.time.delayedCall(3000, () => {
@@ -232,5 +239,73 @@ export class BootScene extends Phaser.Scene {
         this.progressText.setText('[ click anywhere to proceed ]');
       }
     });
+  }
+
+  /**
+   * Show a full-screen storage warning. When `withNewTabLink` is set, also
+   * overlays a real DOM anchor that opens the game as its own top-level tab
+   * (the only way to restore saving inside an iOS embedded iframe). Tapping
+   * the dim area dismisses the warning and calls `onDismiss`.
+   */
+  private showStorageWarning(
+    cx: number, cy: number, message: string,
+    withNewTabLink: boolean, onDismiss: () => void,
+  ): void {
+    const w = this.cameras.main.width;
+    const h = this.cameras.main.height;
+    const overlay = this.add.rectangle(cx, cy, w + 8, h + 8, 0x000000, 0.9)
+      .setScrollFactor(0).setDepth(1000).setInteractive();
+    const text = createText(this, cx, cy, message, {
+      fontSize: fs(14),
+      fontFamily: 'Inter', resolution: 4,
+      color: '#ffaa44',
+      align: 'center',
+      lineSpacing: 4,
+    }).setOrigin(0.5).setDepth(1001);
+
+    if (withNewTabLink) {
+      this.createNewTabLink();
+    }
+
+    overlay.on('pointerdown', () => {
+      overlay.destroy();
+      text.destroy();
+      this.removeNewTabLink();
+      onDismiss();
+    });
+  }
+
+  /** Overlay a DOM anchor that opens the current URL as a top-level tab. */
+  private createNewTabLink(): void {
+    const a = document.createElement('a');
+    a.href = window.location.href;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = '→ Open in a new tab to save progress';
+    a.style.cssText = [
+      'position:fixed',
+      'left:50%',
+      'top:66%',
+      'transform:translate(-50%,-50%)',
+      'z-index:2147483647',
+      'padding:12px 18px',
+      'background:#ffaa44',
+      'color:#1a1a2e',
+      'font:bold 15px Inter,-apple-system,sans-serif',
+      'border-radius:8px',
+      'text-decoration:none',
+      'box-shadow:0 2px 12px rgba(0,0,0,0.5)',
+      '-webkit-tap-highlight-color:transparent',
+    ].join(';');
+    document.body.appendChild(a);
+    this.newTabLink = a;
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.removeNewTabLink());
+  }
+
+  private removeNewTabLink(): void {
+    if (this.newTabLink) {
+      this.newTabLink.remove();
+      this.newTabLink = null;
+    }
   }
 }
