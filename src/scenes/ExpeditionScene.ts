@@ -1816,6 +1816,7 @@ export class ExpeditionScene extends Phaser.Scene {
       () => {
         gameState.inventory.removeItem('carrot', cost);
         gameState.save();
+        this.updateCarrotCounter();
       },
       (reward) => {
         if (reward) this.giveItem(reward.id, reward.quantity);

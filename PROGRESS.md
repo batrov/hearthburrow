@@ -490,3 +490,4 @@ Resolved Bugs:
 
 ## Resolved Bugs
 - **Gambling "Walk away" removes NPC** — `GamblePanel.showPreview()` set `onWalk = () => onClose(null)`, which in `ExpeditionScene.triggerGamble()` called `tile.broken = true` + `drawFloor()`, erasing the goblin NPC even when the player walked away without gambling. Fixed by adding optional `onWalk` parameter to `showPreview()` and passing a noop callback from `triggerGamble()` that only clears the interact target without marking the tile broken.
+- **Carrot counter not updating on gamble** — `onSpin` callback deducted carrots and saved but never called `updateCarrotCounter()`. Counter stayed stale until the next carrot pickup from the floor. Fixed by adding `updateCarrotCounter()` after the deduction.
