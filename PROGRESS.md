@@ -80,6 +80,19 @@
 - **Damage tint** — ore sprite darkens via `setTint()` immediately on each hit (0xaaaaaa at ≤66%, 0x777777 at ≤33%). Uses `oreImageMap` for O(1) lookup. Preview tile tint synced.
 - **Ore scale** — ore sprites scaled 1.5× for better visibility
 
+## ✅ Player Movement Smoothing (July 2026)
+- **Removed timer throttling** — `moveTimer`/`moveDelay` (150ms) eliminated in all 3 scenes; input checked every frame with `isMoving` as the only gate — eliminates 50ms gap between tiles
+- **Smooth easing** — all movement tweens changed from `Linear` to `Quad.easeOut` for smooth deceleration at each tile stop
+- **Click-to-move fix** — added `!this.isMoving` guard before `movePath.shift()` to prevent path being drained mid-tween
+
+## ✅ Separate Ore Drop Sprites (July 2026)
+- **Node vs drop separation** — in-ground ore nodes now use `{resource}_node` textures (renamed existing PNGs); dropped items use `{resource}_ore` textures (new small nugget/crystal PNGs, 24×24)
+- **6 new nugget sprites** — `stone_ore`, `bronze_ore`, `silver_ore`, `gold_ore`, `crystal_ore`, `monster_drop_ore` — small colored circle shapes with highlight
+- **Fallback textures updated** — TextureGenerator generates both node (40×40 diamond) and drop (24×24 circle-nugget) textures
+- **SpriteConfig updated** — node textures keep offsetY:-5/scale:1.2; drop textures use centered scale:0.6
+- **Research panel icons** — mining research nodes now show the ore drop sprite instead of the node sprite
+- **Parabolic arc flight** — ore drop flight changed from linear tween to parametric parabola: `y = startY - arcHeight * 4 * t * (1 - t) + (targetY - startY) * t` for natural arc trajectory; pop-to-arc delay removed for continuous animation flow
+
 ## ✅ Code Quality — Refactoring (June 2026)
 - **DEPTH constants** — all 50+ `setDepth(NN)` magic numbers replaced with `DEPTH.*` constants in a single typed object
 - **isBlocked() helper** — 3 verbatim copies of the "full blocked" megacheck consolidated to one method

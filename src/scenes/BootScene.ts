@@ -78,12 +78,19 @@ export class BootScene extends Phaser.Scene {
     this.load.image('pressure_plate', 'tiles/pressure_plate.png');
     this.load.image('blocked', 'tiles/blocked.png');
 
-    this.load.image('ore_stone', 'ores/stone.png');
-    this.load.image('ore_bronze_ore', 'ores/bronze_ore.png');
-    this.load.image('ore_silver_ore', 'ores/silver_ore.png');
-    this.load.image('ore_gold_ore', 'ores/gold_ore.png');
-    this.load.image('ore_crystal', 'ores/crystal.png');
-    this.load.image('ore_monster_drop', 'ores/monster_drop.png');
+    this.load.image('stone_node', 'ores/stone_node.png');
+    this.load.image('bronze_ore_node', 'ores/bronze_ore_node.png');
+    this.load.image('silver_ore_node', 'ores/silver_ore_node.png');
+    this.load.image('gold_ore_node', 'ores/gold_ore_node.png');
+    this.load.image('crystal_node', 'ores/crystal_node.png');
+    this.load.image('monster_drop_node', 'ores/monster_drop_node.png');
+
+    this.load.image('stone_ore', 'ores/stone_ore.png');
+    this.load.image('bronze_ore', 'ores/bronze_ore.png');
+    this.load.image('silver_ore', 'ores/silver_ore.png');
+    this.load.image('gold_ore', 'ores/gold_ore.png');
+    this.load.image('crystal_ore', 'ores/crystal_ore.png');
+    this.load.image('monster_drop_ore', 'ores/monster_drop_ore.png');
 
     this.load.image('enemy_slime', 'enemies/slime.png');
     this.load.image('enemy_rat', 'enemies/rat.png');

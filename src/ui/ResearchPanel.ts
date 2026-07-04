@@ -23,17 +23,17 @@ const VIEWPORT_TOP = 60;
 const VIEWPORT_BOTTOM = 410;
 
 const NODES: ResearchNode[] = [
-  { id: 'efficient_mining', name: 'Efficient Mining', description: 'Reduce stamina cost per mining swing by 1.', tier: 1, branch: 'mining', prereqId: null, cost: { crystal: 1, stone: 50 }, spriteKey: 'ore_stone', effect: { type: 'mining_stamina', value: 1 } },
+  { id: 'efficient_mining', name: 'Efficient Mining', description: 'Reduce stamina cost per mining swing by 1.', tier: 1, branch: 'mining', prereqId: null, cost: { crystal: 1, stone: 50 }, spriteKey: 'stone_ore', effect: { type: 'mining_stamina', value: 1 } },
   { id: 'combat_training', name: 'Combat Training', description: 'Deal +1 damage per hit.', tier: 1, branch: 'combat', prereqId: null, cost: { crystal: 1, stone: 50 }, spriteKey: 'item_ring_damage', effect: { type: 'bonus_damage', value: 1 } },
   { id: 'trail_rations', name: 'Trail Rations', description: '+25% effectiveness from consumables.', tier: 1, branch: 'survival', prereqId: null, cost: { crystal: 1, stone: 50 }, spriteKey: 'item_stamina_potion', effect: { type: 'consumable_mult', value: 1.25 } },
-  { id: 'ore_magnet', name: 'Ore Magnet', description: '15% chance to mine double ore from a vein.', tier: 2, branch: 'mining', prereqId: 'efficient_mining', cost: { crystal: 3, bronze_ore: 10 }, spriteKey: 'ore_bronze_ore', effect: { type: 'double_ore_chance', value: 0.15 } },
+  { id: 'ore_magnet', name: 'Ore Magnet', description: '15% chance to mine double ore from a vein.', tier: 2, branch: 'mining', prereqId: 'efficient_mining', cost: { crystal: 3, bronze_ore: 10 }, spriteKey: 'bronze_ore', effect: { type: 'double_ore_chance', value: 0.15 } },
   { id: 'critical_strikes', name: 'Critical Strikes', description: '+10% critical hit chance.', tier: 2, branch: 'combat', prereqId: 'combat_training', cost: { crystal: 3, bronze_ore: 10 }, spriteKey: 'item_ring_critical', effect: { type: 'crit_chance', value: 0.1 } },
   { id: 'deep_pockets', name: 'Deep Pockets', description: 'Permanently add 8 inventory slots.', tier: 2, branch: 'survival', prereqId: 'trail_rations', cost: { crystal: 3, bronze_ore: 10 }, spriteKey: 'item_inventory_bag', effect: { type: 'slot_bonus', value: 8 } },
-  { id: 'deep_core_mining', name: 'Deep Core Mining', description: 'Mine ore one tier above your current pickaxe.', tier: 3, branch: 'mining', prereqId: 'ore_magnet', cost: { crystal: 5, silver_ore: 10 }, spriteKey: 'ore_silver_ore', effect: { type: 'mine_tier_offset', value: 1 } },
+  { id: 'deep_core_mining', name: 'Deep Core Mining', description: 'Mine ore one tier above your current pickaxe.', tier: 3, branch: 'mining', prereqId: 'ore_magnet', cost: { crystal: 5, silver_ore: 10 }, spriteKey: 'silver_ore', effect: { type: 'mine_tier_offset', value: 1 } },
   { id: 'vitality_surge', name: 'Vitality Surge', description: '+20% maximum stamina.', tier: 3, branch: 'combat', prereqId: 'critical_strikes', cost: { crystal: 5, silver_ore: 10 }, spriteKey: 'item_boots_stamina_bronze', effect: { type: 'stamina_percent', value: 20 } },
   { id: 'lantern_efficiency', name: 'Lantern Efficiency', description: 'Extend lantern range by 1 tile.', tier: 3, branch: 'survival', prereqId: 'deep_pockets', cost: { crystal: 5, silver_ore: 10 }, spriteKey: 'item_lantern_bronze', effect: { type: 'lantern_range', value: 1 } },
-  { id: 'excavation_mastery', name: 'Excavation Mastery', description: 'Halve mining animation time.', tier: 4, branch: 'mining', prereqId: 'deep_core_mining', cost: { crystal: 10, gold_ore: 5 }, spriteKey: 'ore_gold_ore', effect: { type: 'mining_anim_speed', value: 0.5 } },
-  { id: 'boss_slayer', name: 'Boss Slayer', description: '+50% damage against bosses.', tier: 4, branch: 'combat', prereqId: 'vitality_surge', cost: { crystal: 10, gold_ore: 5 }, spriteKey: 'ore_monster_drop', effect: { type: 'boss_damage_mult', value: 1.5 } },
+  { id: 'excavation_mastery', name: 'Excavation Mastery', description: 'Halve mining animation time.', tier: 4, branch: 'mining', prereqId: 'deep_core_mining', cost: { crystal: 10, gold_ore: 5 }, spriteKey: 'gold_ore', effect: { type: 'mining_anim_speed', value: 0.5 } },
+  { id: 'boss_slayer', name: 'Boss Slayer', description: '+50% damage against bosses.', tier: 4, branch: 'combat', prereqId: 'vitality_surge', cost: { crystal: 10, gold_ore: 5 }, spriteKey: 'monster_drop_ore', effect: { type: 'boss_damage_mult', value: 1.5 } },
   { id: 'second_wind', name: 'Second Wind', description: 'Recover 5 stamina when entering a new floor.', tier: 4, branch: 'survival', prereqId: 'lantern_efficiency', cost: { crystal: 10, gold_ore: 5 }, spriteKey: 'item_boots_luck_bronze', effect: { type: 'floor_stamina', value: 5 } },
 ];
 
@@ -84,7 +84,7 @@ export class ResearchPanel extends BasePanel {
     this.descBg = scene.add.graphics().setDepth(206).setScrollFactor(0);
     this.container.add(this.descBg);
 
-    this.descSprite = scene.add.image(24 + 20, 440 + 28, 'ore_stone').setDepth(207).setScrollFactor(0).setScale(1.5).setVisible(false);
+    this.descSprite = scene.add.image(24 + 20, 440 + 28, 'stone_ore').setDepth(207).setScrollFactor(0).setScale(1.5).setVisible(false);
     this.container.add(this.descSprite);
 
     this.descName = createText(scene, 24 + 44, 440 + 4, '', {

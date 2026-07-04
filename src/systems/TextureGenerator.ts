@@ -83,13 +83,22 @@ export function generateAll(scene: Phaser.Scene): void {
   };
 
   for (const [res, cfg] of Object.entries(oreConfigs)) {
-    make(scene, g, `ore_${res}`, 40, 40, () => {
+    make(scene, g, `${res}_node`, 40, 40, () => {
       const { cx, cy } = centered(40, 40);
       drawDiamond(g, cx, cy, 0x000000, 0.2);
       g.fillStyle(cfg.base, 1);
       g.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
       g.fillStyle(cfg.inner, 1);
       g.fillRoundedRect(cx - cfg.innerW / 2, cy - cfg.innerH / 2, cfg.innerW, cfg.innerH, 2);
+    });
+    const dropKey = res.endsWith('_ore') ? res : `${res}_ore`;
+    make(scene, g, dropKey, 24, 24, () => {
+      const { cx, cy } = centered(24, 24);
+      drawDiamond(g, cx, cy, 0x000000, 0.15);
+      g.fillStyle(cfg.base, 0.9);
+      g.fillCircle(cx, cy, 8);
+      g.fillStyle(cfg.inner, 1);
+      g.fillCircle(cx, cy, 4);
     });
   }
 
@@ -312,12 +321,22 @@ export function generateAll(scene: Phaser.Scene): void {
     g.lineBetween(cx - 8, cy + 4, cx + 8, cy - 4);
   });
 
-  // --- Monster drop (ore-textured but no inner highlight) ---
-  make(scene, g, 'ore_monster_drop', 40, 40, () => {
+  // --- Monster drop node ---
+  make(scene, g, 'monster_drop_node', 40, 40, () => {
     const { cx, cy } = centered(40, 40);
     drawDiamond(g, cx, cy, 0x000000, 0.2);
     g.fillStyle(0x8a3a3a, 1);
     g.fillRoundedRect(cx - 14, cy - 14, 28, 28, 4);
+  });
+
+  // --- Monster drop item sprite ---
+  make(scene, g, 'monster_drop_ore', 24, 24, () => {
+    const { cx, cy } = centered(24, 24);
+    drawDiamond(g, cx, cy, 0x000000, 0.15);
+    g.fillStyle(0x8a3a3a, 0.9);
+    g.fillCircle(cx, cy, 8);
+    g.fillStyle(0xaa5a5a, 1);
+    g.fillCircle(cx, cy, 4);
   });
 
   // --- Item sprites (24x24 UI icons) ---

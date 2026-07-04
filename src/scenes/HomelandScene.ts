@@ -213,8 +213,6 @@ export class HomelandScene extends Phaser.Scene {
   private currentBuilding: HubBuildingDef | null = null;
   private pendingBuilding: HubBuildingDef | null = null;
   private facingOutlineImages: Phaser.GameObjects.Image[] = [];
-  private moveTimer: number = 0;
-  private moveDelay: number = 150;
   private isMoving: boolean = false;
   private actionBtnBg!: Phaser.GameObjects.Graphics;
   private actionBtnText!: Phaser.GameObjects.Text;
@@ -253,7 +251,6 @@ export class HomelandScene extends Phaser.Scene {
 
     this.currentBuilding = null;
     this.pendingBuilding = null;
-    this.moveTimer = 0;
     this.animFrame = 0;
     this.animTimer = 0;
     this.isMoving = false;
@@ -708,11 +705,7 @@ export class HomelandScene extends Phaser.Scene {
       return;
     }
 
-    this.moveTimer += delta;
-    if (this.moveTimer >= this.moveDelay) {
-      this.handleMovement(delta);
-      this.moveTimer = 0;
-    }
+    this.handleMovement(delta);
     if (this.isMoving) {
       this.animTimer += delta;
       if (this.animTimer >= this.ANIM_INTERVAL) {
@@ -797,7 +790,7 @@ export class HomelandScene extends Phaser.Scene {
       y: target.y + (cfg.offsetY ?? 0),
       depth: interactiveDepth(nx, ny, 0.0005),
       duration: 100,
-      ease: 'Linear',
+      ease: 'Quad.easeOut',
       onComplete: () => { this.isMoving = false; },
     });
     this.tweens.add({
@@ -805,7 +798,7 @@ export class HomelandScene extends Phaser.Scene {
       x: target.x,
       y: target.y - 30,
       duration: 100,
-      ease: 'Linear',
+      ease: 'Quad.easeOut',
     });
   }
 
@@ -828,7 +821,7 @@ export class HomelandScene extends Phaser.Scene {
     } else if (this.analog.active && (this.analog.dx !== 0 || this.analog.dy !== 0)) {
       dx = this.analog.dx;
       dy = this.analog.dy;
-    } else if (this.movePath.length > 0) {
+    } else if (!this.isMoving && this.movePath.length > 0) {
       const next = this.movePath.shift()!;
       dx = next.x - this.playerGx;
       dy = next.y - this.playerGy;

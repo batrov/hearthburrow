@@ -59,8 +59,7 @@ export class TavernScene extends Phaser.Scene {
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private promptText!: Phaser.GameObjects.Text;
   private greetingActive = false;
-  private moveTimer: number = 0;
-  private moveDelay: number = 150;
+
   private analog!: AnalogStickInput;
   private photobook!: NPCPhotobookPanel;
   private hudCam!: Phaser.Cameras.Scene2D.Camera;
@@ -533,11 +532,7 @@ export class TavernScene extends Phaser.Scene {
       return;
     }
 
-    this.moveTimer += delta;
-    if (this.moveTimer >= this.moveDelay) {
-      this.handleMovement(delta);
-      this.moveTimer = 0;
-    }
+    this.handleMovement(delta);
     if (this.isMoving) {
       this.animTimer += delta;
       if (this.animTimer >= this.ANIM_INTERVAL) {
@@ -647,7 +642,7 @@ export class TavernScene extends Phaser.Scene {
       y: target.y + (cfg.offsetY ?? 0),
       depth: 6 + (nx + ny) * 0.01 + 0.005,
       duration: 100,
-      ease: 'Linear',
+      ease: 'Quad.easeOut',
       onComplete: () => { this.isMoving = false; },
     });
     this.tweens.add({
@@ -655,7 +650,7 @@ export class TavernScene extends Phaser.Scene {
       x: target.x,
       y: target.y - 30,
       duration: 100,
-      ease: 'Linear',
+      ease: 'Quad.easeOut',
     });
   }
 
@@ -679,7 +674,7 @@ export class TavernScene extends Phaser.Scene {
     } else if (this.analog.active && (this.analog.dx !== 0 || this.analog.dy !== 0)) {
       dx = this.analog.dx;
       dy = this.analog.dy;
-    } else if (this.movePath.length > 0) {
+    } else if (!this.isMoving && this.movePath.length > 0) {
       const next = this.movePath.shift()!;
       dx = next.x - this.playerGx;
       dy = next.y - this.playerGy;

@@ -519,8 +519,8 @@ export class ExpeditionScene extends Phaser.Scene {
           }
           break;
         case 'mineable':
-          if (!tile.broken && this.textures.exists('ore_' + tile.resource)) {
-            const img = makeImg('ore_' + tile.resource);
+          if (!tile.broken && this.textures.exists(tile.resource + '_node')) {
+            const img = makeImg(tile.resource + '_node');
             this.oreImageMap.set(`${x},${y}`, img);
             const tint = this.getDamageTint(tile);
             if (tint !== null) img.setTint(tint);
@@ -582,7 +582,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     let texKey = '';
     switch (tile.type) {
-      case 'mineable': texKey = 'ore_' + tile.resource; break;
+      case 'mineable': texKey = tile.resource + '_node'; break;
       case 'wall': texKey = getWallTextureKey(floor.depth); break;
       case 'stairs_up': texKey = 'stairs_up'; break;
       case 'stairs_down': texKey = 'stairs_down'; break;
@@ -3242,7 +3242,7 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private spawnItemSprite(tx: number, ty: number, resource: string): void {
-    const textureKey = `ore_${resource}`;
+    const textureKey = resource.endsWith('_ore') ? resource : `${resource}_ore`;
     if (!this.textures.exists(textureKey)) return;
     const p = gridToIso(tx, ty);
     const sprite = this.add.image(p.x, p.y, textureKey)
@@ -3261,9 +3261,7 @@ export class ExpeditionScene extends Phaser.Scene {
           duration: 80,
           ease: 'Quad.easeIn',
           onComplete: () => {
-            this.time.delayedCall(200, () => {
-              this.queueItemFly(sprite, resource);
-            });
+            this.queueItemFly(sprite, resource);
           }
         });
       }
@@ -3350,16 +3348,22 @@ export class ExpeditionScene extends Phaser.Scene {
     sprite.setScrollFactor(0).setPosition(screenX, screenY);
     sprite.cameraFilter &= ~this.hudCam.id;
     this.cameras.main.ignore(sprite);
+    const startX = screenX;
+    const startY = screenY;
     const targetX = 40;
     const targetY = VH() - 42;
+    const arcHeight = 100;
     this.tweens.add({
       targets: sprite,
-      x: targetX,
-      y: targetY,
       scale: 0.35,
       alpha: 0.7,
-      duration: 500,
+      duration: 600,
       ease: 'Quad.easeIn',
+      onUpdate: (tween) => {
+        const t = tween.progress;
+        sprite.x = startX + (targetX - startX) * t;
+        sprite.y = startY - arcHeight * 4 * t * (1 - t) + (targetY - startY) * t;
+      },
       onComplete: () => {
         audio.playResourcePickup(resource);
         this.giveItem(resource, 1);
