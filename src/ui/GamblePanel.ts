@@ -164,12 +164,13 @@ export class GamblePanel extends BasePanel {
     canGamble: boolean,
     onSpin: () => void,
     onClose: (reward: { id: string; quantity: number } | null) => void,
+    onWalk?: () => void,
   ): void {
     this.segments = segments;
     this.cost = cost;
     this.canGamble = canGamble;
     this.onSpin = onSpin;
-    this.onWalk = () => onClose(null);
+    this.onWalk = onWalk ?? (() => onClose(null));
     this.onResult = onClose;
     this.mode = 'preview';
     this.spinning = false;

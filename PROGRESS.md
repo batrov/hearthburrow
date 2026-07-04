@@ -474,3 +474,6 @@ Resolved Bugs:
 - **Duplicated map eliminated** — `buildingTextureKeys` defined once as module-level constant instead of twice in HomelandScene
 - **Type safety** — 4 `any` annotations replaced with proper types (`Phaser.Types.Tweens.TweenBuilderConfig`, `DungeonTile`, typed union, `Phaser.Input.Pointer`)
 - **Clean build** — `tsc --noEmit` zero errors
+
+## Resolved Bugs
+- **Gambling "Walk away" removes NPC** — `GamblePanel.showPreview()` set `onWalk = () => onClose(null)`, which in `ExpeditionScene.triggerGamble()` called `tile.broken = true` + `drawFloor()`, erasing the goblin NPC even when the player walked away without gambling. Fixed by adding optional `onWalk` parameter to `showPreview()` and passing a noop callback from `triggerGamble()` that only clears the interact target without marking the tile broken.

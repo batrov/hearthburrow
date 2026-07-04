@@ -170,8 +170,6 @@ export class ExpeditionScene extends Phaser.Scene {
     F: Phaser.Input.Keyboard.Key;
     Z: Phaser.Input.Keyboard.Key;
   };
-  private moveTimer: number = 0;
-  private moveDelay: number = 150;
   private isMoving: boolean = false;
   private isMining: boolean = false;
   private pendingMineTx: number = -1;
@@ -295,7 +293,6 @@ export class ExpeditionScene extends Phaser.Scene {
     gameState.runRecipesDiscovered = [];
     this.expeditionState.reset();
     this.expeditionState.depth = this.startFloor;
-    this.moveTimer = 0;
     this.animFrame = 0;
     this.animTimer = 0;
     this.facingHighlight = this.add.graphics().setDepth(DEPTH.FACING_HIGHLIGHT);
@@ -1566,8 +1563,6 @@ export class ExpeditionScene extends Phaser.Scene {
       return;
     }
 
-    this.moveTimer += delta;
-
     if (this.exhausted) return;
 
     this.checkEventProximity();
@@ -1617,41 +1612,38 @@ export class ExpeditionScene extends Phaser.Scene {
       return;
     }
 
-    if (this.moveTimer >= this.moveDelay) {
-      let dx = 0;
-      let dy = 0;
+    let dx = 0;
+    let dy = 0;
 
-      const kbA = this.keys.A.isDown || this.keys.LEFT.isDown;
-      const kbD = this.keys.D.isDown || this.keys.RIGHT.isDown;
-      const kbW = this.keys.W.isDown || this.keys.UP.isDown;
-      const kbS = this.keys.S.isDown || this.keys.DOWN.isDown;
+    const kbA = this.keys.A.isDown || this.keys.LEFT.isDown;
+    const kbD = this.keys.D.isDown || this.keys.RIGHT.isDown;
+    const kbW = this.keys.W.isDown || this.keys.UP.isDown;
+    const kbS = this.keys.S.isDown || this.keys.DOWN.isDown;
 
-      if (kbA || kbD || kbW || kbS) {
-        this.movePath = [];
-        this.analog.reset();
-        if (kbA) dx = -1;
-        else if (kbD) dx = 1;
-        if (kbW) dy = -1;
-        else if (kbS) dy = 1;
-      } else if (this.analog.active && (this.analog.dx !== 0 || this.analog.dy !== 0)) {
-        dx = this.analog.dx;
-        dy = this.analog.dy;
-      } else if (this.movePath.length > 0) {
-        const next = this.movePath.shift()!;
-        dx = next.x - this.playerX;
-        dy = next.y - this.playerY;
-      }
+    if (kbA || kbD || kbW || kbS) {
+      this.movePath = [];
+      this.analog.reset();
+      if (kbA) dx = -1;
+      else if (kbD) dx = 1;
+      if (kbW) dy = -1;
+      else if (kbS) dy = 1;
+    } else if (this.analog.active && (this.analog.dx !== 0 || this.analog.dy !== 0)) {
+      dx = this.analog.dx;
+      dy = this.analog.dy;
+    } else if (!this.isMoving && this.movePath.length > 0) {
+      const next = this.movePath.shift()!;
+      dx = next.x - this.playerX;
+      dy = next.y - this.playerY;
+    }
 
-      if (dx !== 0 && dy !== 0) dy = 0;
+    if (dx !== 0 && dy !== 0) dy = 0;
 
-      if (dx !== 0 || dy !== 0) {
-        this.facingX = dx;
-        this.facingY = dy;
-        this.updatePlayerSprite();
-        this.tryMove(dx, dy);
-        this.updateFacingHighlight();
-        this.moveTimer = 0;
-      }
+    if (dx !== 0 || dy !== 0) {
+      this.facingX = dx;
+      this.facingY = dy;
+      this.updatePlayerSprite();
+      this.tryMove(dx, dy);
+      this.updateFacingHighlight();
     }
 
     if (this.isMining) {
@@ -1832,6 +1824,10 @@ export class ExpeditionScene extends Phaser.Scene {
         this.interactPrompt.setAlpha(0);
         this.drawFloor();
         this.drawMinimap();
+      },
+      () => {
+        this.interactTarget = null;
+        this.interactPrompt.setAlpha(0);
       },
     );
   }
@@ -2262,7 +2258,7 @@ export class ExpeditionScene extends Phaser.Scene {
       y: target.y + (cfg.offsetY ?? 0),
       depth: playerDepth(nx, ny),
       duration: 100,
-      ease: 'Linear',
+      ease: 'Quad.easeOut',
       onComplete: () => { this.isMoving = false; },
     });
 
