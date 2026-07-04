@@ -32,7 +32,7 @@ const TAVERN_MAP: number[][] = [
   [1,1,1,1,1,1,1,1,1,1,1,1],
 ];
 
-const NPC_GRID: { x: number; y: number }[] = [
+const NPC_SEATS: { x: number; y: number }[] = [
   { x: 2, y: 2 }, { x: 4, y: 2 }, { x: 7, y: 2 }, { x: 10, y: 2 },
   { x: 3, y: 3 }, { x: 6, y: 3 },
   { x: 1, y: 4 }, { x: 4, y: 4 }, { x: 8, y: 4 },
@@ -80,6 +80,9 @@ export class TavernScene extends Phaser.Scene {
   private countText!: Phaser.GameObjects.Text;
   private exitBtn!: Phaser.GameObjects.Text;
   private photobookBtn!: Phaser.GameObjects.Text;
+  private npcSpriteRefs: Phaser.GameObjects.Image[] = [];
+  private npcBaseFlip: boolean[] = [];
+  private npcSeats: { x: number; y: number }[] = [];
   private _onViewportResize?: () => void;
 
   constructor() {
@@ -106,6 +109,9 @@ export class TavernScene extends Phaser.Scene {
     this.highlightedNPC = -1;
     this.adjacentNPC = null;
     this.pendingNPCIdx = -1;
+    this.npcSpriteRefs = [];
+    this.npcBaseFlip = [];
+    this.npcSeats = [];
 
     this.drawTavern();
     this.createPlayer();
@@ -247,10 +253,16 @@ export class TavernScene extends Phaser.Scene {
     this.npcCells.clear();
     this.facingOutlineImages.forEach(img => img.destroy());
     this.facingOutlineImages = [];
+    this.npcSpriteRefs = [];
+    this.npcBaseFlip = [];
+    this.npcSeats = [];
+
+    const seats = Phaser.Utils.Array.Shuffle([...NPC_SEATS]);
+    this.npcSeats = seats;
 
     for (let i = 0; i < Math.min(rescued.length, 20); i++) {
       const npc = rescued[i];
-      const gpos = NPC_GRID[i];
+      const gpos = seats[i];
       this.npcCells.add(`${gpos.x},${gpos.y}`);
       const pos = gridToScreen(gpos.x, gpos.y);
       const depth = 6 + (gpos.x + gpos.y) * 0.01 + 0.003;
@@ -267,7 +279,11 @@ export class TavernScene extends Phaser.Scene {
         sprite.setOrigin(npcCfg.originX ?? 0.5, npcCfg.originY ?? 0.5);
       }
       if (npcCfg.scale !== undefined) sprite.setScale(npcCfg.scale);
+      sprite.setFlipX(Math.random() > 0.5);
       container.add(sprite);
+
+      this.npcSpriteRefs.push(sprite);
+      this.npcBaseFlip.push(sprite.flipX);
 
       const label = createText(this, 0, 16, npc.name, {
         fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
@@ -288,7 +304,7 @@ export class TavernScene extends Phaser.Scene {
         this.hidePrompt();
       });
       container.on('pointerdown', () => {
-        const gpos = NPC_GRID[i];
+        const gpos = seats[i];
         const dx = Math.abs(this.playerGx - gpos.x);
         const dy = Math.abs(this.playerGy - gpos.y);
         if (dx + dy === 1) {
@@ -308,6 +324,17 @@ export class TavernScene extends Phaser.Scene {
             this.pendingNPCIdx = i;
           }
         }
+      });
+
+      // Idle bob animation
+      this.tweens.add({
+        targets: container,
+        y: container.y - 3,
+        yoyo: true,
+        repeat: -1,
+        duration: 600 + Math.random() * 400,
+        ease: 'Sine.easeInOut',
+        delay: Math.random() * 1000,
       });
     }
   }
@@ -370,7 +397,7 @@ export class TavernScene extends Phaser.Scene {
         const rescued = gameState.rescuedVillagers;
         for (let i = 0; i < Math.min(rescued.length, 20); i++) {
           if (rescued[i] === this.adjacentNPC) {
-            const gpos = NPC_GRID[i];
+            const gpos = this.npcSeats[i];
             this.facingX = Math.sign(gpos.x - this.playerGx);
             this.facingY = Math.sign(gpos.y - this.playerGy);
             this.updatePlayerSprite();
@@ -492,7 +519,7 @@ export class TavernScene extends Phaser.Scene {
         );
         if (path && path.length > 0) {
           for (let i = 0; i < Math.min(gameState.rescuedVillagers.length, 20); i++) {
-            if (NPC_GRID[i].x === g.x && NPC_GRID[i].y === g.y) {
+            if (this.npcSeats[i].x === g.x && this.npcSeats[i].y === g.y) {
               this.pendingNPCIdx = i;
               break;
             }
@@ -552,7 +579,7 @@ export class TavernScene extends Phaser.Scene {
     if (this.pendingNPCIdx >= 0 && !this.isMoving && this.movePath.length === 0) {
       const rescued = gameState.rescuedVillagers;
       if (this.pendingNPCIdx < rescued.length) {
-        const npcGpos = NPC_GRID[this.pendingNPCIdx];
+        const npcGpos = this.npcSeats[this.pendingNPCIdx];
         const dx = Math.abs(this.playerGx - npcGpos.x);
         const dy = Math.abs(this.playerGy - npcGpos.y);
         if (dx + dy === 1) {
@@ -569,7 +596,7 @@ export class TavernScene extends Phaser.Scene {
     let foundNPC: { variant: number; rescuedAtDepth: number; name: string; talkCount: number } | null = null;
     let foundIdx = -1;
     for (let i = 0; i < Math.min(rescued.length, 20); i++) {
-      const gpos = NPC_GRID[i];
+      const gpos = this.npcSeats[i];
       const dx = Math.abs(this.playerGx - gpos.x);
       const dy = Math.abs(this.playerGy - gpos.y);
       if (dx + dy === 1) {
@@ -584,8 +611,18 @@ export class TavernScene extends Phaser.Scene {
     }
     this.adjacentNPC = foundNPC;
 
+    // Reset all NPC flips to their random base, then face the one toward player
+    for (let i = 0; i < this.npcSpriteRefs.length; i++) {
+      this.npcSpriteRefs[i].setFlipX(this.npcBaseFlip[i]);
+    }
+    if (foundIdx >= 0 && foundIdx < this.npcSpriteRefs.length) {
+      const npcGx = this.npcSeats[foundIdx].x;
+      if (npcGx < this.playerGx) this.npcSpriteRefs[foundIdx].setFlipX(false);
+      else if (npcGx > this.playerGx) this.npcSpriteRefs[foundIdx].setFlipX(true);
+    }
+
     if (foundNPC) {
-      const npcPos = gridToScreen(NPC_GRID[foundIdx].x, NPC_GRID[foundIdx].y);
+      const npcPos = gridToScreen(this.npcSeats[foundIdx].x, this.npcSeats[foundIdx].y);
       this.showPrompt(`[SPACE] Talk to ${foundNPC.name}`, npcPos.x, npcPos.y - 48);
     } else {
       const doorCell = this.findDoorCell();
@@ -814,7 +851,7 @@ export class TavernScene extends Phaser.Scene {
     if (npcIdx < 0) return;
     const rescued = gameState.rescuedVillagers;
     if (npcIdx >= rescued.length) return;
-    const gpos = NPC_GRID[npcIdx];
+    const gpos = this.npcSeats[npcIdx];
     const texKey = `npc_${rescued[npcIdx].variant}`;
     if (!this.textures.exists(texKey)) return;
     const pos = gridToScreen(gpos.x, gpos.y);

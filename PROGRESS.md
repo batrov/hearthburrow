@@ -498,3 +498,10 @@ Resolved Bugs:
 - **Treasure vault rewards**: tiered ore by depth (bronze→silver→gold) with `qty = 2 + floor(depth/5)` + crystal at `1 + floor(depth/8)`
 - **Hidden treasure rewards**: depth-pool resource (stone→bronze→silver→gold) at `qty = 3 + floor(depth/5) * 2`
 - **No gold before depth 10** — pool indexing uses `min(floor(depth/2), 5)` so gold only enters at pool[5] (depth 10+)
+
+## ✅ Tavern NPC Liveliness (July 2026)
+- **Random seat shuffle** — NPCs assigned to randomized seat positions each tavern visit via `Phaser.Utils.Array.Shuffle` instead of fixed rescue-order placement
+- **Random sprite flip** — each NPC spawns with 50/50 `setFlipX` so they don't all face the same direction
+- **Player-facing on interaction** — NPC flips toward the player when adjacent and being faced; reverts to random flip when player walks away
+- **Idle bob animation** — NPC containers gently oscillate 3px on a slow sine wave (600-1000ms random duration, staggered start delays) for subtle breathing/life
+- **`NPC_GRID` → `NPC_SEATS`** — renamed for semantic clarity
