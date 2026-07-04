@@ -1784,6 +1784,11 @@ export class ExpeditionScene extends Phaser.Scene {
       return;
     }
 
+    if (eventId === 'hidden_treasure' || eventId === 'treasure_vault') {
+      this.triggerChestAnimation(tx, ty, tile, eventId);
+      return;
+    }
+
     this.eventActive = true;
 
     const config = this.buildEventConfig(eventId);
@@ -1802,6 +1807,175 @@ export class ExpeditionScene extends Phaser.Scene {
         this.drawFloor();
         this.drawMinimap();
       });
+    });
+  }
+
+  private triggerChestAnimation(tx: number, ty: number, tile: DungeonTile, eventId: string): void {
+    this.eventActive = true;
+    this.analog.reset();
+    this.interactTarget = null;
+    this.interactPrompt.setAlpha(0);
+
+    const existing = this.tileObjects.find(o => o.getData('gx') === tx && o.getData('gy') === ty);
+    const texKey = existing?.texture.key ?? (eventId === 'treasure_vault' ? 'event_treasure_vault' : 'event_chest');
+    const p = gridToIso(tx, ty);
+
+    const animChest = this.add.image(p.x, p.y, texKey)
+      .setDepth(interactiveDepth(tx, ty, 0.05))
+      .setScale(existing?.scaleX ?? 1);
+    this.hudCam.ignore(animChest);
+
+    const depth = this.expeditionState.depth;
+    const rewards: { id: string; qty: number }[] = [];
+    if (eventId === 'treasure_vault') {
+      const orePool = ['bronze_ore', 'bronze_ore', 'silver_ore', 'silver_ore', 'gold_ore', 'gold_ore'];
+      const oreIdx = Math.min(Math.floor(depth / 2), 5);
+      rewards.push(
+        { id: orePool[oreIdx], qty: 2 + Math.floor(depth / 5) },
+        { id: 'crystal', qty: 1 + Math.floor(depth / 8) },
+      );
+    } else {
+      const pool = ['stone', 'bronze_ore', 'bronze_ore', 'silver_ore', 'silver_ore', 'gold_ore'];
+      const idx = Math.min(Math.floor(depth / 2), 5);
+      rewards.push({ id: pool[idx], qty: 3 + Math.floor(depth / 5) * 2 });
+    }
+
+    this.tweens.add({
+      targets: animChest,
+      x: p.x + 3,
+      yoyo: true,
+      repeat: 5,
+      duration: 50,
+      ease: 'Sine.easeInOut',
+      onComplete: () => {
+        animChest.x = p.x;
+
+        const beam = this.add.graphics();
+        beam.fillStyle(0xffdd66, 0.7);
+        beam.fillRect(p.x - 3, p.y - 40, 6, 40);
+        beam.setDepth(interactiveDepth(tx, ty, 0.04));
+        beam.setScale(1, 0);
+        beam.setAlpha(0);
+        this.hudCam.ignore(beam);
+
+        this.tweens.add({
+          targets: beam,
+          scaleY: 1,
+          alpha: 1,
+          duration: 200,
+          ease: 'Quad.easeOut',
+          onComplete: () => {
+            this.tweens.add({
+              targets: animChest,
+              scaleX: (existing?.scaleX ?? 1) * 1.3,
+              scaleY: (existing?.scaleY ?? 1) * 1.3,
+              duration: 100,
+              ease: 'Back.easeOut',
+              onComplete: () => {
+                animChest.setTint(0xffffff);
+                this.time.delayedCall(50, () => {
+                  animChest.setVisible(false);
+
+                  this.tweens.add({
+                    targets: beam,
+                    alpha: 0,
+                    duration: 100,
+                    onComplete: () => {
+                      beam.destroy();
+                      this.launchChestItemFlight(rewards, p, tx, ty, tile, animChest);
+                    },
+                  });
+                });
+              },
+            });
+          },
+        });
+      },
+    });
+  }
+
+  private launchChestItemFlight(
+    rewards: { id: string; qty: number }[],
+    origin: { x: number; y: number },
+    tx: number, ty: number,
+    tile: DungeonTile,
+    animChest: Phaser.GameObjects.Image,
+  ): void {
+    let idx = 0;
+    const launchNext = () => {
+      if (idx >= rewards.length) {
+        tile.broken = true;
+        this.eventActive = false;
+        animChest.destroy();
+        this.drawFloor();
+        this.drawMinimap();
+        return;
+      }
+      const reward = rewards[idx++];
+      const texKey = reward.id.endsWith('_ore') ? reward.id : `${reward.id}_ore`;
+      const exists = this.textures.exists(texKey);
+
+      const sprite = this.add.image(origin.x, origin.y, exists ? texKey : '__DEFAULT')
+        .setDepth(interactiveDepth(tx, ty, 0.03))
+        .setScale(0);
+      this.hudCam.ignore(sprite);
+
+      this.tweens.add({
+        targets: sprite,
+        scale: 1.2,
+        duration: 150,
+        ease: 'Back.easeOut',
+        onComplete: () => {
+          this.tweens.add({
+            targets: sprite,
+            scale: 1,
+            duration: 80,
+            ease: 'Quad.easeIn',
+            onComplete: () => {
+              this.flyChestItemToBackpack(sprite, reward, launchNext);
+            },
+          });
+        },
+      });
+    };
+    launchNext();
+  }
+
+  private flyChestItemToBackpack(
+    sprite: Phaser.GameObjects.Image,
+    reward: { id: string; qty: number },
+    onDone: () => void,
+  ): void {
+    const cam = this.cameras.main;
+    const screenX = sprite.x - cam.scrollX;
+    const screenY = sprite.y - cam.scrollY;
+    sprite.setScrollFactor(0).setPosition(screenX, screenY);
+    sprite.cameraFilter &= ~this.hudCam.id;
+    this.cameras.main.ignore(sprite);
+
+    const startX = screenX;
+    const startY = screenY;
+    const targetX = 40;
+    const targetY = VH() - 42;
+    const arcHeight = 100;
+
+    this.tweens.add({
+      targets: sprite,
+      scale: 0.35,
+      alpha: 0.7,
+      duration: 600,
+      ease: 'Quad.easeIn',
+      onUpdate: (tween) => {
+        const t = tween.progress;
+        sprite.x = startX + (targetX - startX) * t;
+        sprite.y = startY - arcHeight * 4 * t * (1 - t) + (targetY - startY) * t;
+      },
+      onComplete: () => {
+        audio.playItemPickup();
+        this.giveItem(reward.id, reward.qty);
+        sprite.destroy();
+        onDone();
+      },
     });
   }
 

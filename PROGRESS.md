@@ -491,3 +491,10 @@ Resolved Bugs:
 ## Resolved Bugs
 - **Gambling "Walk away" removes NPC** — `GamblePanel.showPreview()` set `onWalk = () => onClose(null)`, which in `ExpeditionScene.triggerGamble()` called `tile.broken = true` + `drawFloor()`, erasing the goblin NPC even when the player walked away without gambling. Fixed by adding optional `onWalk` parameter to `showPreview()` and passing a noop callback from `triggerGamble()` that only clears the interact target without marking the tile broken.
 - **Carrot counter not updating on gamble** — `onSpin` callback deducted carrots and saved but never called `updateCarrotCounter()`. Counter stayed stale until the next carrot pickup from the floor. Fixed by adding `updateCarrotCounter()` after the deduction.
+
+## ✅ VS-Style Chest Animation (July 2026)
+- **Shake → beam → open → reward animation** — pressing SPACE on vault/chest tiles plays a 6-phase sequence (shake 300ms → golden light beam 200ms → scale pop + flash 150ms → beam fade 100ms → item pop-in → fly-to-backpack arc) instead of instant popup
+- **No popup interaction** — animation plays automatically, no choice menu required; items queue into the existing `flySpriteToBackpack` parabolic arc system
+- **Treasure vault rewards**: tiered ore by depth (bronze→silver→gold) with `qty = 2 + floor(depth/5)` + crystal at `1 + floor(depth/8)`
+- **Hidden treasure rewards**: depth-pool resource (stone→bronze→silver→gold) at `qty = 3 + floor(depth/5) * 2`
+- **No gold before depth 10** — pool indexing uses `min(floor(depth/2), 5)` so gold only enters at pool[5] (depth 10+)
