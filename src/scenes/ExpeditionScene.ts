@@ -55,7 +55,7 @@ function playerDepth(x: number, y: number): number {
 const DEPTH = {
   TERRAIN: 4, INTERACTIVE_BASE: 6, SELECTED_BACKDROP: 7, PREVIEW_TILE: 7.1,
   FACING_HIGHLIGHT: 12, EFFECTS: 14, PARTICLES: 15, BOMB: 20,
-  ITEM_POPUP: 25, ITEM_SPRITE: 26, DARKNESS: 48, HUD_BG: 50, HUD: 51, MINIMAP_DOT: 52,
+  ITEM_POPUP: 25, ITEM_GLOW: 25, ITEM_SPRITE: 26, DARKNESS: 48, HUD_BG: 50, HUD: 51, MINIMAP_DOT: 52,
   INTERACT_PROMPT: 55, OVERLAY: 100, OVERLAY_TEXT: 101,
   POPUP: 200, CLICK_ZONES: 210, ANALOG: 250,
 };
@@ -123,6 +123,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private currentFloor: DungeonFloor | null = null;
   private floorSpriteObjects: Phaser.GameObjects.Image[] = [];
   private tileObjects: Phaser.GameObjects.Image[] = [];
+  private dropGlowImages: Phaser.GameObjects.Image[] = [];
   private selectedObject!: Phaser.GameObjects.Graphics;
   private facingHighlight!: Phaser.GameObjects.Graphics;
   private portraitSprite!: Phaser.GameObjects.Image;
@@ -2380,6 +2381,8 @@ export class ExpeditionScene extends Phaser.Scene {
     const floor = this.currentFloor;
     if (!floor) return;
 
+    this.dropGlowImages.forEach(g => { if (g.active) g.destroy(); });
+    this.dropGlowImages = [];
     this.stairsSpawned = false;
     this.floorEntry = true;
     this.interactTarget = null;
@@ -3422,25 +3425,34 @@ export class ExpeditionScene extends Phaser.Scene {
     const p = gridToIso(tx, ty);
     const sprite = this.add.image(p.x, p.y, textureKey)
       .setDepth(DEPTH.ITEM_SPRITE)
-      .setScale(0);
+      .setScale(1);
     this.hudCam.ignore(sprite);
-    this.tweens.add({
-      targets: sprite,
-      scale: 1.2,
-      duration: 150,
-      ease: 'Back.easeOut',
-      onComplete: () => {
+
+    // White filled glow (matching Tavern NPC highlight style: 8 dirs × 3 layers)
+    const dirs: [number, number][] = [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
+    const glowImages: Phaser.GameObjects.Image[] = [];
+    for (let t = 1; t <= 3; t++) {
+      const targetAlpha = t === 1 ? 0.6 : t === 2 ? 0.3 : 0.1;
+      for (const [dx, dy] of dirs) {
+        const img = this.add.image(p.x + dx * t, p.y + dy * t, textureKey)
+          .setDepth(DEPTH.ITEM_GLOW)
+          .setTint(0xffffff).setTintMode(Phaser.TintModes.FILL)
+          .setAlpha(0);
+        this.hudCam.ignore(img);
+        this.dropGlowImages.push(img);
+        glowImages.push(img);
         this.tweens.add({
-          targets: sprite,
-          scale: 1,
-          duration: 80,
-          ease: 'Quad.easeIn',
-          onComplete: () => {
-            this.queueItemFly(sprite, resource);
-          }
+          targets: img,
+          alpha: targetAlpha,
+          duration: 150,
+          ease: 'Quad.easeOut',
         });
       }
-    });
+    }
+    sprite.setData('glowImages', glowImages);
+
+    // Fly directly — no pop-in delay
+    this.queueItemFly(sprite, resource);
   }
 
   private queueItemFly(sprite: Phaser.GameObjects.Image, resource: string): void {
@@ -3520,9 +3532,30 @@ export class ExpeditionScene extends Phaser.Scene {
     const cam = this.cameras.main;
     const screenX = sprite.x - cam.scrollX;
     const screenY = sprite.y - cam.scrollY;
+
+    // Capture world-space offsets BEFORE converting sprite to screen space
+    const glowImages: Phaser.GameObjects.Image[] = sprite.getData('glowImages') ?? [];
+    const glowOffsets: { dx: number; dy: number }[] = [];
+    if (glowImages) {
+      for (const img of glowImages) {
+        glowOffsets.push({ dx: img.x - sprite.x, dy: img.y - sprite.y });
+      }
+    }
+
+    // Convert sprite to screen space
     sprite.setScrollFactor(0).setPosition(screenX, screenY);
     sprite.cameraFilter &= ~this.hudCam.id;
     this.cameras.main.ignore(sprite);
+
+    // Convert glow images to screen space using pre-computed offsets
+    if (glowImages) {
+      for (let i = 0; i < glowImages.length; i++) {
+        glowImages[i].setScrollFactor(0).setPosition(screenX + glowOffsets[i].dx, screenY + glowOffsets[i].dy);
+        glowImages[i].cameraFilter &= ~this.hudCam.id;
+        this.cameras.main.ignore(glowImages[i]);
+      }
+    }
+
     const startX = screenX;
     const startY = screenY;
     const targetX = 40;
@@ -3538,8 +3571,17 @@ export class ExpeditionScene extends Phaser.Scene {
         const t = tween.progress;
         sprite.x = startX + (targetX - startX) * t;
         sprite.y = startY - arcHeight * 4 * t * (1 - t) + (targetY - startY) * t;
+        if (glowImages) {
+          for (let i = 0; i < glowImages.length; i++) {
+            glowImages[i].x = sprite.x + glowOffsets[i].dx;
+            glowImages[i].y = sprite.y + glowOffsets[i].dy;
+          }
+        }
       },
       onComplete: () => {
+        if (glowImages) {
+          glowImages.forEach(img => { if (img.active) img.destroy(); });
+        }
         audio.playResourcePickup(resource);
         this.giveItem(resource, 1);
         sprite.destroy();

@@ -505,3 +505,9 @@ Resolved Bugs:
 - **Player-facing on interaction** — NPC flips toward the player when adjacent and being faced; reverts to random flip when player walks away
 - **Idle bob animation** — NPC containers gently oscillate 3px on a slow sine wave (600-1000ms random duration, staggered start delays) for subtle breathing/life
 - **`NPC_GRID` → `NPC_SEATS`** — renamed for semantic clarity
+
+## ✅ Ore Drop Glow Highlight (July 2026)
+- **White filled glow on spawned drops** — when an ore node breaks, the drop sprite gets a 24-image white glow (8 directions × 3 layers, matching Tavern NPC highlight style) that fades in with the drop
+- **Glow follows the flight arc** — glow images convert from world→screen space alongside the sprite and track it through the entire parabolic arc to the backpack
+- **Persists until backpack** — glow stays visible for the full 600ms flight, destroyed only when `flySpriteToBackpack.onComplete` fires
+- **Immediate flight** — drop flies directly with no pop-in delay; glow fades in during the first 150ms of the arc
