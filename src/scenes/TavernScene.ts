@@ -617,8 +617,12 @@ export class TavernScene extends Phaser.Scene {
     }
     if (foundIdx >= 0 && foundIdx < this.npcSpriteRefs.length) {
       const npcGx = this.npcSeats[foundIdx].x;
-      if (npcGx < this.playerGx) this.npcSpriteRefs[foundIdx].setFlipX(false);
-      else if (npcGx > this.playerGx) this.npcSpriteRefs[foundIdx].setFlipX(true);
+      const npcGy = this.npcSeats[foundIdx].y;
+      if (npcGx < this.playerGx || (npcGx === this.playerGx && npcGy > this.playerGy)) {
+        this.npcSpriteRefs[foundIdx].setFlipX(true);
+      } else if (npcGx > this.playerGx || (npcGx === this.playerGx && npcGy < this.playerGy)) {
+        this.npcSpriteRefs[foundIdx].setFlipX(false);
+      }
     }
 
     if (foundNPC) {
@@ -870,6 +874,11 @@ export class TavernScene extends Phaser.Scene {
         this.hudCam.ignore(img);
         this.facingOutlineImages.push(img);
       }
+    }
+    // Sync highlight flip with the actual NPC sprite
+    if (npcIdx < this.npcSpriteRefs.length) {
+      const flip = this.npcSpriteRefs[npcIdx].flipX;
+      this.facingOutlineImages.forEach(img => img.setFlipX(flip));
     }
   }
 
