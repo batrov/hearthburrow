@@ -202,7 +202,8 @@ export class ExpeditionScene extends Phaser.Scene {
   private minimapBg!: Phaser.GameObjects.Graphics;
   private minimapGfx!: Phaser.GameObjects.Graphics;
   private minimapDot!: Phaser.GameObjects.Rectangle;
-  private interactPrompt!: Phaser.GameObjects.Text;
+  private actionBubbleGfx!: Phaser.GameObjects.Graphics;
+  private actionBubbleText!: Phaser.GameObjects.Text;
   private interactTarget: { x: number; y: number; id: string } | null = null;
   private darknessOverlay!: Phaser.GameObjects.Graphics;
   private darknessMaskGfx!: Phaser.GameObjects.Graphics;
@@ -332,10 +333,12 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.ignore(this.minimapGfx);
     this.cameras.main.ignore(this.minimapDot);
 
-    this.interactPrompt = createText(this, 0, 0, '', {
+    this.actionBubbleGfx = this.add.graphics().setDepth(DEPTH.INTERACT_PROMPT).setAlpha(0);
+    this.hudCam.ignore(this.actionBubbleGfx);
+    this.actionBubbleText = createText(this, 0, 0, '', {
       fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#ffdd88',
     }).setOrigin(0.5).setAlpha(0).setDepth(DEPTH.INTERACT_PROMPT);
-    this.hudCam.ignore(this.interactPrompt);
+    this.hudCam.ignore(this.actionBubbleText);
 
     if (this.runSeed) this.dungeonGen.setSeed(`${this.runSeed}_depth_${this.startFloor}`);
     this.currentFloor = this.dungeonGen.generateFloor(this.startFloor);
@@ -1182,10 +1185,10 @@ export class ExpeditionScene extends Phaser.Scene {
 
     const cx = 40;
     const cy = anchorBottom(42);
-    const radius = 16;
+    const radius = 20;
     const color = ratio <= 0.75 ? 0x44cc66 : ratio <= 0.9 ? 0xccaa44 : 0xcc4444;
 
-    this.invBtnRing.lineStyle(2, color, 1);
+    this.invBtnRing.lineStyle(3, color, 1);
     this.invBtnRing.beginPath();
     this.invBtnRing.arc(cx, cy, radius, Math.PI / 2, Math.PI / 2 + Math.PI * 2 * Math.min(ratio, 1), false);
     this.invBtnRing.strokePath();
@@ -1198,14 +1201,14 @@ export class ExpeditionScene extends Phaser.Scene {
 
     const pickCx = 30;
     const pickCy = HUD_TOP_SAFE + STAMINA_BLOCK_H + TOPLEFT_GAP + 21;
-    const radius = 14;
+    const radius = 20;
     const tier = gameState.currentPickaxeTier;
     const runsLeft = gameState.remainingPickaxeRuns(tier);
     const maxRuns = 5;
     const ratio = tier > 1 && runsLeft >= 0 ? runsLeft / maxRuns : 1;
     const color = ratio > 0.4 ? 0x44cc66 : ratio > 0.2 ? 0xccaa44 : 0xcc4444;
 
-    this.pickaxeRing.lineStyle(2, color, 1);
+    this.pickaxeRing.lineStyle(3, color, 1);
     this.pickaxeRing.beginPath();
     this.pickaxeRing.arc(pickCx, pickCy, radius, Math.PI / 2, Math.PI / 2 + Math.PI * 2 * Math.min(ratio, 1), false);
     this.pickaxeRing.strokePath();
@@ -1558,7 +1561,7 @@ export class ExpeditionScene extends Phaser.Scene {
         this.hideStairPrompt();
         this.stairAction = null;
         this.interactTarget = null;
-        this.interactPrompt.setAlpha(0);
+        this.hideActionBubble();
         this.stairDismissCell = { x: this.playerX, y: this.playerY };
       }
       return;
@@ -1688,6 +1691,38 @@ export class ExpeditionScene extends Phaser.Scene {
     this.updateDarkness();
   }
 
+  private showActionBubble(msg: string): void {
+    this.drawChatBubble(this.actionBubbleGfx, this.actionBubbleText, msg, this.player.x, this.player.y - 30);
+    this.actionBubbleGfx.setAlpha(1);
+    this.actionBubbleText.setAlpha(1);
+  }
+
+  private hideActionBubble(): void {
+    this.actionBubbleGfx.setAlpha(0);
+    this.actionBubbleText.setAlpha(0);
+  }
+
+  private drawChatBubble(
+    gfx: Phaser.GameObjects.Graphics, text: Phaser.GameObjects.Text,
+    msg: string, cx: number, topY: number,
+  ): void {
+    gfx.clear();
+    text.setText(msg);
+    const padX = 12, padY = 6, tailH = 5, radius = 6;
+    const bw = text.width + padX * 2;
+    const bh = text.height + padY * 2;
+    const bx = cx - bw / 2;
+    const by = topY - bh - tailH;
+    gfx.fillStyle(0x1a1410, 0.9);
+    gfx.fillRoundedRect(bx, by, bw, bh, radius);
+    gfx.fillTriangle(
+      cx - 5, by + bh,
+      cx + 5, by + bh,
+      cx, by + bh + tailH,
+    );
+    text.setPosition(cx, by + bh / 2);
+  }
+
   private checkEventProximity(): void {
     const floor = this.currentFloor;
     if (!floor) return;
@@ -1703,7 +1738,7 @@ export class ExpeditionScene extends Phaser.Scene {
       const dismissed = this.stairDismissCell && this.stairDismissCell.x === this.playerX && this.stairDismissCell.y === this.playerY;
       if (!dismissed) {
         this.interactTarget = null;
-        this.interactPrompt.setAlpha(0);
+        this.hideActionBubble();
         this.stairTargetX = this.playerX;
         this.stairTargetY = this.playerY;
         this.stairAction = curTile.type === 'stairs_up' ? 'ascend' : 'descend';
@@ -1716,7 +1751,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const ty = this.playerY + this.facingY;
     if (tx < 0 || tx >= floor.cols || ty < 0 || ty >= floor.rows) {
       this.interactTarget = null;
-      this.interactPrompt.setAlpha(0);
+      this.hideActionBubble();
       return;
     }
 
@@ -1724,12 +1759,10 @@ export class ExpeditionScene extends Phaser.Scene {
     if (tile.type === 'enemy' && !tile.broken) {
       this.interactTarget = { x: tx, y: ty, id: tile.eventId };
       if (this.stamina.remaining <= 10) {
-        this.interactPrompt.setText('Not enough stamina!');
+        this.showActionBubble('Not enough stamina!');
       } else {
-        this.interactPrompt.setText('[SPACE] Fight!');
+        this.showActionBubble('[SPACE] Fight!');
       }
-      this.interactPrompt.setPosition(this.player.x, this.player.y - 30);
-      this.interactPrompt.setAlpha(1);
       return;
     }
     if ((tile.type === 'event_boss' || tile.type === 'boss_body') && !tile.broken) {
@@ -1737,18 +1770,16 @@ export class ExpeditionScene extends Phaser.Scene {
       let bossY = ty;
       if (tile.type === 'boss_body') {
         const center = this.findBossCenter(tx, ty);
-        if (!center) { this.interactTarget = null; this.interactPrompt.setAlpha(0); return; }
+        if (!center) { this.interactTarget = null; this.hideActionBubble(); return; }
         bossX = center.x;
         bossY = center.y;
       }
       this.interactTarget = { x: bossX, y: bossY, id: 'boss' };
       if (this.stamina.remaining <= 10) {
-        this.interactPrompt.setText('Not enough stamina!');
+        this.showActionBubble('Not enough stamina!');
       } else {
-        this.interactPrompt.setText('[SPACE] Face the Boss!');
+        this.showActionBubble('[SPACE] Face the Boss!');
       }
-      this.interactPrompt.setPosition(this.player.x, this.player.y - 30);
-      this.interactPrompt.setAlpha(1);
       return;
     }
     if (tile.type.startsWith('event_') && !tile.broken) {
@@ -1763,14 +1794,12 @@ export class ExpeditionScene extends Phaser.Scene {
         event_treasure_vault: '[SPACE] Open vault',
         event_relic: '[SPACE] Claim Relic',
       };
-      this.interactPrompt.setText(labels[tile.type] ?? '[SPACE] Interact');
-      this.interactPrompt.setPosition(this.player.x, this.player.y - 30);
-      this.interactPrompt.setAlpha(1);
+      this.showActionBubble(labels[tile.type] ?? '[SPACE] Interact');
       return;
     }
 
     this.interactTarget = null;
-    this.interactPrompt.setAlpha(0);
+    this.hideActionBubble();
   }
 
   private triggerTileEvent(tx: number, ty: number, eventId: string): void {
@@ -1804,7 +1833,7 @@ export class ExpeditionScene extends Phaser.Scene {
         this.eventActive = false;
         tile.broken = true;
         this.interactTarget = null;
-        this.interactPrompt.setAlpha(0);
+        this.hideActionBubble();
         this.drawFloor();
         this.drawMinimap();
       });
@@ -1815,7 +1844,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.eventActive = true;
     this.analog.reset();
     this.interactTarget = null;
-    this.interactPrompt.setAlpha(0);
+    this.hideActionBubble();
 
     const existing = this.tileObjects.find(o => o.getData('gx') === tx && o.getData('gy') === ty);
     const texKey = existing?.texture.key ?? (eventId === 'treasure_vault' ? 'event_treasure_vault' : 'event_chest');
@@ -1997,13 +2026,13 @@ export class ExpeditionScene extends Phaser.Scene {
         if (reward) this.giveItem(reward.id, reward.quantity);
         tile.broken = true;
         this.interactTarget = null;
-        this.interactPrompt.setAlpha(0);
+        this.hideActionBubble();
         this.drawFloor();
         this.drawMinimap();
       },
       () => {
         this.interactTarget = null;
-        this.interactPrompt.setAlpha(0);
+        this.hideActionBubble();
       },
     );
   }
@@ -2244,7 +2273,7 @@ export class ExpeditionScene extends Phaser.Scene {
         this.hideStairPrompt();
         this.stairAction = null;
         this.interactTarget = null;
-        this.interactPrompt.setAlpha(0);
+        this.hideActionBubble();
         this.stairDismissCell = { x: this.playerX, y: this.playerY };
       }
     };
@@ -2386,7 +2415,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.stairsSpawned = false;
     this.floorEntry = true;
     this.interactTarget = null;
-    this.interactPrompt.setAlpha(0);
+    this.hideActionBubble();
 
     this.drawFloor();
     this.repositionPlayer();
@@ -2670,9 +2699,8 @@ export class ExpeditionScene extends Phaser.Scene {
       if (oreImg) {
         this.tweens.add({
           targets: oreImg,
-          scaleX: 2.0, scaleY: 2.0,
+          scaleX: 0, scaleY: 0,
           alpha: 0,
-          angle: Phaser.Math.Between(-15, 15),
           duration: 250,
           ease: 'Quad.easeOut',
           onComplete: () => {
@@ -3115,7 +3143,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.analog.reset();
     this.combatActive = true;
     audio.playCombatStart();
-    this.interactPrompt.setAlpha(0);
+    this.hideActionBubble();
     this.interactTarget = null;
 
     this.combatPanel.show(

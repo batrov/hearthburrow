@@ -208,7 +208,8 @@ export class HomelandScene extends Phaser.Scene {
   private playerGx: number = 12;
   private playerGy: number = 19;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
-  private promptText!: Phaser.GameObjects.Text;
+  private actionBubbleGfx!: Phaser.GameObjects.Graphics;
+  private actionBubbleText!: Phaser.GameObjects.Text;
   private restoreBuildingId: string = '';
   private currentBuilding: HubBuildingDef | null = null;
   private pendingBuilding: HubBuildingDef | null = null;
@@ -501,10 +502,12 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private createInteractionUI(): void {
-    this.promptText = createText(this, 0, 0, '', {
+    this.actionBubbleGfx = this.add.graphics().setDepth(54).setAlpha(0);
+    this.hudCam.ignore(this.actionBubbleGfx);
+    this.actionBubbleText = createText(this, 0, 0, '', {
       fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#ffdd88',
     }).setOrigin(0.5).setAlpha(0).setDepth(55);
-    this.hudCam.ignore(this.promptText);
+    this.hudCam.ignore(this.actionBubbleText);
   }
 
   private createActionButton(): void {
@@ -860,7 +863,6 @@ export class HomelandScene extends Phaser.Scene {
     if (closest) {
       this.currentBuilding = closest;
       const pp = gridToIso(this.playerGx, this.playerGy);
-      this.promptText.setPosition(pp.x, pp.y - 32).setScrollFactor(1);
 
       let action = 'Interact';
       const restored = !closest.buildingId || isRestored(closest.buildingId);
@@ -869,8 +871,7 @@ export class HomelandScene extends Phaser.Scene {
       else if (closest.id === 'tavern') action = `Enter Tavern (${gameState.rescuedVillagers.length}/20 inside)`;
       else action = `Visit ${closest.label.split(' ')[0].toLowerCase()}`;
 
-      this.promptText.setText(`[SPACE] ${action}`);
-      this.promptText.setAlpha(1);
+      this.showActionBubble(`[SPACE] ${action}`, pp.x, pp.y - 55);
 
       if (this.pendingBuilding === closest) {
         this.pendingBuilding = null;
@@ -878,9 +879,41 @@ export class HomelandScene extends Phaser.Scene {
       }
     } else {
       this.currentBuilding = null;
-      this.promptText.setAlpha(0);
+      this.hideActionBubble();
     }
     this.updateFacingHighlight();
+  }
+
+  private showActionBubble(msg: string, cx: number, topY: number): void {
+    this.drawChatBubble(this.actionBubbleGfx, this.actionBubbleText, msg, cx, topY);
+    this.actionBubbleGfx.setAlpha(1);
+    this.actionBubbleText.setAlpha(1);
+  }
+
+  private hideActionBubble(): void {
+    this.actionBubbleGfx.setAlpha(0);
+    this.actionBubbleText.setAlpha(0);
+  }
+
+  private drawChatBubble(
+    gfx: Phaser.GameObjects.Graphics, text: Phaser.GameObjects.Text,
+    msg: string, cx: number, topY: number,
+  ): void {
+    gfx.clear();
+    text.setText(msg);
+    const padX = 12, padY = 6, tailH = 5, radius = 6;
+    const bw = text.width + padX * 2;
+    const bh = text.height + padY * 2;
+    const bx = cx - bw / 2;
+    const by = topY - bh - tailH;
+    gfx.fillStyle(0x1a1410, 0.9);
+    gfx.fillRoundedRect(bx, by, bw, bh, radius);
+    gfx.fillTriangle(
+      cx - 5, by + bh,
+      cx + 5, by + bh,
+      cx, by + bh + tailH,
+    );
+    text.setPosition(cx, by + bh / 2);
   }
 
   private updateFacingHighlight(): void {

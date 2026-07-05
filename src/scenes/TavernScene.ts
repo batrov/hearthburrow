@@ -57,8 +57,10 @@ export class TavernScene extends Phaser.Scene {
   private isMoving = false;
   private movePath: { x: number; y: number }[] = [];
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
-  private promptText!: Phaser.GameObjects.Text;
+  private actionBubbleGfx!: Phaser.GameObjects.Graphics;
+  private actionBubbleText!: Phaser.GameObjects.Text;
   private greetingActive = false;
+  private closeGreeting: (() => void) | null = null;
 
   private analog!: AnalogStickInput;
   private photobook!: NPCPhotobookPanel;
@@ -82,6 +84,7 @@ export class TavernScene extends Phaser.Scene {
   private photobookBtn!: Phaser.GameObjects.Text;
   private npcSpriteRefs: Phaser.GameObjects.Image[] = [];
   private npcBaseFlip: boolean[] = [];
+  private npcLabelTexts: Phaser.GameObjects.Text[] = [];
   private npcSeats: { x: number; y: number }[] = [];
   private _onViewportResize?: () => void;
 
@@ -111,6 +114,7 @@ export class TavernScene extends Phaser.Scene {
     this.pendingNPCIdx = -1;
     this.npcSpriteRefs = [];
     this.npcBaseFlip = [];
+    this.npcLabelTexts = [];
     this.npcSeats = [];
 
     this.drawTavern();
@@ -255,6 +259,8 @@ export class TavernScene extends Phaser.Scene {
     this.facingOutlineImages = [];
     this.npcSpriteRefs = [];
     this.npcBaseFlip = [];
+    this.npcLabelTexts.forEach(t => t.destroy());
+    this.npcLabelTexts = [];
     this.npcSeats = [];
 
     const seats = Phaser.Utils.Array.Shuffle([...NPC_SEATS]);
@@ -285,10 +291,11 @@ export class TavernScene extends Phaser.Scene {
       this.npcSpriteRefs.push(sprite);
       this.npcBaseFlip.push(sprite.flipX);
 
-      const label = createText(this, 0, 16, npc.name, {
+      const label = createText(this, pos.x, pos.y - 60, npc.name, {
         fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
-      }).setOrigin(0.5);
-      container.add(label);
+      }).setOrigin(0.5).setDepth(50);
+      this.hudCam.ignore(label);
+      this.npcLabelTexts.push(label);
 
       container.setSize(30, 40);
       container.setInteractive(
@@ -297,12 +304,6 @@ export class TavernScene extends Phaser.Scene {
       ).setData('isUI', true);
 
       const npcRef = npc;
-      container.on('pointerover', () => {
-        this.showPrompt(npcRef.name, pos.x, pos.y - 30);
-      });
-      container.on('pointerout', () => {
-        this.hidePrompt();
-      });
       container.on('pointerdown', () => {
         const gpos = seats[i];
         const dx = Math.abs(this.playerGx - gpos.x);
@@ -369,10 +370,12 @@ export class TavernScene extends Phaser.Scene {
     this.cameras.main.ignore(this.carrotCountText);
     this.updateCarrotCounter();
 
-    this.promptText = createText(this, 0, 0, '', {
+    this.actionBubbleGfx = this.add.graphics().setDepth(99).setAlpha(0);
+    this.hudCam.ignore(this.actionBubbleGfx);
+    this.actionBubbleText = createText(this, 0, 0, '', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#ffdd88',
     }).setOrigin(0.5).setDepth(100).setAlpha(0);
-    this.hudCam.ignore(this.promptText);
+    this.hudCam.ignore(this.actionBubbleText);
   }
 
   private updateCarrotCounter(): void {
@@ -393,6 +396,10 @@ export class TavernScene extends Phaser.Scene {
     this.actionBtnHit = hit;
     hit.setInteractive({ useHandCursor: true });
     hit.on('pointerdown', () => {
+      if (this.greetingActive) {
+        this.closeGreeting?.();
+        return;
+      }
       if (this.adjacentNPC) {
         const rescued = gameState.rescuedVillagers;
         for (let i = 0; i < Math.min(rescued.length, 20); i++) {
@@ -626,21 +633,19 @@ export class TavernScene extends Phaser.Scene {
     }
 
     if (foundNPC) {
-      const npcPos = gridToScreen(this.npcSeats[foundIdx].x, this.npcSeats[foundIdx].y);
-      this.showPrompt(`[SPACE] Talk to ${foundNPC.name}`, npcPos.x, npcPos.y - 48);
+      this.showActionPrompt(`[SPACE] Talk to ${foundNPC.name}`);
     } else {
       const doorCell = this.findDoorCell();
       if (doorCell) {
         const dx = Math.abs(this.playerGx - doorCell.x);
         const dy = Math.abs(this.playerGy - doorCell.y);
         if (dx + dy === 1) {
-          const doorPos = gridToScreen(doorCell.x, doorCell.y);
-          this.showPrompt('[SPACE] Exit', doorPos.x, doorPos.y - 48);
+          this.showActionPrompt('[SPACE] Exit');
         } else {
-          this.hidePrompt();
+          this.hideActionPrompt();
         }
       } else {
-        this.hidePrompt();
+        this.hideActionPrompt();
       }
     }
 
@@ -728,14 +733,37 @@ export class TavernScene extends Phaser.Scene {
     }
   }
 
-  private showPrompt(text: string, x: number, y: number): void {
-    this.promptText.setPosition(x, y);
-    this.promptText.setText(text);
-    this.promptText.setAlpha(1);
+  private showActionPrompt(text: string): void {
+    const pp = gridToScreen(this.playerGx, this.playerGy);
+    this.drawChatBubble(this.actionBubbleGfx, this.actionBubbleText, text, pp.x, pp.y - 55);
+    this.actionBubbleGfx.setAlpha(1);
+    this.actionBubbleText.setAlpha(1);
   }
 
-  private hidePrompt(): void {
-    this.promptText.setAlpha(0);
+  private hideActionPrompt(): void {
+    this.actionBubbleGfx.setAlpha(0);
+    this.actionBubbleText.setAlpha(0);
+  }
+
+  private drawChatBubble(
+    gfx: Phaser.GameObjects.Graphics, text: Phaser.GameObjects.Text,
+    msg: string, cx: number, topY: number,
+  ): void {
+    gfx.clear();
+    text.setText(msg);
+    const padX = 12, padY = 6, tailH = 5, radius = 6;
+    const bw = text.width + padX * 2;
+    const bh = text.height + padY * 2;
+    const bx = cx - bw / 2;
+    const by = topY - bh - tailH;
+    gfx.fillStyle(0x1a1410, 0.9);
+    gfx.fillRoundedRect(bx, by, bw, bh, radius);
+    gfx.fillTriangle(
+      cx - 5, by + bh,
+      cx + 5, by + bh,
+      cx, by + bh + tailH,
+    );
+    text.setPosition(cx, by + bh / 2);
   }
 
   private showGreeting(npc: { variant: number; rescuedAtDepth: number; name: string; talkCount: number }): void {
@@ -797,16 +825,18 @@ export class TavernScene extends Phaser.Scene {
       speechText.destroy();
       closeHint.destroy();
       this.greetingActive = false;
+      this.closeGreeting = null;
       this.input.off('pointerdown', close);
       this.input.keyboard!.off('keydown-SPACE', close);
       this.input.keyboard!.off('keydown-ESC', close);
     };
+    this.closeGreeting = close;
 
     this.time.delayedCall(0, () => {
       this.input.on('pointerdown', close);
+      this.input.keyboard!.on('keydown-SPACE', close);
+      this.input.keyboard!.on('keydown-ESC', close);
     });
-    this.input.keyboard!.on('keydown-SPACE', close);
-    this.input.keyboard!.on('keydown-ESC', close);
   }
 
   private showObtainPopup(id: string, qty: number, prefix?: string, stackIndex: number = 0): void {

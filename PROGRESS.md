@@ -511,3 +511,12 @@ Resolved Bugs:
 - **Glow follows the flight arc** — glow images convert from world→screen space alongside the sprite and track it through the entire parabolic arc to the backpack
 - **Persists until backpack** — glow stays visible for the full 600ms flight, destroyed only when `flySpriteToBackpack.onComplete` fires
 - **Immediate flight** — drop flies directly with no pop-in delay; glow fades in during the first 150ms of the arc
+
+## ✅ Chat Bubble Action Prompts (July 2026)
+- **All three scenes** — Tavern, Expedition, Homeland action prompts replaced with styled chat bubbles (rounded rect `#1a1410` at 0.9α, 6px radius, 5px triangular tail, golden text) positioned above the player's head
+- **Tavern NPC hover tooltip removed** — redundant with persistent NPC name labels added earlier (Jul 2026)
+- **Greeting same-frame show/hide fix** — `keydown-SPACE` and `keydown-ESC` close handlers moved into `delayedCall(0)` block alongside `pointerdown` handler, preventing the greeting overlay from being destroyed on the same SPACE press that triggered it
+- **Clean build** — all three scenes share a common `drawChatBubble()` helper pattern
+
+## Resolved Bugs (cont.)
+- **Tavern greeting destroyed instantly on SPACE** — `showGreeting()` registered `keydown-SPACE` close handler synchronously inside the handler that was already triggered by SPACE; the close handler fired on the same press, destroying the overlay before the player could see it. Fixed by deferring all close handler registrations with `delayedCall(0)`.
