@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { InventorySystem } from '../systems/InventorySystem';
 import { itemDisplayName, itemIconKey } from '../systems/GameState';
 import { BasePanel } from './BasePanel';
+import { NineSliceBg } from './NineSliceBg';
+import { UiButton } from './UiButton';
 import { isConsumable } from '../systems/DataRegistry';
 import { VW, VH, CX, anchorBottom } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
@@ -50,11 +52,10 @@ export class InventoryPanel extends BasePanel {
   private onUse: ((itemId: string) => void) | null = null;
   private onTrash: ((itemId: string) => void) | null = null;
   private clickZones: Phaser.GameObjects.Zone[] = [];
-  private useBtn: Phaser.GameObjects.Text;
-  private trashBtn: Phaser.GameObjects.Text;
-  private useBtnZone: Phaser.GameObjects.Rectangle;
-  private trashBtnZone: Phaser.GameObjects.Rectangle;
+  private useBtn!: UiButton;
+  private trashBtn!: UiButton;
   private dirty: boolean = true;
+  private clickHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
 
   // List area top (below title+warn text) is a fixed chrome height; the bottom
   // boundary is derived from the button row above so rows never overlap the
@@ -105,37 +106,25 @@ export class InventoryPanel extends BasePanel {
     }).setOrigin(0.5);
     this.container.add(this.descriptionText);
 
-    this.useBtn = createText(scene, CX() - 50, VH() - 70, '[ USE ]', {
-      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#b8a888',
-    }).setOrigin(0.5).setVisible(false);
-    this.container.add(this.useBtn);
-
-    this.trashBtn = createText(scene, CX() + 50, VH() - 70, '[ TRASH ]', {
-      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#b8a888',
-    }).setOrigin(0.5).setVisible(false);
-    this.container.add(this.trashBtn);
-
-    this.useBtnZone = scene.add.rectangle(CX() - 50, VH() - 70, 80, 44, 0xffffff, 0)
-      .setDepth(210).setScrollFactor(0).setInteractive().setVisible(false);
-    this.useBtnZone.on('pointerdown', () => {
+    this.useBtn = new UiButton(scene, CX() - 50, VH() - 70, 'USE', 80, 36, () => {
       const item = this.items[this.selectionIndex];
       if (item) {
         this.onUse?.(item.id);
         this.refresh();
       }
-    });
-    this.container.add(this.useBtnZone);
+    }, { color: '#b8a888' });
+    this.useBtn.setDepth(210).setVisible(false);
+    for (const child of this.useBtn.getChildren()) this.container.add(child);
 
-    this.trashBtnZone = scene.add.rectangle(CX() + 50, VH() - 70, 90, 44, 0xffffff, 0)
-      .setDepth(210).setScrollFactor(0).setInteractive().setVisible(false);
-    this.trashBtnZone.on('pointerdown', () => {
+    this.trashBtn = new UiButton(scene, CX() + 50, VH() - 70, 'TRASH', 90, 36, () => {
       const item = this.items[this.selectionIndex];
       if (item) {
         this.onTrash?.(item.id);
         this.refresh();
       }
-    });
-    this.container.add(this.trashBtnZone);
+    }, { color: '#b8a888' });
+    this.trashBtn.setDepth(210).setVisible(false);
+    for (const child of this.trashBtn.getChildren()) this.container.add(child);
 
     this.addCloseButton();
   }
@@ -170,6 +159,21 @@ export class InventoryPanel extends BasePanel {
   show(): void {
     this.fadeIn();
     this.dirty = true;
+
+    this.clickHandler = (p: Phaser.Input.Pointer) => {
+      if (!this._visible) return;
+      if (this.useBtn.handleClick(p)) return;
+      if (this.trashBtn.handleClick(p)) return;
+    };
+    this.scene.input.on('pointerdown', this.clickHandler);
+  }
+
+  hide(): void {
+    if (this.clickHandler) {
+      this.scene.input.off('pointerdown', this.clickHandler);
+      this.clickHandler = null;
+    }
+    this.fadeOut();
   }
 
   refresh(): void {
@@ -269,11 +273,9 @@ export class InventoryPanel extends BasePanel {
 
     const canUse = selectedItem && this.onUse && isConsumable(selectedItem.id);
     this.useBtn.setVisible(!!canUse);
-    this.useBtnZone.setVisible(!!canUse);
 
     const canTrash = selectedItem && this.onTrash;
     this.trashBtn.setVisible(!!canTrash);
-    this.trashBtnZone.setVisible(!!canTrash);
   }
 
   draw(): void {
@@ -282,11 +284,9 @@ export class InventoryPanel extends BasePanel {
     this.dirty = false;
 
     this.overlay.clear();
-    this.overlay.fillStyle(0x0a0a1a, 0.92);
-    this.overlay.fillRect(0, 0, VW(), VH());
 
     const pad = 16;
-    this.overlay.lineStyle(1, 0x3a3a4a, 0.5);
+    this.overlay.lineStyle(1, 0x5a4a3a, 0.5);
     this.overlay.strokeRect(pad, InventoryPanel.LIST_TOP - 12, VW() - pad * 2, this.listBottom() - (InventoryPanel.LIST_TOP - 12));
 
     this.buildItemList();
@@ -300,8 +300,6 @@ export class InventoryPanel extends BasePanel {
     this.descriptionText.setPosition(CX(), anchorBottom(100));
     this.useBtn.setPosition(CX() - 50, anchorBottom(70));
     this.trashBtn.setPosition(CX() + 50, anchorBottom(70));
-    this.useBtnZone.setPosition(CX() - 50, anchorBottom(70));
-    this.trashBtnZone.setPosition(CX() + 50, anchorBottom(70));
     this.dirty = true;
   }
 }

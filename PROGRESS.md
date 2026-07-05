@@ -530,3 +530,4 @@ Resolved Bugs:
 - **Left-aligned dialogue** — both NPC name and speech text aligned to `left` at `CX() - 155` inside the panel inset
 - **Clean text** — removed double quotes wrapping and `"... says:"` suffix from the greeting display
 - **Dynamic hint** — hint text changes from `[SPACE] skip` (while typing) to `[SPACE / ESC] close` (when complete)
+- **Inventory TRASH/USE buttons unresponsive** — `UiButton` hitZones added to Container via `container.add(child)` don't reliably fire `pointerdown` in Phaser 4. InventoryPanel had no scene-level click handler to manually hit-test them. Fixed by adding a scene-level `pointerdown` handler in `show()` that calls `useBtn.handleClick(p)` and `trashBtn.handleClick(p)`, cleaned up in `hide()`.
