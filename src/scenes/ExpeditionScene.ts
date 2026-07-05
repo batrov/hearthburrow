@@ -2930,6 +2930,28 @@ export class ExpeditionScene extends Phaser.Scene {
     });
   }
 
+  private createPlayerDamageEffect(): void {
+    const p = gridToIso(this.playerX, this.playerY);
+    const cx = p.x;
+    const cy = p.y;
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI * 2 / 6) * i + Phaser.Math.FloatBetween(-0.3, 0.3);
+      const dist = Phaser.Math.Between(15, 30);
+      const radius = Phaser.Math.FloatBetween(2, 4);
+      const particle = this.add.circle(cx, cy, radius, 0xff4444, 0.8)
+        .setStrokeStyle(1, 0xffffff, 0.3).setDepth(DEPTH.PARTICLES);
+      this.hudCam.ignore(particle);
+      this.tweens.add({
+        targets: particle,
+        x: cx + Math.cos(angle) * dist,
+        y: cy + Math.sin(angle) * dist,
+        alpha: 0, scale: 0,
+        duration: 300, ease: 'Quad.easeOut',
+        onComplete: () => particle.destroy(),
+      });
+    }
+  }
+
   private createWallBreakParticles(tx: number, ty: number): void {
     const p = gridToIso(tx, ty);
     const cx = p.x;
@@ -3346,6 +3368,7 @@ export class ExpeditionScene extends Phaser.Scene {
     },
     () => {
       this.stamina.consume(10);
+      this.createPlayerDamageEffect();
       this.tweens.add({
         targets: [this.staminaBg, this.portraitSprite, this.staminaBarGfx, this.staminaValueText],
         x: { value: '+=' + 5 },

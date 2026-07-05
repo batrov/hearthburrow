@@ -402,6 +402,8 @@ export class CombatPanel extends BasePanel {
       if (isCrit || effectiveInCrit) audio.playCombatCrit();
       else audio.playCombatHit();
 
+      this.spawnHitParticles(isCrit || effectiveInCrit);
+
       this.scene.tweens.add({
         targets: this.enemySprite,
         x: this.enemySprite.x + 5,
@@ -613,6 +615,38 @@ export class CombatPanel extends BasePanel {
       this.instructionText.setColor('#b8a898');
       this.hintText.setColor('#5a4a6a');
     }
+  }
+
+  private spawnHitParticles(isCritical: boolean): void {
+    const color = isCritical ? 0xffdd44 : 0xffffff;
+    const ex = this.enemySprite.x;
+    const ey = this.enemySprite.y;
+    const count = isCritical ? 12 : 8;
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 / count) * i + Phaser.Math.FloatBetween(-0.2, 0.2);
+      const dist = Phaser.Math.Between(isCritical ? 25 : 20, isCritical ? 50 : 40);
+      const radius = Phaser.Math.FloatBetween(2, 4);
+      const particle = this.scene.add.circle(ex, ey, radius, color, 0.8)
+        .setStrokeStyle(1, 0xffffff, isCritical ? 0.6 : 0.3).setDepth(250).setScrollFactor(0);
+      this.container.add(particle);
+      this.scene.tweens.add({
+        targets: particle,
+        x: ex + Math.cos(angle) * dist,
+        y: ey + Math.sin(angle) * dist,
+        alpha: 0, scale: 0,
+        duration: isCritical ? 350 : 250,
+        ease: 'Quad.easeOut',
+        onComplete: () => particle.destroy(),
+      });
+    }
+    const flash = this.scene.add.circle(ex, ey, 20, 0xffffff, 0.3).setDepth(250).setScrollFactor(0);
+    this.container.add(flash);
+    this.scene.tweens.add({
+      targets: flash,
+      scale: 2.5, alpha: 0,
+      duration: 150, ease: 'Quad.easeOut',
+      onComplete: () => flash.destroy(),
+    });
   }
 
   private spawnDamagePopup(damage: number, isCritical: boolean, x: number, y: number): void {

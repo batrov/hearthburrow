@@ -603,6 +603,10 @@ Resolved Bugs:
 - **Ore node particles** — 4 large core chunks (1.5px white stroke, 60% opacity) + 10 small debris (1px, 40%) for prominent visual pop
 - **Wall break particles** — 6 large chunks (1.5px, 50%) + 12 gray dust (1px, 30%) matching ore particle style
 
+## ✅ Combat Hit Particles (July 2026)
+- **Enemy hit sparks** — radial burst of white/gold circles on strike (8 regular, 12 for crit) with center flash, scaled particles to match critical intensity
+- **Player damage particles** — 6 red circles burst outward from player iso position on miss (stamina cost), matching the existing stamina HUD shake feedback
+
 ## ✅ Per-Texture Filtering & Inventory Count Legibility (July 2026)
 - **Global bilinear default** — `pixelArt` config removed from `main.ts`, all textures default to LINEAR (smooth) filtering
 - **Selective nearest-neighbor** — `BootScene.create()` sets NEAREST (`setFilter(1)`) on characters (`player_*`, `npc_*`), enemies (`enemy_*`, `boss_body`), items (`item_*`, all ore nodes/drops), events (`event_*`); title, UI, terrain, walls, decorations stay LINEAR
