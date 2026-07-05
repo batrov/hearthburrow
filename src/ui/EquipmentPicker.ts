@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { itemIconKey } from '../systems/GameState';
 import { VW, VH, CX, CY } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { createAdaptiveText } from './AdaptiveText';
 import { NineSliceBg } from './NineSliceBg';
 import { UiButton } from './UiButton';
 
@@ -88,7 +89,7 @@ export class EquipmentPicker {
       this.rows.push({ bg, icon, nameText, descText, zone });
     }
 
-    this.footerText = createText(scene, CX(), 520, '[W/S] select  [SPACE] equip  [ESC] cancel', {
+    this.footerText = createAdaptiveText(scene, CX(), 520, '[W/S] select  [SPACE] equip  [ESC] cancel', 'Tap to equip', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#8a7a9a',
     }).setOrigin(0.5);
     this.container.add(this.footerText);

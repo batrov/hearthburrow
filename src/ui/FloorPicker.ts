@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { VW, VH, CX, CY } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { createAdaptiveText } from './AdaptiveText';
 import { NineSliceBg } from './NineSliceBg';
 import { UiButton } from './UiButton';
 
@@ -61,7 +62,7 @@ export class FloorPicker {
       this.rows.push({ bg, text, zone });
     }
 
-    this.footerText = createText(scene, CX(), 520, '[W/S] select  [SPACE] confirm  [ESC] cancel', {
+    this.footerText = createAdaptiveText(scene, CX(), 520, '[W/S] select  [SPACE] confirm  [ESC] cancel', 'Tap a floor to select', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#8a7a9a',
     }).setOrigin(0.5);
     this.container.add(this.footerText);

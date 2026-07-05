@@ -6,9 +6,11 @@ import { ExpeditionRecapScene } from './scenes/ExpeditionRecapScene';
 import { TavernScene } from './scenes/TavernScene';
 import { computeLogicalSize, viewportManager } from './systems/ViewportManager';
 import { __setViewportSize } from './systems/Viewport';
+import { initInputModeDetection } from './systems/InputMode';
 
 const { width, height } = computeLogicalSize(window.innerWidth, window.innerHeight);
 __setViewportSize(width, height);
+initInputModeDetection();
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,

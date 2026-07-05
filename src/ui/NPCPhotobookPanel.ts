@@ -3,6 +3,7 @@ import { gameState, NPC_PERSONALITIES } from '../systems/GameState';
 import { BasePanel } from './BasePanel';
 import { VW, VH, CX } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { getInputMode } from '../systems/InputMode';
 import { NineSliceBg } from './NineSliceBg';
 import { UiButton } from './UiButton';
 
@@ -115,7 +116,7 @@ export class NPCPhotobookPanel extends BasePanel {
 
     if (this.entries.length === 0) {
       this.contentText.setText('No villagers rescued yet.\nVenture into the dungeon to find them!');
-      this.hintText.setText('[ESC/TAB/TAP] close');
+      this.hintText.setText(getInputMode() !== 'keyboard' ? 'Close' : '[ESC/TAB/TAP] close');
       return;
     }
 
@@ -139,6 +140,6 @@ export class NPCPhotobookPanel extends BasePanel {
 
     this.contentText.setText(lines.join('\n') + info);
 
-    this.hintText.setText('[W/S] scroll  [ESC/TAB] close  [▲/▼] tap');
+    this.hintText.setText(getInputMode() !== 'keyboard' ? 'Scroll & tap to close' : '[W/S] scroll  [ESC/TAB] close  [▲/▼] tap');
   }
 }

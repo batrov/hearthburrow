@@ -4,6 +4,7 @@ import { audio } from '../systems/AudioSystem';
 import { BasePanel } from './BasePanel';
 import { VW, VH, CX } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { getInputMode } from '../systems/InputMode';
 import { NineSliceBg } from './NineSliceBg';
 import { UiButton } from './UiButton';
 
@@ -110,7 +111,7 @@ export class FarmPanel extends BasePanel {
       `Each plot yields 1 carrot\n` +
       `per 100 steps taken\n\n` +
       `You have ${carrots} Carrots\n\n` +
-      `[Z] Plant one  |  [X] Harvest all  |  [ESC/TAP] close`
+      getInputMode() !== 'keyboard' ? 'Plant  |  Harvest  |  Close' : '[Z] Plant one  |  [X] Harvest all  |  [ESC/TAP] close'
     );
   }
 }

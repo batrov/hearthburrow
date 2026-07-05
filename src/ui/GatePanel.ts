@@ -11,6 +11,8 @@ import { ConfirmPopup } from './ConfirmPopup';
 import { VW, VH, CX } from '../systems/Viewport';
 import { SCENES } from '../constants/scenes';
 import { textStyle, fs, createText } from '../systems/Font';
+import { createAdaptiveText } from './AdaptiveText';
+import { getInputMode } from '../systems/InputMode';
 
 const NAMES: Record<number, string> = {
   1: 'Common Pickaxe', 2: 'Bronze Pickaxe', 3: 'Silver Pickaxe', 4: 'Gold Pickaxe',
@@ -466,7 +468,9 @@ export class GatePanel extends BasePanel {
       : `Depth ${this.selectedElevatorFloor}`;
     const seedDisplay = this.gateSeed || '(none)';
     const debugStr = this.debugMode ? 'ON' : 'OFF';
-    const resetStr = this.resetConfirm ? 'Reset? [SPACE]' : 'Reset Game';
+    const resetStr = this.resetConfirm
+      ? (getInputMode() !== 'keyboard' ? 'Reset? Tap' : 'Reset? [SPACE]')
+    : 'Reset Game';
 
     const lines = [
       `Start Floor: ${elevStr}`,
@@ -508,7 +512,7 @@ export class GatePanel extends BasePanel {
       case 9: return ['Run Seed', this.gateSeed || '(empty — random)'];
       case 10: return ['Debug Mode', this.debugMode ? 'ON' : 'OFF'];
       case 11: return ['Reset Game', 'Wipes all progress permanently'];
-      case 12: return ['Ready to descend', '[SPACE] to embark'];
+      case 12: return ['Ready to descend', getInputMode() !== 'keyboard' ? 'Tap to embark' : '[SPACE] to embark'];
       default: return ['', ''];
     }
   }
@@ -558,7 +562,9 @@ export class GatePanel extends BasePanel {
   }
 
   private renderFooter(): void {
-    this.footerText.setText('[W/S] nav  [SPACE] pick  [\u2190\u2192] cycle  [ESC] cancel');
+    this.footerText.setText(getInputMode() !== 'keyboard'
+      ? 'Tap to navigate & select'
+      : '[W/S] nav  [SPACE] pick  [\u2190\u2192] cycle  [ESC] cancel');
   }
 
   private onEquipClick(idx: number): void {

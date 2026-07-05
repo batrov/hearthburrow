@@ -560,3 +560,9 @@ Resolved Bugs:
 - **Hyperbolic inverse-of-remaining** — replaced the linear `0.1 + (1 - 0.9 × ratio)` formula with Stardew Valley's `0.02 + 1/remainingOres`: 2% base per ore + chance spikes as ores deplete (1 ore left = 100% guaranteed)
 - **Exponential depth scaling** — `1.1^depth` (capped at 5×) multiplies the base chance, so shallow floors require heavy mining while deep floors yield stairs quickly
 - **Last-ore guarantee** — `1/0 = Infinity` ensures stairs always spawn before the floor is fully depleted, preventing softlocks
+
+## ✅ Input Mode Detection & Adaptive Hints (July 2026)
+- **`InputMode` three-state system** — `src/systems/InputMode.ts` detects `'keyboard'`, `'click'`, or `'touch'` mode; initial detection via touch-capability check, runtime switching via window-level `keydown` (→keyboard), `pointerdown` with `pointerType === 'mouse'` (→click), or `pointerType === 'touch'|'pen'` (→touch)
+- **`createAdaptiveText` factory** — `src/ui/AdaptiveText.ts` creates a Phaser.Text that auto-switches between keyboard and pointer-friendly text whenever the input mode changes; cleans up on destroy/scene shutdown via `onInputModeChange` listener
+- **22 call sites flipped** — all `getInputMode() === 'touch'` checks replaced with `getInputMode() !== 'keyboard'`, so both click and touch modes show pointer-friendly hints; changed files: CombatPanel, ConfirmPopup, ConsumablePicker, CraftingPanel, EquipmentPicker, FarmPanel, FloorPicker, GamblePanel, GatePanel, InventoryPanel, NPCPhotobookPanel, ResearchPanel, SeedEntryPopup, TradePanel, ExpeditionRecapScene, ExpeditionScene, HomelandScene, TavernScene
+- **World-space bubble texts** — `showActionBubble()`/`showActionPrompt()` in ExpeditionScene, HomelandScene, and TavernScene strip `[SPACE] ` prefix in both click and touch modes

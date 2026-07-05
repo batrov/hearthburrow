@@ -4,6 +4,8 @@ import { BasePanel } from './BasePanel';
 import { ConfirmPopup } from './ConfirmPopup';
 import { VW, VH, CX, CY } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { createAdaptiveText } from './AdaptiveText';
+import { getInputMode } from '../systems/InputMode';
 import { NineSliceBg } from './NineSliceBg';
 import { UiButton } from './UiButton';
 
@@ -135,12 +137,12 @@ export class CombatPanel extends BasePanel {
     }).setOrigin(0.5);
     this.container.add(this.feedbackText);
 
-    this.hintText = createText(scene, CX(), boxTop + 420, '[SPACE] Strike  |  Action button', {
+    this.hintText = createAdaptiveText(scene, CX(), boxTop + 420, '[SPACE] Strike  |  Action button', 'Tap to strike', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
-    this.retreatBtn = new UiButton(scene, CX(), boxTop + 460, '[ ESC ] Retreat', 200, 36,
+    this.retreatBtn = new UiButton(scene, CX(), boxTop + 460, 'Retreat', 200, 36,
       () => {
         if (this._visible && !this.result) {
           this.scene.time.delayedCall(0, () => {
@@ -439,7 +441,8 @@ export class CombatPanel extends BasePanel {
 
           this.scene.time.delayedCall(600, () => {
             this.showFeedback('VICTORY!', '#44cc66');
-            this.hintText.setText('[SPACE] Collect rewards');
+            const isPointer = getInputMode() !== 'keyboard';
+            this.hintText.setText(isPointer ? 'Tap to collect' : '[SPACE] Collect rewards');
           });
         } else {
           this.showFeedback('VICTORY!', '#44cc66');

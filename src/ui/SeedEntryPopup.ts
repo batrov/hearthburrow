@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { VW, VH, CX, CY } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { getInputMode } from '../systems/InputMode';
 import { NineSliceBg } from './NineSliceBg';
 import { UiButton } from './UiButton';
 
@@ -81,7 +82,7 @@ export class SeedEntryPopup {
     this.popupBg.setDepth(249);
     this.container.addAt(this.popupBg, 2);
 
-    this.hintText.setText('Type to edit  [SPACE] done  [ESC] cancel');
+    this.hintText.setText(getInputMode() !== 'keyboard' ? 'Type & tap done' : 'Type to edit  [SPACE] done  [ESC] cancel');
 
     this.keyHandler = (e: KeyboardEvent) => {
       if (e.key === 'Backspace') {

@@ -4,6 +4,7 @@ import { audio } from '../systems/AudioSystem';
 import { itemIconKey } from '../systems/GameState';
 import { VW, VH, CX, CY } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { getInputMode } from '../systems/InputMode';
 import { NineSliceBg } from './NineSliceBg';
 import { UiButton } from './UiButton';
 
@@ -335,7 +336,7 @@ export class GamblePanel extends BasePanel {
     this.hideLegend();
     this.hideButtons();
     this.subtitleText.setVisible(false);
-    this.hintText.setText('[SPACE] Stop the wheel!').setVisible(true);
+    this.hintText.setText(getInputMode() !== 'keyboard' ? 'Tap to stop' : '[SPACE] Stop the wheel!').setVisible(true);
     this.resultText.setText('');
     this.resultBg.clear();
     this.wheelPctTexts.forEach(s => s.destroy());
@@ -442,7 +443,7 @@ export class GamblePanel extends BasePanel {
       audio.playError();
     }
 
-    this.hintText.setText('[SPACE] Close');
+    this.hintText.setText(getInputMode() !== 'keyboard' ? 'Tap to close' : '[SPACE] Close');
   }
 
   hide(): void {

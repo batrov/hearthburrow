@@ -6,6 +6,8 @@ import { NineSliceBg } from './NineSliceBg';
 import { UiButton } from './UiButton';
 import { VW, VH, CX } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { createAdaptiveText } from './AdaptiveText';
+import { getInputMode } from '../systems/InputMode';
 
 interface ResearchNode {
   id: string;
@@ -110,7 +112,7 @@ export class ResearchPanel extends BasePanel {
     }).setDepth(207).setScrollFactor(0).setOrigin(1, 0);
     this.container.add(this.descStatus);
 
-    this.hintText = createText(scene, CX(), VH() - 30, '[W/S] Scroll  [A/D] Nav  [SPACE] Research  [Click] Focus', {
+    this.hintText = createAdaptiveText(scene, CX(), VH() - 30, '[W/S] Scroll  [A/D] Nav  [SPACE] Research  [Click] Focus', 'Scroll & tap to research', {
       fontSize: fs(9), fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
     }).setOrigin(0.5).setDepth(207).setScrollFactor(0);
     this.container.add(this.hintText);
@@ -310,8 +312,8 @@ export class ResearchPanel extends BasePanel {
     this.createClickZones();
 
     this.hintText.setText(this.state === 'idle'
-      ? '[W/S] Scroll  [A/D] Nav  [SPACE] Research  [Click] Focus'
-      : '[SPACE] Confirm  [ESC] Cancel');
+      ? (getInputMode() !== 'keyboard' ? 'Scroll & tap to research' : '[W/S] Scroll  [A/D] Nav  [SPACE] Research  [Click] Focus')
+      : (getInputMode() !== 'keyboard' ? 'Confirm  |  Cancel' : '[SPACE] Confirm  [ESC] Cancel'));
   }
 
   private cleanupDynamic(): void {

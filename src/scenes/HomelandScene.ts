@@ -21,6 +21,8 @@ import {
 import { VW, VH, CX, CY, actionButtonCenter, actionButtonGlowBoxTopLeft, ACTION_BTN_SIZE } from '../systems/Viewport';
 import { viewportManager } from '../systems/ViewportManager';
 import { textStyle, fs, createText } from '../systems/Font';
+import { createAdaptiveText } from '../ui/AdaptiveText';
+import { getInputMode } from '../systems/InputMode';
 
 interface HubBuildingDef {
   id: string;
@@ -235,6 +237,7 @@ export class HomelandScene extends Phaser.Scene {
   private analog!: AnalogStickInput;
   private hudCam!: Phaser.Cameras.Scene2D.Camera;
   private carrotCountText!: Phaser.GameObjects.Text;
+  private levelText!: Phaser.GameObjects.Text;
   private animFrame: number = 0;
   private animTimer: number = 0;
   private readonly ANIM_INTERVAL: number = 60;
@@ -298,6 +301,11 @@ export class HomelandScene extends Phaser.Scene {
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(55);
     this.cameras.main.ignore(this.carrotCountText);
     this.updateCarrotCounter();
+
+    this.levelText = createText(this, 4, 4, `Lv.${gameState.playerLevel}`, {
+      fontSize: fs(9), fontFamily: 'Inter', resolution: 4, color: '#88aacc', stroke: '#000000', strokeThickness: 2
+    }).setScrollFactor(0).setDepth(55);
+    this.cameras.main.ignore(this.levelText);
 
     this.relayout();
     this._onViewportResize = () => this.relayout();
@@ -428,7 +436,7 @@ export class HomelandScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(7);
     this.hudCam.ignore(gateLabel);
 
-    const descendText = createText(this, c.x, c.y + 24, '[SPACE] Descend', {
+    const descendText = createAdaptiveText(this, c.x, c.y + 24, '[SPACE] Descend', 'Descend', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#8a7aba',
     }).setOrigin(0.5).setDepth(7);
     this.hudCam.ignore(descendText);
@@ -885,7 +893,8 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private showActionBubble(msg: string, cx: number, topY: number): void {
-    this.drawChatBubble(this.actionBubbleGfx, this.actionBubbleText, msg, cx, topY);
+    const displayMsg = getInputMode() !== 'keyboard' ? msg.replace(/^\[SPACE\] /, '') : msg;
+    this.drawChatBubble(this.actionBubbleGfx, this.actionBubbleText, displayMsg, cx, topY);
     this.actionBubbleGfx.setAlpha(1);
     this.actionBubbleText.setAlpha(1);
   }

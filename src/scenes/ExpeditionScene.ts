@@ -27,6 +27,7 @@ import { viewportManager } from '../systems/ViewportManager';
 import { textStyle, fs, createText } from '../systems/Font';
 import { NineSliceBg } from '../ui/NineSliceBg';
 import { UiButton } from '../ui/UiButton';
+import { getInputMode } from '../systems/InputMode';
 
 const BIOMES = ['FOREST', 'CAVE', 'ICE', 'LAVA', 'RUINS'];
 
@@ -66,8 +67,9 @@ const DEPTH = {
 // accumulating offsets from the top edge, so the blocks can never drift out of
 // alignment with each other regardless of viewport size.
 const HUD_TOP_SAFE = 4;
-const STAMINA_BLOCK_H = 68;
+const STAMINA_BLOCK_H = 82;
 const TOPLEFT_GAP = 6;
+const XP_BAR_H = 6;
 
 // Bottom-right HUD stack (potion -> bomb -> escape) is built by accumulating
 // offsets from the bottom edge, so the three icons can never overlap by
@@ -229,6 +231,9 @@ export class ExpeditionScene extends Phaser.Scene {
   private actionBtnBg!: Phaser.GameObjects.Graphics;
   private actionBtnText!: Phaser.GameObjects.Text;
   private hudCam!: Phaser.Cameras.Scene2D.Camera;
+  private levelText!: Phaser.GameObjects.Text;
+  private xpBarBg!: Phaser.GameObjects.Graphics;
+  private xpBarFill!: Phaser.GameObjects.Graphics;
 
   constructor() {
     super({ key: SCENES.EXPEDITION });
@@ -758,6 +763,18 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.ignore(this.carrotCountText);
     this.updateCarrotCounter();
 
+    this.levelText = createText(this, 80, HUD_TOP_SAFE + STAMINA_BLOCK_H - XP_BAR_H - 19, '', {
+      fontSize: fs(9), fontFamily: 'Inter', resolution: 4, color: '#88aacc', stroke: '#000000', strokeThickness: 2,
+    }).setScrollFactor(0).setDepth(214);
+    this.cameras.main.ignore(this.levelText);
+
+    this.xpBarBg = this.add.graphics().setScrollFactor(0).setDepth(211);
+    this.cameras.main.ignore(this.xpBarBg);
+    this.xpBarFill = this.add.graphics().setScrollFactor(0).setDepth(211.5);
+    this.cameras.main.ignore(this.xpBarFill);
+
+    this.updateLevelDisplay();
+
     this.drawStaminaBar();
 
     // === BOTTOM-CENTER: Depth ===
@@ -882,6 +899,8 @@ export class ExpeditionScene extends Phaser.Scene {
     this.portraitSprite.setPosition(42, staminaY + 84);
     this.staminaValueText.setPosition(VW() - 8, staminaY + 6);
     this.carrotCountText.setPosition(CX(), pickaxeY + 7);
+    this.levelText.setPosition(80, HUD_TOP_SAFE + STAMINA_BLOCK_H - XP_BAR_H - 19);
+    this.updateLevelDisplay();
     this.depthTextCentered.setPosition(CX(), anchorBottom(36));
     this.drawStaminaBar();
 
@@ -1684,7 +1703,8 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private showActionBubble(msg: string): void {
-    this.drawChatBubble(this.actionBubbleGfx, this.actionBubbleText, msg, this.player.x, this.player.y - 30);
+    const displayMsg = getInputMode() !== 'keyboard' ? msg.replace(/^\[SPACE\] /, '') : msg;
+    this.drawChatBubble(this.actionBubbleGfx, this.actionBubbleText, displayMsg, this.player.x, this.player.y - 30);
     this.actionBubbleGfx.setAlpha(1);
     this.actionBubbleText.setAlpha(1);
   }
@@ -2148,6 +2168,9 @@ export class ExpeditionScene extends Phaser.Scene {
                     gameState.villagersRescued++;
                     gameState.runVillagersRescued.push({ variant, name });
                 gameState.save();
+                const lvls = gameState.addXp(5);
+                if (lvls > 0) this.handleLevelUp(lvls);
+                this.updateLevelDisplay();
                 this.createPopup(`Rescued: ${name}!`, this.cameras.main.width / 2, 300, '#44cc66');
                 const floor = this.currentFloor;
                 if (floor && this.interactTarget) {
@@ -2346,6 +2369,10 @@ export class ExpeditionScene extends Phaser.Scene {
     this.rebuildFloor();
     this.expeditionState.initExplored(floor.cols, floor.rows);
     this.revealSurroundings();
+
+    const descendLvls = gameState.addXp(2);
+    if (descendLvls > 0) this.handleLevelUp(descendLvls);
+    this.updateLevelDisplay();
   }
 
   private handleAscend(): void {
@@ -2659,6 +2686,9 @@ export class ExpeditionScene extends Phaser.Scene {
 
       this.rocksBrokenThisRun++;
       this.checkRegenBoots();
+      const mineLvls = gameState.addXp(tile.maxDurability);
+      if (mineLvls > 0) this.handleLevelUp(mineLvls);
+      this.updateLevelDisplay();
 
       const luckBonus = gameState.getBootEffects().luckBonus;
       if (Math.random() < luckBonus) {
@@ -2977,6 +3007,43 @@ export class ExpeditionScene extends Phaser.Scene {
     }
   }
 
+  private updateLevelDisplay(): void {
+    const nextXp = gameState.getXpToNextLevel();
+    this.levelText.setText(`Lv.${gameState.playerLevel}  ${gameState.playerXp}/${nextXp} XP`);
+    this.drawXpBar();
+  }
+
+  private drawXpBar(): void {
+    const y = HUD_TOP_SAFE + STAMINA_BLOCK_H - XP_BAR_H - 15;
+    const x = 100, w = VW() - 120, h = XP_BAR_H;
+    const nextXp = gameState.getXpToNextLevel();
+    const pct = nextXp > 0 ? Math.min(gameState.playerXp / nextXp, 1) : 0;
+
+    this.xpBarBg.clear();
+    this.xpBarBg.fillStyle(0x1a1a2a, 0.7);
+    this.xpBarBg.fillRoundedRect(x, y, w, h, 2);
+
+    this.xpBarFill.clear();
+    if (pct > 0) {
+      this.xpBarFill.fillStyle(0x8866cc, 0.8);
+      this.xpBarFill.fillRoundedRect(x, y, Math.max(w * pct, 4), h, 2);
+    }
+  }
+
+  private handleLevelUp(levels: number): void {
+    for (let i = 0; i < levels; i++) {
+      gameState.maxStaminaBonus += 5;
+      this.stamina.upgradeMax(5);
+      gameState.inventorySlotBonus += 1;
+      this.inventory.expandSlots(1);
+    }
+    this.drawStaminaBar();
+    this.drawInventoryButton();
+    this.updateLevelDisplay();
+    this.createPopup(`Level Up! Lv.${gameState.playerLevel}`, CX(), 200, '#ffdd44', { duration: 2000 });
+    audio.playPuzzleComplete();
+  }
+
   private handleExhaustion(): void {
     if (this.exhausted) return;
     this.exhausted = true;
@@ -3163,6 +3230,10 @@ export class ExpeditionScene extends Phaser.Scene {
           gameState.monsterKills[enemyType as 'slime' | 'rat' | 'bat']++;
           this.checkRingDiscovery();
         }
+
+        const combatLvls = gameState.addXp(config.hp);
+        if (combatLvls > 0) this.handleLevelUp(combatLvls);
+        this.updateLevelDisplay();
 
         if (isBoss) {
           const floor = this.currentFloor;

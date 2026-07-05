@@ -10,9 +10,11 @@ import {
 import { NPCPhotobookPanel } from '../ui/NPCPhotobookPanel';
 import { SCENES } from '../constants/scenes';
 import { AnalogStickInput } from '../ui/AnalogStickInput';
+import { getInputMode } from '../systems/InputMode';
 import { VW, VH, CX, CY, actionButtonCenter, actionButtonGlowBoxTopLeft, ACTION_BTN_SIZE } from '../systems/Viewport';
 import { viewportManager } from '../systems/ViewportManager';
 import { textStyle, fs, createText } from '../systems/Font';
+import { createAdaptiveText } from '../ui/AdaptiveText';
 import { NineSliceBg } from '../ui/NineSliceBg';
 
 const TAVERN_COLS = 12;
@@ -739,8 +741,9 @@ export class TavernScene extends Phaser.Scene {
   }
 
   private showActionPrompt(text: string): void {
+    const displayText = getInputMode() !== 'keyboard' ? text.replace(/^\[SPACE\] /, '') : text;
     const pp = gridToScreen(this.playerGx, this.playerGy);
-    this.drawChatBubble(this.actionBubbleGfx, this.actionBubbleText, text, pp.x, pp.y - 55);
+    this.drawChatBubble(this.actionBubbleGfx, this.actionBubbleText, displayText, pp.x, pp.y - 55);
     this.actionBubbleGfx.setAlpha(1);
     this.actionBubbleText.setAlpha(1);
   }
@@ -798,7 +801,7 @@ export class TavernScene extends Phaser.Scene {
     }).setOrigin(0, 0.5).setDepth(201).setScrollFactor(0);
     this.cameras.main.ignore(speechText);
 
-    const closeHint = createText(this, CX(), CY() + 48, '[SPACE] skip', {
+    const closeHint = createAdaptiveText(this, CX(), CY() + 48, '[SPACE] skip', 'skip', {
       fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#6a5a4a',
     }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
     this.cameras.main.ignore(closeHint);
@@ -819,7 +822,7 @@ export class TavernScene extends Phaser.Scene {
             this.greetingTimer.remove();
             this.greetingTimer = null;
           }
-          closeHint.setText('[SPACE / ESC] close');
+          closeHint.setText(getInputMode() !== 'keyboard' ? 'close' : '[SPACE / ESC] close');
         }
       },
       loop: true,
@@ -868,7 +871,7 @@ export class TavernScene extends Phaser.Scene {
         this.greetingRevealedChars = this.greetingFullText.length;
         speechText.setText(this.greetingFullText);
         this.greetingTypingComplete = true;
-        closeHint.setText('[SPACE / ESC] close');
+        closeHint.setText(getInputMode() !== 'keyboard' ? 'close' : '[SPACE / ESC] close');
       } else {
         close();
       }

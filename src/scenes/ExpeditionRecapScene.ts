@@ -3,6 +3,7 @@ import { gameState, itemDisplayName, itemIconKey, itemIdFromDisplayName } from '
 import { VW, VH, CX, CY } from '../systems/Viewport';
 import { viewportManager } from '../systems/ViewportManager';
 import { textStyle, fs, createText } from '../systems/Font';
+import { createAdaptiveText } from '../ui/AdaptiveText';
 import { SCENES } from '../constants/scenes';
 import { NineSliceBg } from '../ui/NineSliceBg';
 
@@ -160,7 +161,7 @@ export class ExpeditionRecapScene extends Phaser.Scene {
       }).setOrigin(0.5);
     }
 
-    createText(this, CX(), hintY + 4, '[SPACE] Return   [W/S] Scroll', {
+    createAdaptiveText(this, CX(), hintY + 4, '[SPACE] Return   [W/S] Scroll', 'Tap to return', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
     }).setOrigin(0.5);
 

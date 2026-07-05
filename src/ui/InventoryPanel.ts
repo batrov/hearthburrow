@@ -7,6 +7,7 @@ import { UiButton } from './UiButton';
 import { isConsumable } from '../systems/DataRegistry';
 import { VW, VH, CX, anchorBottom } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { getInputMode } from '../systems/InputMode';
 
 const ITEM_INFO: Record<string, { desc: string }> = {
   stone: { desc: 'Common stone. Used for building and basic crafting.' },
@@ -206,7 +207,9 @@ export class InventoryPanel extends BasePanel {
 
     this.warnText.setText(
       over
-        ? `! OVER CAPACITY — free ${total - max} slot(s) by trashing [Z] or using [SPACE] !`
+        ? getInputMode() !== 'keyboard'
+          ? `! OVER CAPACITY — free ${total - max} slot(s) by trashing or using!`
+          : `! OVER CAPACITY — free ${total - max} slot(s) by trashing [Z] or using [SPACE] !`
         : `  Slots: ${used}/${max}  `,
     );
 
@@ -255,14 +258,15 @@ export class InventoryPanel extends BasePanel {
       this.clickZones.push(zone);
     }
 
+    const isPointer = getInputMode() !== 'keyboard';
     const hints: string[] = [];
     if (this.items.length > 0 && (this.onUse || this.onTrash)) {
-      hints.push('[W/S] select');
-      if (this.onTrash) hints.push('[Z] trash');
-      if (this.onUse) hints.push('[SPACE] use');
+      hints.push(isPointer ? 'Select items' : '[W/S] select');
+      if (this.onTrash) hints.push(isPointer ? 'Trash' : '[Z] trash');
+      if (this.onUse) hints.push(isPointer ? 'Use' : '[SPACE] use');
     }
     if (!over) {
-      hints.push('[ESC/TAB] close');
+      hints.push(isPointer ? 'Close' : '[ESC/TAB] close');
     }
     this.hintText.setText(hints.join('    '));
 

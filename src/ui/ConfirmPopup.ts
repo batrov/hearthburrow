@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { VW, VH, CX, CY } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { createAdaptiveText } from './AdaptiveText';
 import { NineSliceBg } from './NineSliceBg';
 import { UiButton } from './UiButton';
 
@@ -70,7 +71,7 @@ export class ConfirmPopup {
     }, { color: '#aaaacc' });
     for (const child of this.noBtn.getChildren()) this.container.add(child);
 
-    this.footerText = createText(scene, CX(), boxTop + 190, '[← →] switch  [SPACE] confirm  [ESC] cancel', {
+    this.footerText = createAdaptiveText(scene, CX(), boxTop + 190, '[← →] switch  [SPACE] confirm  [ESC] cancel', 'Tap to switch & confirm', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#8a7a9a',
     }).setOrigin(0.5);
     this.container.add(this.footerText);

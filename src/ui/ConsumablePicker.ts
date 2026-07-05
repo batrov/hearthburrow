@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { itemIconKey, itemDisplayName } from '../systems/GameState';
 import { VW, VH, CX, CY } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { createAdaptiveText } from './AdaptiveText';
 import { NineSliceBg } from './NineSliceBg';
 import { UiButton } from './UiButton';
 
@@ -82,7 +83,7 @@ export class ConsumablePicker {
     }).setOrigin(0.5);
     this.container.add(this.qtyText);
 
-    this.footerText = createText(scene, CX(), 440, '[← →] adjust  [SPACE] confirm  [ESC] cancel', {
+    this.footerText = createAdaptiveText(scene, CX(), 440, '[← →] adjust  [SPACE] confirm  [ESC] cancel', 'Tap to adjust & confirm', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#8a7a9a',
     }).setOrigin(0.5);
     this.container.add(this.footerText);

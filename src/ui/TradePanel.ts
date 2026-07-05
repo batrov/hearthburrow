@@ -4,6 +4,7 @@ import { audio } from '../systems/AudioSystem';
 import { BasePanel } from './BasePanel';
 import { VW, VH, CX } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { getInputMode } from '../systems/InputMode';
 import { NineSliceBg } from './NineSliceBg';
 import { UiButton } from './UiButton';
 
@@ -149,7 +150,7 @@ export class TradePanel extends BasePanel {
       this.clickZones.push(zone);
     }
 
-    lines.push('', '', '  [W/S] navigate  [SPACE] trade  [ESC] close');
+    lines.push('', '', getInputMode() !== 'keyboard' ? '  Tap to navigate & trade' : '  [W/S] navigate  [SPACE] trade  [ESC] close');
     this.text.setText(lines.join('\n'));
   }
 }

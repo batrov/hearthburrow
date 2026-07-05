@@ -6,6 +6,7 @@ import { BasePanel } from './BasePanel';
 import { NineSliceBg } from './NineSliceBg';
 import { VW, VH, CX } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { createAdaptiveText } from './AdaptiveText';
 
 const RECIPE_INFO: Record<string, { desc: string; unlock?: string }> = {
   pickaxe_2: { desc: 'Bronze Pickaxe — 5 runs, mines bronze ore' },
@@ -104,7 +105,7 @@ export class CraftingPanel extends BasePanel {
     }).setOrigin(0.5);
     this.container.add(this.descriptionText);
 
-    this.hintText = createText(scene, CX(), VH() - 44, '[W/S] Select  [SPACE] Craft  [ESC] Close', {
+    this.hintText = createAdaptiveText(scene, CX(), VH() - 44, '[W/S] Select  [SPACE] Craft  [ESC] Close', 'Select & craft', {
       fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#5a4a6a',
     }).setOrigin(0.5);
     this.container.add(this.hintText);
