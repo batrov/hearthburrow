@@ -24,6 +24,7 @@ export interface EnemyConfig {
   researchCritChance?: number;
   bossDamageMult?: number;
   bossMechanic?: 'shrink' | 'accelerate' | 'fake_zone' | 'invert';
+  pickaxeBonusDamage?: number;
 }
 
 export class CombatPanel extends BasePanel {
@@ -385,7 +386,7 @@ export class CombatPanel extends BasePanel {
     const effectiveInCrit = this.isInverted ? false : inCritZone;
 
     if (effectiveInZone) {
-      let damage = 1 + (this.currentEnemy?.ringBonusDamage ?? 0) + (this.currentEnemy?.researchBonusDamage ?? 0);
+      let damage = 1 + (this.currentEnemy?.ringBonusDamage ?? 0) + (this.currentEnemy?.researchBonusDamage ?? 0) + (this.currentEnemy?.pickaxeBonusDamage ?? 0);
       if (effectiveInCrit) damage *= 2;
       const isCrit = Math.random() < ((this.currentEnemy?.ringCritChance ?? 0) + (this.currentEnemy?.researchCritChance ?? 0));
       if (isCrit) damage *= 2;

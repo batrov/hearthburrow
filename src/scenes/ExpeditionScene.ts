@@ -3178,6 +3178,9 @@ export class ExpeditionScene extends Phaser.Scene {
       bat: { name: 'Cave Bat', hp: 1, speed: 450, zoneWidth: 50, rewards: [{ id: 'monster_drop', quantity: 1 }, { id: 'crystal', quantity: 1 }] },
     };
 
+    const depth = this.expeditionState.depth;
+    const hpMult = 1 + (depth - 1) * 0.15;
+    const pickaxeBonusDamage = Math.max(0, gameState.currentPickaxeTier - 1);
     const ringEffects = gameState.getRingEffects();
 
     let config: EnemyConfig;
@@ -3187,7 +3190,7 @@ export class ExpeditionScene extends Phaser.Scene {
       const bossCfg = BOSS_CONFIGS[biomeKey] ?? BOSS_CONFIGS.FOREST;
       config = {
         name: bossCfg.name,
-        hp: bossCfg.hp,
+        hp: Math.floor(bossCfg.hp * hpMult),
         timingSpeed: bossCfg.timingSpeed,
         hitZoneWidth: Math.round(bossCfg.hitZoneWidth * ringEffects.precisionMult),
         spriteKey: `enemy_boss_${biomeKey}`,
@@ -3198,12 +3201,13 @@ export class ExpeditionScene extends Phaser.Scene {
         researchCritChance: gameState.getResearchLevel('critical_strikes') >= 1 ? 0.1 : 0,
         bossDamageMult: gameState.getResearchLevel('boss_slayer') >= 1 ? 1.5 : 1,
         bossMechanic: bossCfg.mechanic,
+        pickaxeBonusDamage,
       };
     } else {
       const data = enemyData[enemyType] ?? enemyData.slime;
       config = {
         name: data.name,
-        hp: data.hp,
+        hp: Math.floor(data.hp * hpMult),
         timingSpeed: data.speed,
         hitZoneWidth: Math.round(data.zoneWidth * ringEffects.precisionMult),
         spriteKey: `enemy_${enemyType}`,
@@ -3212,6 +3216,7 @@ export class ExpeditionScene extends Phaser.Scene {
         ringCritChance: ringEffects.critChance,
         researchBonusDamage: gameState.getResearchLevel('combat_training') >= 1 ? 1 : 0,
         researchCritChance: gameState.getResearchLevel('critical_strikes') >= 1 ? 0.1 : 0,
+        pickaxeBonusDamage,
       };
     }
 

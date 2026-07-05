@@ -574,3 +574,8 @@ Resolved Bugs:
 - **HUD display** — level text `Lv.X  XP/next XP` + animated purple XP progress bar inside the stamina card, matching stamina bar width/alignment
 - **Level-up popup** — gold `Level Up!` notification + puzzle-complete arpeggio
 - **Homeland display** — level text shown in top-left corner
+
+## ✅ Depth-Scaling Enemy HP + Pickaxe Combat Damage (July 2026)
+- **Depth HP multiplier** — enemy HP scaled by `1 + (depth - 1) * 0.15` (depth 1=1.0×, depth 25=4.6×); applies to both regular enemies and bosses
+- **Pickaxe combat bonus** — `pickaxeBonusDamage = max(0, pickaxeTier - 1)`: tier 1=+0, tier 2=+1, tier 3=+2, tier 4=+3; stacks additively with ring and research damage bonuses
+- **Additive formula** — damage = `1 + ringBonusDamage + researchBonusDamage + pickaxeBonusDamage` (×2 for crit hits)
