@@ -1148,7 +1148,9 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private showGatePanel(): void {
-    this.gatePanel.show();
+    this.time.delayedCall(0, () => {
+      this.gatePanel.show();
+    });
   }
 
   private startExpedition(config: {

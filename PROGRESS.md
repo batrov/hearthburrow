@@ -607,6 +607,9 @@ Resolved Bugs:
 - **Enemy hit sparks** — radial burst of white/gold circles on strike (8 regular, 12 for crit) with center flash, scaled particles to match critical intensity
 - **Player damage particles** — 6 red circles burst outward from player iso position on miss (stamina cost), matching the existing stamina HUD shake feedback
 
+## ✅ Gate Click Leak Prevention (July 2026)
+- **Same-frame show deferred** — `showGatePanel()` now wraps `this.gatePanel.show()` in `delayedCall(0)`, preventing the gate panel's scene-level `pointerdown` handler from registering mid-event-cycle and catching the same click that opened it, which caused unintended instant embark
+
 ## ✅ Per-Texture Filtering & Inventory Count Legibility (July 2026)
 - **Global bilinear default** — `pixelArt` config removed from `main.ts`, all textures default to LINEAR (smooth) filtering
 - **Selective nearest-neighbor** — `BootScene.create()` sets NEAREST (`setFilter(1)`) on characters (`player_*`, `npc_*`), enemies (`enemy_*`, `boss_body`), items (`item_*`, all ore nodes/drops), events (`event_*`); title, UI, terrain, walls, decorations stay LINEAR

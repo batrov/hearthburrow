@@ -227,6 +227,7 @@ export class CombatPanel extends BasePanel {
     this.feedbackText.setText('');
 
     if (config.spriteKey && this.scene.textures.exists(config.spriteKey)) {
+      this.enemySprite.clearTint();
       this.enemySprite.setTexture(config.spriteKey);
       this.enemySprite.setDisplaySize(config.bossDamageMult !== undefined ? 200 : 96, config.bossDamageMult !== undefined ? 200 : 96);
       this.enemySprite.setScrollFactor(0);
@@ -415,6 +416,7 @@ export class CombatPanel extends BasePanel {
 
       if (this.enemyHP <= 0) {
         this.result = 'victory';
+        this.enemySprite.setTint(0x666666);
         this.stopMarker();
         this.retreatBtn.setVisible(false);
 
