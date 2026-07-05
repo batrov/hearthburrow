@@ -4,6 +4,8 @@ import { BasePanel } from './BasePanel';
 import { ConfirmPopup } from './ConfirmPopup';
 import { VW, VH, CX, CY } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { NineSliceBg } from './NineSliceBg';
+import { UiButton } from './UiButton';
 
 export type CombatResult = 'victory' | 'retreat' | null;
 
@@ -33,7 +35,7 @@ export class CombatPanel extends BasePanel {
   private hintText: Phaser.GameObjects.Text;
   private instructionText: Phaser.GameObjects.Text;
   private enemySprite: Phaser.GameObjects.Image;
-  private retreatBtn: Phaser.GameObjects.Text;
+  private retreatBtn: UiButton;
   private result: CombatResult = null;
   private enemyHP: number = 0;
   private enemyMaxHP: number = 0;
@@ -51,7 +53,6 @@ export class CombatPanel extends BasePanel {
   private hitPauseTimer?: Phaser.Time.TimerEvent;
   private blocker: Phaser.GameObjects.Rectangle;
   private confirmPopup: ConfirmPopup;
-  private retreatHitZone: Phaser.GameObjects.Rectangle;
   private clickHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
   private currentSpeed: number = 600;
   private fakeZoneTimer?: Phaser.Time.TimerEvent;
@@ -59,6 +60,8 @@ export class CombatPanel extends BasePanel {
   private fakeZoneX: number = 0;
   private isInverted: boolean = false;
   private invertTimer?: Phaser.Time.TimerEvent;
+  private panelBg: Phaser.GameObjects.NineSlice;
+  private modalBg: Phaser.GameObjects.NineSlice;
 
   private readonly BAR_WIDTH = 300;
   private readonly BAR_HEIGHT = 16;
@@ -80,6 +83,13 @@ export class CombatPanel extends BasePanel {
 
     this.overlay = scene.add.graphics();
     this.container.add(this.overlay);
+
+    this.panelBg = NineSliceBg.panel(scene, CX(), VH() / 2, VW(), VH());
+    this.panelBg.setAlpha(0.85);
+    this.container.add(this.panelBg);
+    this.modalBg = NineSliceBg.modal(scene, CX(), CY(), CombatPanel.BOX_W, CombatPanel.BOX_H);
+    this.modalBg.setAlpha(0.85);
+    this.container.add(this.modalBg);
 
     const boxTop = this.boxTop();
     this.BAR_Y = boxTop + 340;
@@ -130,18 +140,21 @@ export class CombatPanel extends BasePanel {
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
-    this.retreatBtn = createText(scene, CX(), boxTop + 460, '[ ESC ] Retreat', {
-      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#cc6644',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(210).setData('isUI', true).setVisible(false);
-
-    this.retreatHitZone = scene.add.rectangle(CX(), boxTop + 460, 200, 36, 0x000000, 0)
-      .setScrollFactor(0).setDepth(210).setData('isUI', true).setVisible(false);
-    this.retreatHitZone.setInteractive({ useHandCursor: true });
-    this.retreatHitZone.on('pointerdown', () => {
-      if (this._visible && !this.result) {
-        this.confirmPopup.show('Retreat?', 'Leave the dungeon?\nAll progress this floor is lost.', () => this.handleRetreat());
-      }
-    });
+    this.retreatBtn = new UiButton(scene, CX(), boxTop + 460, '[ ESC ] Retreat', 200, 36,
+      () => {
+        if (this._visible && !this.result) {
+          this.scene.time.delayedCall(0, () => {
+            this.confirmPopup.show('Retreat?', 'Leave the combat?\nAll progress during combat will be lost.', () => this.handleRetreat());
+          });
+        }
+      },
+      { fontSize: fs(14), color: '#cc6644' });
+    this.retreatBtn.setDepth(210);
+    this.retreatBtn.setVisible(false);
+    for (const child of this.retreatBtn.getChildren()) {
+      this.scene.cameras.main.ignore(child);
+      this.container.add(child);
+    }
 
     this.blocker = scene.add.rectangle(CX(), CY(), VW(), VH(), 0x000000, 0)
       .setScrollFactor(0).setInteractive().setData('isUI', true);
@@ -171,15 +184,14 @@ export class CombatPanel extends BasePanel {
     this.feedbackText.setPosition(CX(), boxTop + 380);
     this.hintText.setPosition(CX(), boxTop + 420);
     this.retreatBtn.setPosition(CX(), boxTop + 460);
-    this.retreatHitZone.setPosition(CX(), boxTop + 460);
     this.blocker.setPosition(CX(), CY()).setSize(VW(), VH());
 
     if (this._visible) {
       this.overlay.clear();
-      this.overlay.fillStyle(0x0a0a1a, 0.92);
-      this.overlay.fillRect(0, 0, VW(), VH());
-      this.overlay.lineStyle(2, 0x5a4a7a, 0.6);
-      this.overlay.strokeRoundedRect(CX() - CombatPanel.BOX_W / 2, boxTop, CombatPanel.BOX_W, CombatPanel.BOX_H, 10);
+      NineSliceBg.updateSize(this.panelBg, VW(), VH());
+      this.panelBg.setPosition(CX(), VH() / 2);
+      NineSliceBg.updateSize(this.modalBg, CombatPanel.BOX_W, CombatPanel.BOX_H);
+      this.modalBg.setPosition(CX(), CY());
       this.drawHP();
       if (this.currentHitZoneWidth > 0) this.drawTimingBar(this.currentHitZoneWidth);
       if (!this.result) this.startMarker(this.currentSpeed);
@@ -202,10 +214,10 @@ export class CombatPanel extends BasePanel {
     this.onMiss = onMiss ?? null;
 
     this.overlay.clear();
-    this.overlay.fillStyle(0x0a0a1a, 0.92);
-    this.overlay.fillRect(0, 0, VW(), VH());
-    this.overlay.lineStyle(2, 0x5a4a7a, 0.6);
-    this.overlay.strokeRoundedRect(CX() - CombatPanel.BOX_W / 2, this.boxTop(), CombatPanel.BOX_W, CombatPanel.BOX_H, 10);
+    NineSliceBg.updateSize(this.panelBg, VW(), VH());
+    this.panelBg.setPosition(CX(), VH() / 2);
+    NineSliceBg.updateSize(this.modalBg, CombatPanel.BOX_W, CombatPanel.BOX_H);
+    this.modalBg.setPosition(CX(), CY());
 
     this.enemyNameText.setText(config.name);
     this.instructionText.setText('Watch the marker — strike when it\'s in the green zone!');
@@ -225,7 +237,6 @@ export class CombatPanel extends BasePanel {
     this.currentSpeed = config.timingSpeed;
     this.isInverted = false;
     this.retreatBtn.setVisible(true);
-    this.retreatHitZone.setVisible(true);
     this.drawHP();
     this.drawTimingBar(config.hitZoneWidth);
     this.startMarker(config.timingSpeed);
@@ -281,6 +292,7 @@ export class CombatPanel extends BasePanel {
     this.clickHandler = (p: Phaser.Input.Pointer) => {
       if (!this._visible) return;
       if (this.confirmPopup.isVisible()) return;
+      if (this.retreatBtn.handleClick(p)) return;
       if (this.result === 'victory') {
         this.handleCollect();
       } else if (this.handleStrike() === 'miss') {
@@ -321,7 +333,6 @@ export class CombatPanel extends BasePanel {
     this.enemySprite.setVisible(false);
     this.blocker.setVisible(false);
     this.retreatBtn.setVisible(false);
-    this.retreatHitZone.setVisible(false);
     this.result = null;
     this.isInverted = false;
     this.fadeOut(200);
@@ -332,7 +343,6 @@ export class CombatPanel extends BasePanel {
       this.scene.input.off('pointerdown', this.clickHandler);
       this.clickHandler = null;
     }
-    this.retreatHitZone.destroy();
     this.retreatBtn.destroy();
     super.destroy();
   }

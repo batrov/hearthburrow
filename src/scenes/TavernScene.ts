@@ -13,6 +13,7 @@ import { AnalogStickInput } from '../ui/AnalogStickInput';
 import { VW, VH, CX, CY, actionButtonCenter, actionButtonGlowBoxTopLeft, ACTION_BTN_SIZE } from '../systems/Viewport';
 import { viewportManager } from '../systems/ViewportManager';
 import { textStyle, fs, createText } from '../systems/Font';
+import { NineSliceBg } from '../ui/NineSliceBg';
 
 const TAVERN_COLS = 12;
 const TAVERN_ROWS = 10;
@@ -61,6 +62,10 @@ export class TavernScene extends Phaser.Scene {
   private actionBubbleText!: Phaser.GameObjects.Text;
   private greetingActive = false;
   private closeGreeting: (() => void) | null = null;
+  private greetingFullText: string = '';
+  private greetingRevealedChars: number = 0;
+  private greetingTimer: Phaser.Time.TimerEvent | null = null;
+  private greetingTypingComplete: boolean = false;
 
   private analog!: AnalogStickInput;
   private photobook!: NPCPhotobookPanel;
@@ -778,23 +783,47 @@ export class TavernScene extends Phaser.Scene {
 
     this.greetingActive = true;
 
-    const overlayBg = this.add.graphics().setDepth(200).setScrollFactor(0);
-    overlayBg.fillStyle(0x0a0a1a, 0.85);
-    overlayBg.fillRoundedRect(CX() - 170, CY() - 65, 340, 130, 10);
-    overlayBg.lineStyle(1, 0x6a5a8a, 0.5);
-    overlayBg.strokeRoundedRect(CX() - 170, CY() - 65, 340, 130, 10);
+    const overlayBg = NineSliceBg.modal(this, CX(), CY(), 340, 130);
+    overlayBg.setDepth(200).setScrollFactor(0).setAlpha(0.85);
     this.cameras.main.ignore(overlayBg);
 
-    const overlayText = createText(this, CX(), CY() - 30, `${npc.name} says:`, {
+    const overlayText = createText(this, CX() - 155, CY() - 30, `${npc.name}`, {
       fontSize: fs(13), fontFamily: 'Inter', resolution: 4, color: '#ccaa66', fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
+    }).setOrigin(0, 0.5).setDepth(201).setScrollFactor(0);
     this.cameras.main.ignore(overlayText);
 
-    const speechText = createText(this, CX(), CY() + 2, `"${greeting}"`, {
-      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', align: 'center',
-      wordWrap: { width: 290 },
-    }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
+    const speechText = createText(this, CX() - 155, CY() + 2, '', {
+      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', align: 'left',
+      wordWrap: { width: 310 },
+    }).setOrigin(0, 0.5).setDepth(201).setScrollFactor(0);
     this.cameras.main.ignore(speechText);
+
+    const closeHint = createText(this, CX(), CY() + 48, '[SPACE] skip', {
+      fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#6a5a4a',
+    }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
+    this.cameras.main.ignore(closeHint);
+
+    this.greetingFullText = greeting;
+    this.greetingRevealedChars = 0;
+    this.greetingTypingComplete = false;
+
+    const typingSpeed = 35;
+    this.greetingTimer = this.time.addEvent({
+      delay: typingSpeed,
+      callback: () => {
+        this.greetingRevealedChars++;
+        speechText.setText(this.greetingFullText.substring(0, this.greetingRevealedChars));
+        if (this.greetingRevealedChars >= this.greetingFullText.length) {
+          this.greetingTypingComplete = true;
+          if (this.greetingTimer) {
+            this.greetingTimer.remove();
+            this.greetingTimer = null;
+          }
+          closeHint.setText('[SPACE / ESC] close');
+        }
+      },
+      loop: true,
+    });
 
     if (isFirstTalk) {
       const recipeWasNew = !gameState.crafting.isDiscovered('miners_potion');
@@ -814,27 +843,42 @@ export class TavernScene extends Phaser.Scene {
       }
     }
 
-    const closeHint = createText(this, CX(), CY() + 48, '[SPACE / ESC] close', {
-      fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#6a5a4a',
-    }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
-    this.cameras.main.ignore(closeHint);
-
     const close = () => {
+      if (this.greetingTimer) {
+        this.greetingTimer.remove();
+        this.greetingTimer = null;
+      }
       overlayBg.destroy();
       overlayText.destroy();
       speechText.destroy();
       closeHint.destroy();
       this.greetingActive = false;
       this.closeGreeting = null;
-      this.input.off('pointerdown', close);
-      this.input.keyboard!.off('keydown-SPACE', close);
+      this.input.off('pointerdown', advance);
+      this.input.keyboard!.off('keydown-SPACE', advance);
       this.input.keyboard!.off('keydown-ESC', close);
     };
-    this.closeGreeting = close;
+
+    const advance = () => {
+      if (!this.greetingTypingComplete) {
+        if (this.greetingTimer) {
+          this.greetingTimer.remove();
+          this.greetingTimer = null;
+        }
+        this.greetingRevealedChars = this.greetingFullText.length;
+        speechText.setText(this.greetingFullText);
+        this.greetingTypingComplete = true;
+        closeHint.setText('[SPACE / ESC] close');
+      } else {
+        close();
+      }
+    };
+
+    this.closeGreeting = advance;
 
     this.time.delayedCall(0, () => {
-      this.input.on('pointerdown', close);
-      this.input.keyboard!.on('keydown-SPACE', close);
+      this.input.on('pointerdown', advance);
+      this.input.keyboard!.on('keydown-SPACE', advance);
       this.input.keyboard!.on('keydown-ESC', close);
     });
   }

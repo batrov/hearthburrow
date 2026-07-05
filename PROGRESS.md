@@ -520,3 +520,13 @@ Resolved Bugs:
 
 ## Resolved Bugs (cont.)
 - **Tavern greeting destroyed instantly on SPACE** — `showGreeting()` registered `keydown-SPACE` close handler synchronously inside the handler that was already triggered by SPACE; the close handler fired on the same press, destroying the overlay before the player could see it. Fixed by deferring all close handler registrations with `delayedCall(0)`.
+- **Combat retreat button unresponsive** — `CombatPanel.clickHandler` never called `retreatBtn.handleClick(p)`, so clicks on the retreat button fell through to the strike handler instead. Fixed by adding the missing call.
+- **UiButton stuck in pressed state** — `handleClick()` set `_pressed = true` and tinted/scaled the button, but no panel registered a `pointerup` handler to call `handleRelease()`, so buttons stayed tinted `0x666688` at scale 0.95 permanently. Fixed by auto-releasing in `handleClick()` after firing the callback.
+
+## ✅ Typewriter NPC Greeting (July 2026)
+- **Character-by-character text** — greeting speech reveals one character at a time (35ms interval) via `this.time.addEvent` loop updating `text.substring`
+- **Skip on interaction** — pressing SPACE/click/action button while typing completes the text instantly; pressing again closes
+- **ESC always closes** — `keydown-ESC` handler calls `close()` directly regardless of typing state
+- **Left-aligned dialogue** — both NPC name and speech text aligned to `left` at `CX() - 155` inside the panel inset
+- **Clean text** — removed double quotes wrapping and `"... says:"` suffix from the greeting display
+- **Dynamic hint** — hint text changes from `[SPACE] skip` (while typing) to `[SPACE / ESC] close` (when complete)
