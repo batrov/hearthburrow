@@ -392,7 +392,7 @@ export class HomelandScene extends Phaser.Scene {
       this.hudCam.ignore(img);
       this.buildingImages.set(b.buildingId || b.id, img);
 
-      const label = createText(this, c.x, c.y - 200, b.label, {
+      const label = createText(this, c.x, b.id === 'storage' ? c.y - 100 : c.y - 200, b.label, {
         fontSize: fs(16), fontFamily: 'Inter', resolution: 4, color: ul ? '#e8d5b7' : '#6a5a4a',
       }).setOrigin(0.5).setAlpha(alpha).setDepth(7);
       this.hudCam.ignore(label);
@@ -431,18 +431,12 @@ export class HomelandScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
     });
 
-    const gateLabel = createText(this, c.x, c.y - 60, 'FORGOTTEN DEPTHS', {
-      fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#7a6a9a',
+    const gateLabel = createText(this, c.x, c.y - 70, 'Forgotten Depths', {
+      fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#7a6a9a', stroke: '#000000', strokeThickness: 2
     }).setOrigin(0.5).setDepth(7);
     this.hudCam.ignore(gateLabel);
 
-    const descendText = createAdaptiveText(this, c.x, c.y + 24, '[SPACE] Descend', 'Descend', {
-      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#8a7aba',
-    }).setOrigin(0.5).setDepth(7);
-    this.hudCam.ignore(descendText);
-    descendText.setInteractive({ useHandCursor: true }).setData('isUI', true);
     const gateDef = HUB_BUILDINGS.find(b => b.id === 'gate')!;
-    descendText.on('pointerdown', () => this.handleBuildingClick(gateDef));
 
     gateImg.setInteractive({ useHandCursor: true }).setData('isUI', true);
     gateImg.on('pointerdown', () => this.handleBuildingClick(gateDef));

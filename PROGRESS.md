@@ -614,3 +614,4 @@ Resolved Bugs:
 - **Global bilinear default** — `pixelArt` config removed from `main.ts`, all textures default to LINEAR (smooth) filtering
 - **Selective nearest-neighbor** — `BootScene.create()` sets NEAREST (`setFilter(1)`) on characters (`player_*`, `npc_*`), enemies (`enemy_*`, `boss_body`), items (`item_*`, all ore nodes/drops), events (`event_*`); title, UI, terrain, walls, decorations stay LINEAR
 - **Inventory count outline** — `invSlotText` in ExpeditionScene gets 3px black stroke for readability against dungeon background
+- **Storage label lowered** — Storage building label in Homeland adjusted from `c.y - 200` to `c.y - 180` for better visual spacing
