@@ -156,7 +156,7 @@ export class FloorPicker {
       row.bg.fillStyle(isSelected ? 0x3a3a5a : 0x1a1a2a, 0.8);
       row.bg.fillRoundedRect(24, y, VW() - 48, 32, 4);
 
-      const label = floor === 0 ? '0' : `Floor ${floor}`;
+      const label = `Floor ${floor}`;
       row.text.setText(label);
       row.text.setPosition(CX(), y + 8);
       row.text.setOrigin(0.5);

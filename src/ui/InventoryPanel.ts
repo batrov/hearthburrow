@@ -83,12 +83,12 @@ export class InventoryPanel extends BasePanel {
 
     this.createOverlay();
 
-    this.titleText = createText(scene, CX(), 48, title, {
+    this.titleText = createText(scene, CX(), 28, title, {
       fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
-    this.warnText = createText(scene, CX(), 70, '', {
+    this.warnText = createText(scene, CX(), 50, '', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#ff6644', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.warnText);
@@ -298,8 +298,8 @@ export class InventoryPanel extends BasePanel {
 
   protected relayout(): void {
     super.relayout();
-    this.titleText.setPosition(CX(), 48);
-    this.warnText.setPosition(CX(), 70);
+    this.titleText.setPosition(CX(), 28);
+    this.warnText.setPosition(CX(), 50);
     this.hintText.setPosition(CX(), anchorBottom(40));
     this.descriptionText.setPosition(CX(), anchorBottom(100));
     this.useBtn.setPosition(CX() - 50, anchorBottom(70));

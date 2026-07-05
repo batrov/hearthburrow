@@ -32,7 +32,7 @@
   "building_tavern":       { "offsetY": -80, "scale": 0.3 },
   "building_storage":      { "offsetY": -6 },
   "building_laboratory":   { "offsetY": -80, "scale": 0.3 },
-  "building_gate":         { "offsetY": -6 },
+  "building_gate":         { "offsetY": -26 },
   "decoration_tree_*":     { "offsetY": 0, "scale": 1.7, "originY": 1 },
   "decoration_bush":       { "offsetY": -4,  "originY": 1 },
   "decoration_rock":       { "offsetY": 0,   "originY": 1 },

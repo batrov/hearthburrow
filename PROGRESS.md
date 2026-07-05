@@ -610,6 +610,9 @@ Resolved Bugs:
 ## ✅ Gate Click Leak Prevention (July 2026)
 - **Same-frame show deferred** — `showGatePanel()` now wraps `this.gatePanel.show()` in `delayedCall(0)`, preventing the gate panel's scene-level `pointerdown` handler from registering mid-event-cycle and catching the same click that opened it, which caused unintended instant embark
 
+## ✅ Gate Sprite Reposition (July 2026)
+- **Offset moved to sprite config** — `building_gate` `offsetY` changed from `-6` to `-26` in `sprite-offsets.json`, shifting the gate sprite 20px upward; highlight position automatically follows since both read from the same config
+
 ## ✅ Per-Texture Filtering & Inventory Count Legibility (July 2026)
 - **Global bilinear default** — `pixelArt` config removed from `main.ts`, all textures default to LINEAR (smooth) filtering
 - **Selective nearest-neighbor** — `BootScene.create()` sets NEAREST (`setFilter(1)`) on characters (`player_*`, `npc_*`), enemies (`enemy_*`, `boss_body`), items (`item_*`, all ore nodes/drops), events (`event_*`); title, UI, terrain, walls, decorations stay LINEAR
