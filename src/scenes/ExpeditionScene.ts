@@ -234,6 +234,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private levelText!: Phaser.GameObjects.Text;
   private xpBarBg!: Phaser.GameObjects.Graphics;
   private xpBarFill!: Phaser.GameObjects.Graphics;
+  private xpBarDisplayRatio: number = 0;
 
   constructor() {
     super({ key: SCENES.EXPEDITION });
@@ -773,7 +774,10 @@ export class ExpeditionScene extends Phaser.Scene {
     this.xpBarFill = this.add.graphics().setScrollFactor(0).setDepth(211.5);
     this.cameras.main.ignore(this.xpBarFill);
 
-    this.updateLevelDisplay();
+    const initNextXp = gameState.getXpToNextLevel();
+    this.xpBarDisplayRatio = initNextXp > 0 ? Math.min(gameState.playerXp / initNextXp, 1) : 0;
+    this.levelText.setText(`Lv.${gameState.playerLevel}  ${gameState.playerXp}/${initNextXp} XP`);
+    this.drawXpBar();
 
     this.drawStaminaBar();
 
@@ -900,7 +904,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.staminaValueText.setPosition(VW() - 8, staminaY + 6);
     this.carrotCountText.setPosition(CX(), pickaxeY + 7);
     this.levelText.setPosition(80, HUD_TOP_SAFE + STAMINA_BLOCK_H - XP_BAR_H - 19);
-    this.updateLevelDisplay();
+    this.drawXpBar();
     this.depthTextCentered.setPosition(CX(), anchorBottom(36));
     this.drawStaminaBar();
 
@@ -3009,15 +3013,22 @@ export class ExpeditionScene extends Phaser.Scene {
 
   private updateLevelDisplay(): void {
     const nextXp = gameState.getXpToNextLevel();
+    const targetRatio = nextXp > 0 ? Math.min(gameState.playerXp / nextXp, 1) : 0;
     this.levelText.setText(`Lv.${gameState.playerLevel}  ${gameState.playerXp}/${nextXp} XP`);
-    this.drawXpBar();
+    this.tweens.killTweensOf(this);
+    this.tweens.add({
+      targets: this,
+      xpBarDisplayRatio: targetRatio,
+      duration: 300,
+      ease: 'Quad.easeOut',
+      onUpdate: () => this.drawXpBar(),
+    });
   }
 
   private drawXpBar(): void {
     const y = HUD_TOP_SAFE + STAMINA_BLOCK_H - XP_BAR_H - 15;
     const x = 100, w = VW() - 120, h = XP_BAR_H;
-    const nextXp = gameState.getXpToNextLevel();
-    const pct = nextXp > 0 ? Math.min(gameState.playerXp / nextXp, 1) : 0;
+    const pct = this.xpBarDisplayRatio;
 
     this.xpBarBg.clear();
     this.xpBarBg.fillStyle(0x1a1a2a, 0.7);
@@ -3040,6 +3051,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.drawStaminaBar();
     this.drawInventoryButton();
     this.updateLevelDisplay();
+    gameState.save();
     this.createPopup(`Level Up! Lv.${gameState.playerLevel}`, CX(), 200, '#ffdd44', { duration: 2000 });
     audio.playPuzzleComplete();
   }

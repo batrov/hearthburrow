@@ -566,3 +566,11 @@ Resolved Bugs:
 - **`createAdaptiveText` factory** — `src/ui/AdaptiveText.ts` creates a Phaser.Text that auto-switches between keyboard and pointer-friendly text whenever the input mode changes; cleans up on destroy/scene shutdown via `onInputModeChange` listener
 - **22 call sites flipped** — all `getInputMode() === 'touch'` checks replaced with `getInputMode() !== 'keyboard'`, so both click and touch modes show pointer-friendly hints; changed files: CombatPanel, ConfirmPopup, ConsumablePicker, CraftingPanel, EquipmentPicker, FarmPanel, FloorPicker, GamblePanel, GatePanel, InventoryPanel, NPCPhotobookPanel, ResearchPanel, SeedEntryPopup, TradePanel, ExpeditionRecapScene, ExpeditionScene, HomelandScene, TavernScene
 - **World-space bubble texts** — `showActionBubble()`/`showActionPrompt()` in ExpeditionScene, HomelandScene, and TavernScene strip `[SPACE] ` prefix in both click and touch modes
+
+## ✅ Player Level System (July 2026)
+- **Persistent XP & leveling** — `gameState.playerLevel` and `gameState.playerXp` tracked globally; XP curve = `50 + (level-1) * 25` per level, no cap
+- **XP sources** — mining (XP = `tile.maxDurability`: stone 2, bronze 3, silver 5, gold 7), enemy kill (XP = `config.hp`: slime 2, rat 4, bat 1, bosses 25-50), rescue (5 XP), descend (2 XP)
+- **Level-up rewards** — each level grants +5 max stamina (via `maxStaminaBonus`) and +1 inventory slot (via `inventorySlotBonus`); persisted to save
+- **HUD display** — level text `Lv.X  XP/next XP` + animated purple XP progress bar inside the stamina card, matching stamina bar width/alignment
+- **Level-up popup** — gold `Level Up!` notification + puzzle-complete arpeggio
+- **Homeland display** — level text shown in top-left corner

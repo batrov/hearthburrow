@@ -331,6 +331,8 @@ export class GameState {
   maxStaminaBonus: number;
   staminaPercentBonus: number;
   inventorySlotBonus: number;
+  playerLevel: number;
+  playerXp: number;
   pickaxeRuns: Record<number, number>;
   equippedRings: { ring1: string | null; ring2: string | null };
   equippedBoots: string | null;
@@ -362,6 +364,8 @@ export class GameState {
     this.maxStaminaBonus = 0;
     this.staminaPercentBonus = 0;
     this.inventorySlotBonus = 0;
+    this.playerLevel = 1;
+    this.playerXp = 0;
     this.pickaxeRuns = {};
     this.equippedRings = { ring1: null, ring2: null };
     this.equippedBoots = null;
@@ -394,6 +398,24 @@ export class GameState {
   /** Set the research level for a project. */
   setResearchLevel(id: string, level: number): void {
     this.researchLevels[id] = level;
+  }
+
+  /** Add XP and return the number of levels gained. */
+  addXp(amount: number): number {
+    this.playerXp += amount;
+    let levels = 0;
+    while (this.playerXp >= this.getXpToNextLevel()) {
+      this.playerXp -= this.getXpToNextLevel();
+      this.playerLevel++;
+      levels++;
+    }
+    if (levels > 0) this.save();
+    return levels;
+  }
+
+  /** XP needed to reach the next level. */
+  getXpToNextLevel(): number {
+    return 50 + (this.playerLevel - 1) * 25;
   }
 
   /** Remaining runs for a pickaxe tier (Infinity for tier 1). */
@@ -638,6 +660,8 @@ export class GameState {
     this.maxStaminaBonus = 0;
     this.staminaPercentBonus = 0;
     this.inventorySlotBonus = 0;
+    this.playerLevel = 1;
+    this.playerXp = 0;
     this.pickaxeRuns = {};
     this.equippedRings = { ring1: null, ring2: null };
     this.equippedBoots = null;
@@ -670,6 +694,8 @@ export class GameState {
       maxStaminaBonus: this.maxStaminaBonus,
       staminaPercentBonus: this.staminaPercentBonus,
       inventorySlotBonus: this.inventorySlotBonus,
+      playerLevel: this.playerLevel,
+      playerXp: this.playerXp,
       pickaxeRuns: { ...this.pickaxeRuns },
       equippedRings: { ...this.equippedRings },
       equippedBoots: this.equippedBoots,
@@ -719,6 +745,8 @@ export class GameState {
       this.maxStaminaBonus = data.maxStaminaBonus ?? 0;
       this.staminaPercentBonus = data.staminaPercentBonus ?? 0;
       this.inventorySlotBonus = data.inventorySlotBonus ?? 0;
+      this.playerLevel = data.playerLevel ?? 1;
+      this.playerXp = data.playerXp ?? 0;
       this.pickaxeRuns = data.pickaxeRuns ?? {};
       this.equippedRings = data.equippedRings ?? { ring1: null, ring2: null };
       this.equippedBoots = data.equippedBoots ?? null;
