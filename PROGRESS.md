@@ -589,3 +589,16 @@ Resolved Bugs:
 - **Highlight depth always behind sprite** — outline glow at `facingDep - 0.0005`, selected backdrop at `facingDep - 0.001`, enemy sprite at `facingDep`; no longer depends on player direction so glow never renders on top when player is south/east
 - **Boss sprites case-corrected** — `boss_FOREST.png` → `boss_forest.png` etc. via `git mv` (was silently failing on case-sensitive Linux)
 - **Frost Wyrm accelerate toned down** — `Math.max(300, speed * 0.93)` instead of `Math.max(200, speed * 0.88)`: reaches floor 300ms at hit 16 instead of hit 12
+
+## ✅ Monster Drop & Level-Up SFX Differentiation (July 2026)
+- **Dark magical pickup sound** — monster drop pickup changed from weak single descending tone to A-minor arpeggio (triangle root + 3 ascending sine notes)
+
+## ✅ Player Level-Up Fanfare (July 2026)
+- **Dedicated `playLevelUp()` method** — new C-major fanfare (triangle C5→E5→G5 arpeggio + sustaining sine chord) replaces `playPuzzleComplete()` reuse, giving level-ups their own triumphant identity
+
+## ✅ Facing Highlight Cleanup on Destroy (July 2026)
+- **`clearFacingHighlight()` helper** — extracted reusable method clearing all highlight state (graphics, outline images, preview tile, faced enemy key); called immediately on both wall and ore break, eliminating 250ms highlight persistence until the shrink tween completes
+
+## ✅ White Outlines on Break Particles (July 2026)
+- **Ore node particles** — 4 large core chunks (1.5px white stroke, 60% opacity) + 10 small debris (1px, 40%) for prominent visual pop
+- **Wall break particles** — 6 large chunks (1.5px, 50%) + 12 gray dust (1px, 30%) matching ore particle style

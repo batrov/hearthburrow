@@ -18,7 +18,6 @@ const config: Phaser.Types.Core.GameConfig = {
   width,
   height,
   backgroundColor: '#1a1a2e',
-  pixelArt: true,
   roundPixels: true,
   input: {
     activePointers: 2,

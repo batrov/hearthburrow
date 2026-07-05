@@ -575,6 +575,16 @@ export class AudioSystem {
     this.playNote('triangle', 784, 784, 0.05, 0.6, 0.45);
   }
 
+  /** Triumphant expanding fanfare for player level-up. */
+  playLevelUp(): void {
+    this.playNote('triangle', 523, 523, 0.08, 0.3, 0);
+    this.playNote('triangle', 659, 659, 0.08, 0.3, 0.1);
+    this.playNote('triangle', 784, 784, 0.08, 0.3, 0.2);
+    this.playNote('sine', 1047, 1047, 0.12, 0.6, 0.3);
+    this.playNote('sine', 784, 784, 0.04, 0.6, 0.3);
+    this.playNote('sine', 523, 523, 0.04, 0.6, 0.3);
+  }
+
   playResourcePickup(resourceId: string): void {
     switch (resourceId) {
       case 'stone':
@@ -591,7 +601,10 @@ export class AudioSystem {
         [660, 880, 1100].forEach((freq, i) => this.playNote('sine', freq, freq, 0.07, 0.12, i * 0.04));
         break;
       case 'monster_drop':
-        this.playNote('sine', 200, 100, 0.06, 0.15);
+        this.playNote('triangle', 220, 220, 0.08, 0.25, 0);
+        this.playNote('sine', 294, 294, 0.06, 0.2, 0.06);
+        this.playNote('sine', 349, 349, 0.06, 0.2, 0.12);
+        this.playNote('sine', 440, 440, 0.08, 0.35, 0.18);
         break;
       default: this.playNote('triangle', 300, 100, 0.05, 0.1); break;
     }

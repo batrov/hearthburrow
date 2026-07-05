@@ -203,6 +203,21 @@ export class BootScene extends Phaser.Scene {
     // Generate procedural fallbacks for any textures that didn't load (missing PNGs)
     generateAll(this);
 
+    // Set nearest-neighbor filtering for pixel-art textures (characters, items, enemies)
+    // while everything else (UI, title, terrain) keeps the default LINEAR for smooth scaling.
+    const pixelArtKeys = new Set([
+      'portrait', 'boss_body', 'carrot_pickup',
+      'monster_drop_ore', 'monster_drop_node',
+      'stone_ore', 'bronze_ore', 'silver_ore', 'gold_ore', 'crystal_ore',
+      'stone_node', 'bronze_ore_node', 'silver_ore_node', 'gold_ore_node', 'crystal_node',
+    ]);
+    for (const key of this.textures.getTextureKeys()) {
+      if (key.startsWith('player_') || key.startsWith('npc_') || key.startsWith('event_') || key.startsWith('enemy_') || key.startsWith('item_') || pixelArtKeys.has(key)) {
+        const tex = this.textures.get(key);
+        if (tex?.source[0]) tex.source[0].setFilter(1);
+      }
+    }
+
     const proceed = () => {
       this.removeNewTabLink();
       this.tweens.killTweensOf(this.progressText);

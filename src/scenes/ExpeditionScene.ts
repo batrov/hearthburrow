@@ -837,6 +837,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.ignore(this.invBtnRing);
     this.invSlotText = createText(this, invCx, invCy + 16, '', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#cccccc', align: 'center',
+      stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD + 2);
     this.cameras.main.ignore(this.invSlotText);
 
@@ -2822,7 +2823,7 @@ export class ExpeditionScene extends Phaser.Scene {
     // Large core chunks
     for (let i = 0; i < 4; i++) {
       const radius = Phaser.Math.FloatBetween(4, 7);
-      const p = this.add.circle(cx, cy, radius, color, 0.9).setDepth(DEPTH.PARTICLES);
+      const p = this.add.circle(cx, cy, radius, color, 0.9).setStrokeStyle(1.5, 0xffffff, 0.6).setDepth(DEPTH.PARTICLES);
       this.hudCam.ignore(p);
 
       this.tweens.add({
@@ -2840,7 +2841,7 @@ export class ExpeditionScene extends Phaser.Scene {
     // Small debris burst
     for (let i = 0; i < 10; i++) {
       const radius = Phaser.Math.FloatBetween(1.5, 3.5);
-      const p = this.add.circle(cx, cy, radius, color, 0.7).setDepth(DEPTH.PARTICLES);
+      const p = this.add.circle(cx, cy, radius, color, 0.7).setStrokeStyle(1, 0xffffff, 0.4).setDepth(DEPTH.PARTICLES);
       this.hudCam.ignore(p);
 
       this.tweens.add({
@@ -2937,7 +2938,7 @@ export class ExpeditionScene extends Phaser.Scene {
     // Large chunks
     for (let i = 0; i < 6; i++) {
       const radius = Phaser.Math.FloatBetween(4, 8);
-      const chunk = this.add.circle(cx, cy, radius, 0x888888, 0.9).setDepth(DEPTH.PARTICLES);
+      const chunk = this.add.circle(cx, cy, radius, 0x888888, 0.9).setStrokeStyle(1.5, 0xffffff, 0.5).setDepth(DEPTH.PARTICLES);
       this.hudCam.ignore(chunk);
       this.tweens.add({
         targets: chunk,
@@ -2954,7 +2955,7 @@ export class ExpeditionScene extends Phaser.Scene {
     // Gray dust burst
     for (let i = 0; i < 12; i++) {
       const radius = Phaser.Math.FloatBetween(1.5, 3.5);
-      const dust = this.add.circle(cx, cy, radius, 0xaaaaaa, 0.6).setDepth(DEPTH.PARTICLES);
+      const dust = this.add.circle(cx, cy, radius, 0xaaaaaa, 0.6).setStrokeStyle(1, 0xffffff, 0.3).setDepth(DEPTH.PARTICLES);
       this.hudCam.ignore(dust);
       this.tweens.add({
         targets: dust,
