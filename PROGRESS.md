@@ -555,3 +555,8 @@ Resolved Bugs:
 - **Clean text** — removed double quotes wrapping and `"... says:"` suffix from the greeting display
 - **Dynamic hint** — hint text changes from `[SPACE] skip` (while typing) to `[SPACE / ESC] close` (when complete)
 - **Inventory TRASH/USE buttons unresponsive** — `UiButton` hitZones added to Container via `container.add(child)` don't reliably fire `pointerdown` in Phaser 4. InventoryPanel had no scene-level click handler to manually hit-test them. Fixed by adding a scene-level `pointerdown` handler in `show()` that calls `useBtn.handleClick(p)` and `trashBtn.handleClick(p)`, cleaned up in `hide()`.
+
+## ✅ Stardew-Inspired Stair Spawn Formula (July 2026)
+- **Hyperbolic inverse-of-remaining** — replaced the linear `0.1 + (1 - 0.9 × ratio)` formula with Stardew Valley's `0.02 + 1/remainingOres`: 2% base per ore + chance spikes as ores deplete (1 ore left = 100% guaranteed)
+- **Exponential depth scaling** — `1.1^depth` (capped at 5×) multiplies the base chance, so shallow floors require heavy mining while deep floors yield stairs quickly
+- **Last-ore guarantee** — `1/0 = Infinity` ensures stairs always spawn before the floor is fully depleted, preventing softlocks

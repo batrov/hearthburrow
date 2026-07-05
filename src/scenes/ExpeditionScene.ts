@@ -3250,7 +3250,9 @@ export class ExpeditionScene extends Phaser.Scene {
     if (!floor) return;
     if (floor.puzzle) return;
     const stairMult = gameState.getBootEffects().stairMultiplier;
-    let chance = (0.1 + (1 - (0.9 * (floor.mineableCount / floor.initialMineableCount)))) * stairMult;
+    const remaining = floor.mineableCount;
+    const depthFactor = Math.min(5, Math.pow(1.1, this.expeditionState.depth));
+    let chance = (0.02 + 1 / remaining) * depthFactor * stairMult;
     if (this.debugMode) chance *= 10;
     const rd = Math.random()
     if (rd < chance) {
