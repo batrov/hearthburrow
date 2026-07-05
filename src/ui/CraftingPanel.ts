@@ -3,6 +3,7 @@ import { gameState, itemDisplayName, itemIconKey } from '../systems/GameState';
 import { getRecipe } from '../systems/DataRegistry';
 import { audio } from '../systems/AudioSystem';
 import { BasePanel } from './BasePanel';
+import { NineSliceBg } from './NineSliceBg';
 import { VW, VH, CX } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
 
@@ -74,7 +75,7 @@ export class CraftingPanel extends BasePanel {
   private maxScroll: number = 0;
 
   private cardContainers: Phaser.GameObjects.Container[] = [];
-  private cardBgs: Phaser.GameObjects.Graphics[] = [];
+  private cardBgs: Phaser.GameObjects.NineSlice[] = [];
 
   private pointerStartY: number = 0;
   private pointerStartScroll: number = 0;
@@ -173,9 +174,7 @@ export class CraftingPanel extends BasePanel {
   refresh(): void {
     const pad = 16;
     this.overlay.clear();
-    this.overlay.fillStyle(0x0a0a1a, 0.88);
-    this.overlay.fillRect(0, 0, VW(), VH());
-    this.overlay.lineStyle(1, 0x3a3a4a, 0.5);
+    this.overlay.lineStyle(1, 0x5a4a3a, 0.5);
     this.overlay.strokeRect(pad, 60, VW() - pad * 2, VH() - 60 - pad);
 
     const discovered = gameState.crafting.getDiscoveredRecipes();
@@ -225,8 +224,8 @@ export class CraftingPanel extends BasePanel {
 
     const card = this.scene.add.container(CARD_X, cy);
 
-    const bg = this.scene.add.graphics();
-    this.drawCardBg(bg, state, isSelected);
+    const bg = NineSliceBg.card(this.scene, cardW() / 2, CARD_H / 2, cardW(), CARD_H);
+    this.applyCardState(bg, state, isSelected);
     card.add(bg);
 
     if (discovered && recipe) {
@@ -290,20 +289,10 @@ export class CraftingPanel extends BasePanel {
     this.cardBgs.push(bg);
   }
 
-  private drawCardBg(bg: Phaser.GameObjects.Graphics, state: CardState, selected: boolean): void {
-    const fill = CARD_FILL[state];
+  private applyCardState(bg: Phaser.GameObjects.NineSlice, state: CardState, selected: boolean): void {
     const border = CARD_BORDER[state];
-    const bw = selected ? 2 : 1;
-
-    bg.fillStyle(fill, 1);
-    bg.fillRoundedRect(0, 0, cardW(), CARD_H, 6);
-    bg.lineStyle(bw, border, 0.8);
-    bg.strokeRoundedRect(0, 0, cardW(), CARD_H, 6);
-
-    if (selected) {
-      bg.fillStyle(border, 0.4);
-      bg.fillRect(0, 0, 4, CARD_H);
-    }
+    bg.setTint(border);
+    bg.setAlpha(selected ? 1 : 0.7);
   }
 
   private ensureVisible(): void {
@@ -331,8 +320,7 @@ export class CraftingPanel extends BasePanel {
   private updateCardHighlights(): void {
     for (let i = 0; i < this.cardBgs.length; i++) {
       const bg = this.cardBgs[i];
-      bg.clear();
-      this.drawCardBg(bg, this.getCardState(i), i === this.selectedIndex);
+      this.applyCardState(bg, this.getCardState(i), i === this.selectedIndex);
     }
   }
 

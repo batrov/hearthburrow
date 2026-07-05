@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { itemIconKey } from '../systems/GameState';
 import { VW, VH, CX, CY } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { NineSliceBg } from './NineSliceBg';
+import { UiButton } from './UiButton';
 
 export interface PickerOption {
   id: string;
@@ -22,11 +24,11 @@ export class EquipmentPicker {
   private onSelectCb: ((id: string) => void) | null = null;
   private onCancelCb: (() => void) | null = null;
 
-  private overlay: Phaser.GameObjects.Graphics;
-  private popupBg: Phaser.GameObjects.Graphics;
+  private overlay: Phaser.GameObjects.NineSlice;
+  private popupBg: Phaser.GameObjects.NineSlice | null = null;
   private titleText: Phaser.GameObjects.Text;
   private rows: {
-    bg: Phaser.GameObjects.Graphics;
+    bg: Phaser.GameObjects.NineSlice;
     icon: Phaser.GameObjects.Image;
     nameText: Phaser.GameObjects.Text;
     descText: Phaser.GameObjects.Text;
@@ -42,9 +44,8 @@ export class EquipmentPicker {
     this.scene = scene;
     this.container = scene.add.container(0, 0).setDepth(250).setScrollFactor(0).setVisible(false);
 
-    this.overlay = scene.add.graphics();
-    this.overlay.fillStyle(0x000000, 0.55);
-    this.overlay.fillRect(0, 0, VW(), VH());
+    this.overlay = NineSliceBg.panel(this.scene, CX(), CY(), VW(), VH());
+    this.overlay.setDepth(249).setAlpha(0.85);
     this.container.add(this.overlay);
 
     this.blocker = scene.add.rectangle(CX(), CY(), VW(), VH(), 0x000000, 0)
@@ -54,16 +55,13 @@ export class EquipmentPicker {
     this.blocker.on('pointerdown', () => {});
     this.container.add(this.blocker);
 
-    this.popupBg = scene.add.graphics();
-    this.container.add(this.popupBg);
-
     this.titleText = createText(scene, CX(), 170, '', {
       fontSize: fs(20), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
     for (let i = 0; i < 7; i++) {
-      const bg = scene.add.graphics();
+      const bg = NineSliceBg.slot(scene, 0, 0, 1, 1);
       this.container.add(bg);
 
       const icon = scene.add.image(0, 0, 'item_pickaxe_1').setScale(1.2);
@@ -159,11 +157,12 @@ export class EquipmentPicker {
     const popX = 20;
     const popW = VW() - 40;
 
-    this.popupBg.clear();
-    this.popupBg.fillStyle(0x0a0a1a, 0.95);
-    this.popupBg.fillRoundedRect(popX, popY, popW, popH, 10);
-    this.popupBg.lineStyle(2, 0x6a5a8a);
-    this.popupBg.strokeRoundedRect(popX, popY, popW, popH, 10);
+    if (this.popupBg) {
+      this.popupBg.destroy();
+    }
+    this.popupBg = NineSliceBg.modal(this.scene, popX + popW / 2, popY + popH / 2, popW, popH);
+    this.popupBg.setDepth(249);
+    this.container.addAt(this.popupBg, 2);
 
     this.titleText.setPosition(CX(), popY + 22);
     this.footerText.setPosition(CX(), popY + popH - 14);
@@ -174,19 +173,19 @@ export class EquipmentPicker {
       const opt = this.options[i];
       const y = startY + i * 40;
 
-      row.bg.clear();
-
       if (!opt) {
         row.icon.setVisible(false);
         row.nameText.setVisible(false);
         row.descText.setVisible(false);
         row.zone.setVisible(false);
+        row.bg.setVisible(false);
         continue;
       }
 
       const isSelected = i === this.selectedIdx;
-      row.bg.fillStyle(isSelected ? 0x3a3a5a : 0x1a1a2a, 0.8);
-      row.bg.fillRoundedRect(popX + 8, y, popW - 16, 36, 4);
+      NineSliceBg.updateSize(row.bg, popW - 16, 36);
+      row.bg.setPosition(popX + 8 + (popW - 16) / 2, y + 18);
+      row.bg.setVisible(true);
 
       if (!opt.id) {
         row.icon.setVisible(false);
@@ -252,6 +251,10 @@ export class EquipmentPicker {
     if (this.clickHandler) {
       this.scene.input.off('pointerdown', this.clickHandler);
       this.clickHandler = null;
+    }
+    if (this.popupBg) {
+      this.popupBg.destroy();
+      this.popupBg = null;
     }
     this.scene.tweens.add({
       targets: this.container,

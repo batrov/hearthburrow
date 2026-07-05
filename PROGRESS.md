@@ -512,6 +512,11 @@ Resolved Bugs:
 - **Persists until backpack** — glow stays visible for the full 600ms flight, destroyed only when `flySpriteToBackpack.onComplete` fires
 - **Immediate flight** — drop flies directly with no pop-in delay; glow fades in during the first 150ms of the arc
 
+## ✅ Slower Fountain Stamina Animation (July 2026)
+- **900ms refill tween** — fountain drink action now uses `animateStaminaBar(prevR, newR, 900)` instead of the default 300ms
+- **`_animatingStamina` flag** — suppresses the generic `onChange` handler so the custom-duration animation isn't overridden
+- **Optional `duration` parameter** — `animateStaminaBar()` accepts an optional 3rd argument; defaults to existing 200/300ms when omitted
+
 ## ✅ Chat Bubble Action Prompts (July 2026)
 - **All three scenes** — Tavern, Expedition, Homeland action prompts replaced with styled chat bubbles (rounded rect `#1a1410` at 0.9α, 6px radius, 5px triangular tail, golden text) positioned above the player's head
 - **Tavern NPC hover tooltip removed** — redundant with persistent NPC name labels added earlier (Jul 2026)

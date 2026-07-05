@@ -1,165 +1,129 @@
 import Phaser from 'phaser';
-import { VW, VH, CX, PANEL_PAD, OVERLAY_W, OVERLAY_H } from '../systems/Viewport';
+import { VW, VH, CX, CY, PANEL_PAD, OVERLAY_W, OVERLAY_H } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { NineSliceBg } from './NineSliceBg';
+import { UiButton } from './UiButton';
 
-export class BasePanel {
-  protected scene: Phaser.Scene;
-  container: Phaser.GameObjects.Container;
-  protected _visible: boolean = false;
-  protected overlay!: Phaser.GameObjects.Graphics;
-  protected _closeBtn: Phaser.GameObjects.Text | null = null;
-  private _closeBtnZone: Phaser.GameObjects.Rectangle | null = null;
-  private _closeBtnRightOffset = 0;
-  private _closeBtnY = 0;
-  private _closePointerDown: ((pointer: Phaser.Input.Pointer) => void) | null = null;
-  private _closePointerMove: ((pointer: Phaser.Input.Pointer) => void) | null = null;
-  /** Set by onViewportResize(); consumed (and cleared) the next time the panel is shown. */
-  protected _layoutDirty = false;
+ export class BasePanel {
+   protected scene: Phaser.Scene;
+   container: Phaser.GameObjects.Container;
+   protected _visible: boolean = false;
+   protected overlayPanel: Phaser.GameObjects.NineSlice | null = null;
+   protected overlay!: Phaser.GameObjects.Graphics;
+   protected _closeBtn: UiButton | null = null;
+   private _closeBtnRightOffset = 0;
+   private _closeBtnY = 0;
+   /** Set by onViewportResize(); consumed (and cleared) the next time the panel is shown. */
+   protected _layoutDirty = false;
 
-  constructor(scene: Phaser.Scene) {
-    this.scene = scene;
+   constructor(scene: Phaser.Scene) {
+     this.scene = scene;
     this.container = scene.add.container(0, 0).setDepth(215).setScrollFactor(0);
+    scene.cameras.main.ignore(this.container);
     this.container.setVisible(false);
-  }
+   }
 
-  isVisible(): boolean {
-    return this._visible;
-  }
+   isVisible(): boolean {
+     return this._visible;
+   }
 
-  hide(): void {
-    this.fadeOut();
-  }
+   hide(): void {
+     this.fadeOut();
+   }
 
-  protected fadeIn(duration = 150): void {
-    if (this._layoutDirty) {
-      this.relayout();
-      this._layoutDirty = false;
-    }
-    this._visible = true;
-    this.container.setAlpha(0);
-    this.container.setVisible(true);
-    this.scene.tweens.add({
-      targets: this.container,
-      alpha: 1,
-      duration,
-      ease: 'Quad.easeOut',
-    });
-    if (this._closeBtn) this._closeBtn.setVisible(true);
-  }
+   protected fadeIn(duration = 150): void {
+     if (this._layoutDirty) {
+       this.relayout();
+       this._layoutDirty = false;
+     }
+     this._visible = true;
+     this.container.setAlpha(0);
+     this.container.setVisible(true);
+     this.scene.tweens.add({
+       targets: this.container,
+       alpha: 1,
+       duration,
+       ease: 'Quad.easeOut',
+     });
+     if (this._closeBtn) this._closeBtn.setVisible(true);
+   }
 
-  protected fadeOut(duration = 150): void {
-    this.scene.tweens.add({
-      targets: this.container,
-      alpha: 0,
-      duration,
-      ease: 'Quad.easeIn',
-      onComplete: () => {
-        this._visible = false;
-        this.container.setVisible(false);
-        if (this._closeBtn) this._closeBtn.setVisible(false);
-      },
-    });
-  }
+   protected fadeOut(duration = 150): void {
+     this.scene.tweens.add({
+       targets: this.container,
+       alpha: 0,
+       duration,
+       ease: 'Quad.easeIn',
+       onComplete: () => {
+         this._visible = false;
+         this.container.setVisible(false);
+         if (this._closeBtn) this._closeBtn.setVisible(false);
+       },
+     });
+   }
 
-  protected createOverlay(): Phaser.GameObjects.Graphics {
-    this.overlay = this.scene.add.graphics();
-    this.overlay.fillStyle(0x0a0a1a, 0.92);
-    this.overlay.fillRect(0, 0, VW(), VH());
-    this.overlay.lineStyle(1, 0x3a3a4a, 0.5);
-    this.overlay.strokeRect(PANEL_PAD, PANEL_PAD, OVERLAY_W(), OVERLAY_H());
-    this.container.add(this.overlay);
-    return this.overlay;
-  }
+   protected createOverlay(): Phaser.GameObjects.Graphics {
+      this.overlayPanel = NineSliceBg.panel(this.scene, CX(), CY(), VW(), VH());
+      this.container.add(this.overlayPanel);
+      this.overlayPanel.setAlpha(0.85);
 
-  protected addCloseButton(x = VW() - 40, y = 44): Phaser.GameObjects.Text {
-    this._closeBtnRightOffset = VW() - x;
-    this._closeBtnY = y;
+     this.overlay = this.scene.add.graphics();
+     this.container.add(this.overlay);
+     return this.overlay;
+   }
 
-    const btn = createText(this.scene, x, y, '[X]', {
-      fontSize: fs(24), fontFamily: 'Inter', resolution: 4, color: '#886666',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(220).setData('isUI', true);
-    this.scene.cameras.main.ignore(btn);
-    btn.setVisible(false);
+   protected addCloseButton(x = VW() - 40, y = 44): UiButton {
+     this._closeBtnRightOffset = VW() - x;
+     this._closeBtnY = y;
 
-    const hitZone = this.scene.add.rectangle(x, y, 48, 48, 0xffffff, 0)
-      .setScrollFactor(0).setDepth(220).setData('isUI', true).setVisible(false);
-    this._closeBtnZone = hitZone;
-    this.scene.cameras.main.ignore(hitZone);
-    hitZone.setInteractive({ useHandCursor: true });
-    hitZone.on('pointerdown', () => {
+     const btn = new UiButton(this.scene, x, y, '[X]', 48, 48, () => {
+       if (this.isVisible()) this.hide();
+     }, { small: true, color: '#886666', fontSize: fs(24) });
+     btn.setDepth(220);
+     btn.setVisible(false);
+     for (const child of btn.getChildren()) {
+       this.scene.cameras.main.ignore(child);
+     }
+
+    btn.hitZone.on('pointerdown', () => {
       if (this.isVisible()) this.hide();
     });
 
-    this._closePointerDown = (pointer: Phaser.Input.Pointer) => {
-      if (!this.isVisible()) return;
-      const b = btn.getBounds();
-      if (b.contains(pointer.x, pointer.y)) {
-        this.hide();
-      }
-    };
-    this.scene.input.on('pointerdown', this._closePointerDown);
-
-    const canvas = this.scene.input.manager.canvas as HTMLCanvasElement;
-    this._closePointerMove = (pointer: Phaser.Input.Pointer) => {
-      if (!this.isVisible()) {
-        if (canvas.style.cursor === 'pointer') {
-          canvas.style.cursor = 'default';
-        }
-        return;
-      }
-      const b = btn.getBounds();
-      if (b.contains(pointer.x, pointer.y)) {
-        canvas.style.cursor = 'pointer';
-      } else if (canvas.style.cursor === 'pointer') {
-        canvas.style.cursor = 'default';
-      }
-    };
-    this.scene.input.on('pointermove', this._closePointerMove);
-
     this._closeBtn = btn;
     return btn;
-  }
+   }
 
-  protected setVisible(v: boolean): void {
-    this._visible = v;
-    this.container.setVisible(v);
-  }
+   protected setVisible(v: boolean): void {
+     this._visible = v;
+     this.container.setVisible(v);
+   }
 
-  /**
-   * Called by ViewportManager (via the owning scene's relayout()) after a resize.
-   * Never toggles visibility — only marks state dirty so the next show() recomputes
-   * positions, avoiding redundant work on panels that aren't currently visible and
-   * avoiding any interaction with the same-frame show/hide race.
-   */
-  onViewportResize(): void {
-    this._layoutDirty = true;
-  }
+   /**
+    * Called by ViewportManager (via the owning scene's relayout()) after a resize.
+    * Never toggles visibility — only marks state dirty so the next show() recomputes
+    * positions, avoiding redundant work on panels that aren't currently visible and
+    * avoiding any interaction with the same-frame show/hide race.
+    */
+   onViewportResize(): void {
+     this._layoutDirty = true;
+   }
 
-  /**
-   * Re-applies position/size to already-existing overlay + close-button objects
-   * using the current live viewport. Subclasses should override to reposition their
-   * own content, calling super.relayout() first. Must only reposition — never
-   * create/destroy objects or call show()/hide().
-   */
-  protected relayout(): void {
-    if (this.overlay) {
-      this.overlay.clear();
-      this.overlay.fillStyle(0x0a0a1a, 0.92);
-      this.overlay.fillRect(0, 0, VW(), VH());
-      this.overlay.lineStyle(1, 0x3a3a4a, 0.5);
-      this.overlay.strokeRect(PANEL_PAD, PANEL_PAD, OVERLAY_W(), OVERLAY_H());
-    }
-    if (this._closeBtn) {
-      const x = VW() - this._closeBtnRightOffset;
-      this._closeBtn.setPosition(x, this._closeBtnY);
-      this._closeBtnZone?.setPosition(x, this._closeBtnY);
-    }
-  }
+   /**
+    * Re-applies position/size to already-existing overlay + close-button objects
+    * using the current live viewport. Subclasses should override to reposition their
+    * own content, calling super.relayout() first. Must only reposition — never
+    * create/destroy objects or call show()/hide().
+    */
+   protected relayout(): void {
+     NineSliceBg.updateSize(this.overlayPanel, VW(), VH());
+     if (this._closeBtn) {
+       const x = VW() - this._closeBtnRightOffset;
+       this._closeBtn.setPosition(x, this._closeBtnY);
+     }
+   }
 
-  destroy(): void {
-    if (this._closePointerDown) this.scene.input.off('pointerdown', this._closePointerDown);
-    if (this._closePointerMove) this.scene.input.off('pointermove', this._closePointerMove);
-    if (this._closeBtn) this._closeBtn.destroy();
-    this.container.destroy(true);
-  }
-}
+   destroy(): void {
+     if (this._closeBtn) this._closeBtn.destroy();
+     this.container.destroy(true);
+   }
+ }

@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
-import { VW, VH, CX } from '../systems/Viewport';
+import { VW, VH, CX, CY } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { NineSliceBg } from './NineSliceBg';
+import { UiButton } from './UiButton';
 
 export class FloorPicker {
   private scene: Phaser.Scene;
@@ -11,8 +13,8 @@ export class FloorPicker {
   private onSelectCb: ((floor: number) => void) | null = null;
   private onCancelCb: (() => void) | null = null;
 
-  private overlay: Phaser.GameObjects.Graphics;
-  private popupBg: Phaser.GameObjects.Graphics;
+  private overlay: Phaser.GameObjects.NineSlice;
+  private popupBg: Phaser.GameObjects.NineSlice | null = null;
   private titleText: Phaser.GameObjects.Text;
   private rows: { bg: Phaser.GameObjects.Graphics; text: Phaser.GameObjects.Text; zone: Phaser.GameObjects.Rectangle }[] = [];
   private footerText: Phaser.GameObjects.Text;
@@ -25,9 +27,8 @@ export class FloorPicker {
     this.scene = scene;
     this.container = scene.add.container(0, 0).setDepth(250).setScrollFactor(0).setVisible(false);
 
-    this.overlay = scene.add.graphics();
-    this.overlay.fillStyle(0x000000, 0.55);
-    this.overlay.fillRect(0, 0, VW(), VH());
+    this.overlay = NineSliceBg.panel(this.scene, CX(), CY(), VW(), VH());
+    this.overlay.setDepth(249);
     this.container.add(this.overlay);
 
     this.blocker = scene.add.rectangle(CX(), VH() / 2, VW(), VH(), 0x000000, 0)
@@ -36,9 +37,6 @@ export class FloorPicker {
       .setData('isUI', true);
     this.blocker.on('pointerdown', () => {});
     this.container.add(this.blocker);
-
-    this.popupBg = scene.add.graphics();
-    this.container.add(this.popupBg);
 
     this.titleText = createText(scene, CX(), 170, 'Select Start Floor', {
       fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
@@ -127,11 +125,14 @@ export class FloorPicker {
     const popH = 60 + count * 38 + 24;
     const popY = Math.floor((VH() - popH) / 2);
 
-    this.popupBg.clear();
-    this.popupBg.fillStyle(0x0a0a1a, 0.95);
-    this.popupBg.fillRoundedRect(16, popY, VW() - 32, popH, 10);
-    this.popupBg.lineStyle(2, 0x6a5a8a);
-    this.popupBg.strokeRoundedRect(16, popY, VW() - 32, popH, 10);
+    const popX = 16;
+    const popW = VW() - 32;
+    if (this.popupBg) {
+      this.popupBg.destroy();
+    }
+    this.popupBg = NineSliceBg.modal(this.scene, popX + popW / 2, popY + popH / 2, popW, popH);
+    this.popupBg.setDepth(249);
+    this.container.addAt(this.popupBg, 2);
 
     this.titleText.setPosition(CX(), popY + 22);
     this.footerText.setPosition(CX(), popY + popH - 14);
@@ -196,6 +197,10 @@ export class FloorPicker {
     if (this.clickHandler) {
       this.scene.input.off('pointerdown', this.clickHandler);
       this.clickHandler = null;
+    }
+    if (this.popupBg) {
+      this.popupBg.destroy();
+      this.popupBg = null;
     }
     this.scene.tweens.add({
       targets: this.container,

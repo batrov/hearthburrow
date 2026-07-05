@@ -5,6 +5,8 @@ import { canRestore } from '../systems/BuildingSystem';
 import { getBuilding } from '../systems/DataRegistry';
 import { CX, CY } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { NineSliceBg } from './NineSliceBg';
+import { UiButton } from './UiButton';
 
 export class RestorePanel extends BasePanel {
   private contentContainer: Phaser.GameObjects.Container;
@@ -44,14 +46,14 @@ export class RestorePanel extends BasePanel {
     const canAfford = canRestore(buildingId);
 
     this.overlay.clear();
-    this.overlay.fillStyle(0x0a0a1a, 0.85);
-    this.overlay.fillRoundedRect(CX() - 180, CY() - 110, 360, 220, 10);
-    this.overlay.lineStyle(2, 0x6a5a8a, 1);
-    this.overlay.strokeRoundedRect(CX() - 180, CY() - 110, 360, 220, 10);
 
     const lineH = 26;
     const totalLines = 5 + costEntries.length;
     const totalTextH = totalLines * lineH;
+
+    this.contentContainer.add(
+      NineSliceBg.modal(this.scene, CX(), CY(), 360, totalTextH + 16)
+    );
     const textTop = CY() - totalTextH / 2;
 
     this.contentContainer.add(
@@ -98,55 +100,29 @@ export class RestorePanel extends BasePanel {
     const btnY = textTop + (4 + costEntries.length) * lineH + lineH / 2;
 
     if (canAfford) {
-      const restoreBg = this.scene.add.graphics();
-      restoreBg.fillStyle(0x1a3a1a, 0.9);
-      restoreBg.fillRoundedRect(CX() - 90, btnY - 12, 80, 24, 4);
-      restoreBg.lineStyle(1, 0x44aa44, 0.6);
-      restoreBg.strokeRoundedRect(CX() - 90, btnY - 12, 80, 24, 4);
-      this.contentContainer.add(restoreBg);
+      const restoreBtn = new UiButton(this.scene, CX() - 50, btnY, 'RESTORE', 80, 24,
+        () => this.onRestoreCb(this.currentBuildingId),
+        { fontSize: fs(11), color: '#88ff88' });
+      for (const c of restoreBtn.getChildren()) this.contentContainer.add(c);
 
-      const restoreText = createText(this.scene, CX() - 50, btnY, 'RESTORE', {
-        fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#88ff88',
-      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-      this.contentContainer.add(restoreText);
-
-      const cancelBg = this.scene.add.graphics();
-      cancelBg.fillStyle(0x1a1a2e, 0.9);
-      cancelBg.fillRoundedRect(CX() + 10, btnY - 12, 80, 24, 4);
-      cancelBg.lineStyle(1, 0x5a4a7a, 0.6);
-      cancelBg.strokeRoundedRect(CX() + 10, btnY - 12, 80, 24, 4);
-      this.contentContainer.add(cancelBg);
-
-      const cancelText = createText(this.scene, CX() + 50, btnY, 'CANCEL', {
-        fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b8a8d8',
-      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-      this.contentContainer.add(cancelText);
+      const cancelBtn = new UiButton(this.scene, CX() + 50, btnY, 'CANCEL', 80, 24,
+        () => this.hide(),
+        { fontSize: fs(11), color: '#b8a8d8' });
+      for (const c of cancelBtn.getChildren()) this.contentContainer.add(c);
 
       this.restoreHandler = (pointer: Phaser.Input.Pointer) => {
-        if (restoreText.getBounds().contains(pointer.x, pointer.y)) {
-          this.onRestoreCb(this.currentBuildingId);
-        } else if (cancelText.getBounds().contains(pointer.x, pointer.y)) {
-          this.hide();
-        }
+        restoreBtn.handleClick(pointer);
+        cancelBtn.handleClick(pointer);
       };
       this.scene.input.on('pointerdown', this.restoreHandler);
     } else {
-      const cancelBg = this.scene.add.graphics();
-      cancelBg.fillStyle(0x1a1a2e, 0.9);
-      cancelBg.fillRoundedRect(CX() - 50, btnY - 12, 100, 24, 4);
-      cancelBg.lineStyle(1, 0x5a4a7a, 0.6);
-      cancelBg.strokeRoundedRect(CX() - 50, btnY - 12, 100, 24, 4);
-      this.contentContainer.add(cancelBg);
-
-      const cancelText = createText(this.scene, CX(), btnY, 'CANCEL', {
-        fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b8a8d8',
-      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-      this.contentContainer.add(cancelText);
+      const cancelBtn = new UiButton(this.scene, CX(), btnY, 'CANCEL', 100, 24,
+        () => this.hide(),
+        { fontSize: fs(11), color: '#b8a8d8' });
+      for (const c of cancelBtn.getChildren()) this.contentContainer.add(c);
 
       this.restoreHandler = (pointer: Phaser.Input.Pointer) => {
-        if (cancelText.getBounds().contains(pointer.x, pointer.y)) {
-          this.hide();
-        }
+        cancelBtn.handleClick(pointer);
       };
       this.scene.input.on('pointerdown', this.restoreHandler);
     }

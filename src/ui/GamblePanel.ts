@@ -4,6 +4,8 @@ import { audio } from '../systems/AudioSystem';
 import { itemIconKey } from '../systems/GameState';
 import { VW, VH, CX, CY } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { NineSliceBg } from './NineSliceBg';
+import { UiButton } from './UiButton';
 
 export interface RouletteSegment {
   label: string;
@@ -45,12 +47,10 @@ export class GamblePanel extends BasePanel {
   private legendGfx!: Phaser.GameObjects.Graphics;
   private legendTitle!: Phaser.GameObjects.Text;
   private legendLines: Phaser.GameObjects.Text[] = [];
-  private spinBtnGfx!: Phaser.GameObjects.Graphics;
-  private spinBtnText!: Phaser.GameObjects.Text;
-  private walkBtnGfx!: Phaser.GameObjects.Graphics;
-  private walkBtnText!: Phaser.GameObjects.Text;
-  private spinBtnZone!: Phaser.GameObjects.Rectangle;
-  private walkBtnZone!: Phaser.GameObjects.Rectangle;
+  private spinBtn!: UiButton;
+  private walkBtn!: UiButton;
+  private panelBg: Phaser.GameObjects.NineSlice | null = null;
+  private modalBg: Phaser.GameObjects.NineSlice | null = null;
 
   constructor(scene: Phaser.Scene) {
     super(scene);
@@ -96,15 +96,10 @@ export class GamblePanel extends BasePanel {
 
     this.scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (!this.isVisible()) return;
-      if (this._closeBtn) {
-        const b = this._closeBtn.getBounds();
-        if (b.contains(pointer.x, pointer.y)) return;
-      }
+      if (this._closeBtn && this._closeBtn.handleClick(pointer)) return;
       if (this.mode === 'preview') {
-        const sb = this.spinBtnZone.getBounds();
-        if (sb.contains(pointer.x, pointer.y)) { this.doSpin(); return; }
-        const wb = this.walkBtnZone.getBounds();
-        if (wb.contains(pointer.x, pointer.y)) { this.doWalk(); return; }
+        if (this.spinBtn.handleClick(pointer)) return;
+        if (this.walkBtn.handleClick(pointer)) return;
       }
       this.onPress();
     });
@@ -125,37 +120,21 @@ export class GamblePanel extends BasePanel {
     const spinX = CX() - gap / 2 - bw;
     const walkX = CX() + gap / 2;
 
-    this.spinBtnGfx = scene.add.graphics();
-    this.container.add(this.spinBtnGfx);
+    this.spinBtn = new UiButton(scene, spinX + bw / 2, by + bh / 2, 'Spin!', bw, bh,
+      () => this.doSpin(),
+      { fontSize: fs(14), color: '#44cc66' });
+    for (const c of this.spinBtn.getChildren()) {
+      this.scene.cameras.main.ignore(c);
+      this.container.add(c);
+    }
 
-    this.spinBtnText = createText(scene, spinX + bw / 2, by + bh / 2, 'Spin!', {
-      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#ffffff', fontStyle: 'bold',
-    }).setOrigin(0.5);
-    this.container.add(this.spinBtnText);
-
-    this.spinBtnZone = scene.add.rectangle(spinX + bw / 2, by + bh / 2, bw, bh, 0xffffff, 0);
-    this.spinBtnZone.setVisible(false);
-    this.container.add(this.spinBtnZone);
-
-    this.walkBtnGfx = scene.add.graphics();
-    this.container.add(this.walkBtnGfx);
-
-    this.walkBtnText = createText(scene, walkX + bw / 2, by + bh / 2, 'Walk away', {
-      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#ffffff',
-    }).setOrigin(0.5);
-    this.container.add(this.walkBtnText);
-
-    this.walkBtnZone = scene.add.rectangle(walkX + bw / 2, by + bh / 2, bw, bh, 0xffffff, 0);
-    this.walkBtnZone.setVisible(false);
-    this.container.add(this.walkBtnZone);
-  }
-
-  private drawBtn(gfx: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number, color: number, enabled: boolean): void {
-    gfx.clear();
-    gfx.fillStyle(enabled ? color : 0x333333, enabled ? 0.2 : 0.1);
-    gfx.fillRoundedRect(x, y, w, h, 8);
-    gfx.lineStyle(2, enabled ? color : 0x555555, enabled ? 0.8 : 0.3);
-    gfx.strokeRoundedRect(x, y, w, h, 8);
+    this.walkBtn = new UiButton(scene, walkX + bw / 2, by + bh / 2, 'Walk away', bw, bh,
+      () => this.doWalk(),
+      { fontSize: fs(14), color: '#cc8888' });
+    for (const c of this.walkBtn.getChildren()) {
+      this.scene.cameras.main.ignore(c);
+      this.container.add(c);
+    }
   }
 
   showPreview(
@@ -184,11 +163,15 @@ export class GamblePanel extends BasePanel {
     this.wheelContainer.setPosition(CX(), this.wheelCY);
     this.resultText.setPosition(CX(), this.wheelCY);
 
+    if (this.panelBg) { this.panelBg.destroy(); this.panelBg = null; }
+    if (this.modalBg) { this.modalBg.destroy(); this.modalBg = null; }
     this.overlay!.clear();
-    this.overlay!.fillStyle(0x0a0a1a, 0.85);
-    this.overlay!.fillRect(0, 0, VW(), VH());
-    this.overlay!.lineStyle(2, 0x5a4a7a, 0.6);
-    this.overlay!.strokeRoundedRect(CX() - 155, 160, 310, 470, 12);
+    this.panelBg = NineSliceBg.panel(this.scene, CX(), VH() / 2, VW(), VH());
+    this.container.add(this.panelBg);
+    this.container.sendToBack(this.panelBg);
+    this.modalBg = NineSliceBg.modal(this.scene, CX(), 395, 310, 470);
+    this.container.add(this.modalBg);
+    this.container.sendToBack(this.modalBg);
 
     this.titleText.setText('Gambling Goblin');
     this.subtitleText.setText(`Risk ${cost} 🥕 for a spin!`).setVisible(true);
@@ -299,30 +282,31 @@ export class GamblePanel extends BasePanel {
     const spinX = CX() - gap / 2 - bw;
     const walkX = CX() + gap / 2;
     const by = 590;
+    const spinCX = spinX + bw / 2;
+    const walkCX = walkX + bw / 2;
+    const cy = by + bh / 2;
 
     if (this.canGamble) {
-      this.drawBtn(this.spinBtnGfx, spinX, by, bw, bh, 0x44cc66, true);
-      this.spinBtnText.setColor('#44cc66').setText(this.cost > 0 ? `Spin!  (${this.cost} 🥕)` : 'Spin!');
+      this.spinBtn.setPosition(spinCX, cy);
+      this.spinBtn.setEnabled(true);
+      this.spinBtn.setText(this.cost > 0 ? `Spin!  (${this.cost} 🥕)` : 'Spin!');
+      this.spinBtn.label.setColor('#44cc66');
     } else {
-      this.drawBtn(this.spinBtnGfx, spinX, by, bw, bh, 0x666666, false);
-      this.spinBtnText.setColor('#666666').setText(`Need ${this.cost} 🥕`);
+      this.spinBtn.setPosition(spinCX, cy);
+      this.spinBtn.setEnabled(false);
+      this.spinBtn.setText(`Need ${this.cost} 🥕`);
+      this.spinBtn.label.setColor('#666666');
     }
-    this.spinBtnText.setVisible(true);
-    this.spinBtnZone.setVisible(true);
+    this.spinBtn.setVisible(true);
 
-    this.drawBtn(this.walkBtnGfx, walkX, by, bw, bh, 0x886666, true);
-    this.walkBtnText.setColor('#cc8888').setText('Walk away');
-    this.walkBtnText.setVisible(true);
-    this.walkBtnZone.setVisible(true);
+    this.walkBtn.setPosition(walkCX, cy);
+    this.walkBtn.setVisible(true);
+    this.walkBtn.label.setColor('#cc8888');
   }
 
   private hideButtons(): void {
-    this.spinBtnGfx.clear();
-    this.walkBtnGfx.clear();
-    this.spinBtnText.setVisible(false);
-    this.walkBtnText.setVisible(false);
-    this.spinBtnZone.setVisible(false);
-    this.walkBtnZone.setVisible(false);
+    this.spinBtn.setVisible(false);
+    this.walkBtn.setVisible(false);
   }
 
   private hideLegend(): void {
@@ -493,10 +477,8 @@ export class GamblePanel extends BasePanel {
     const by = 590, bw = 130, gap = 24;
     const spinX = CX() - gap / 2 - bw;
     const walkX = CX() + gap / 2;
-    this.spinBtnText.setPosition(spinX + bw / 2, by + 20);
-    this.spinBtnZone.setPosition(spinX + bw / 2, by + 20);
-    this.walkBtnText.setPosition(walkX + bw / 2, by + 20);
-    this.walkBtnZone.setPosition(walkX + bw / 2, by + 20);
+    this.spinBtn.setPosition(spinX + bw / 2, by + 20);
+    this.walkBtn.setPosition(walkX + bw / 2, by + 20);
 
     if (this._visible) {
       this.wheelCY = CY() - 70;

@@ -3,6 +3,8 @@ import { gameState, NPC_PERSONALITIES } from '../systems/GameState';
 import { BasePanel } from './BasePanel';
 import { VW, VH, CX } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { NineSliceBg } from './NineSliceBg';
+import { UiButton } from './UiButton';
 
 export class NPCPhotobookPanel extends BasePanel {
   private titleText: Phaser.GameObjects.Text;
@@ -11,6 +13,9 @@ export class NPCPhotobookPanel extends BasePanel {
   private entries: { variant: number; name: string; depth: number }[] = [];
   private selectionIndex: number = 0;
   private dirty: boolean = true;
+  private upBtn: UiButton;
+  private downBtn: UiButton;
+  private clickHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
 
   constructor(scene: Phaser.Scene) {
     super(scene);
@@ -45,23 +50,15 @@ export class NPCPhotobookPanel extends BasePanel {
     }).setOrigin(0.5);
     this.container.add(this.hintText);
 
-    const upBtn = createText(scene, CX(), 62, '▲', {
-      fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#886644',
-    }).setOrigin(0.5).setDepth(210).setScrollFactor(0);
-    this.container.add(upBtn);
-    const upHit = scene.add.rectangle(CX(), 62, 60, 44, 0xffffff, 0)
-      .setInteractive({ useHandCursor: true }).setDepth(211).setScrollFactor(0);
-    upHit.on('pointerdown', () => { this.handleInput('W'); this.dirty = true; });
-    this.container.add(upHit);
+    this.upBtn = new UiButton(scene, CX(), 62, '▲', 60, 44, () => { this.handleInput('W'); this.dirty = true; }, {
+      small: true, color: '#886644', fontSize: fs(18),
+    });
+    for (const child of this.upBtn.getChildren()) this.container.add(child);
 
-    const downBtn = createText(scene, CX(), VH() - 56, '▼', {
-      fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#886644',
-    }).setOrigin(0.5).setDepth(210).setScrollFactor(0);
-    this.container.add(downBtn);
-    const downHit = scene.add.rectangle(CX(), VH() - 56, 60, 44, 0xffffff, 0)
-      .setInteractive({ useHandCursor: true }).setDepth(211).setScrollFactor(0);
-    downHit.on('pointerdown', () => { this.handleInput('S'); this.dirty = true; });
-    this.container.add(downHit);
+    this.downBtn = new UiButton(scene, CX(), VH() - 56, '▼', 60, 44, () => { this.handleInput('S'); this.dirty = true; }, {
+      small: true, color: '#886644', fontSize: fs(18),
+    });
+    for (const child of this.downBtn.getChildren()) this.container.add(child);
 
     this.addCloseButton(VW() - 40, 28);
   }
@@ -85,10 +82,19 @@ export class NPCPhotobookPanel extends BasePanel {
   show(): void {
     this.dirty = true;
     this.selectionIndex = 0;
+    this.clickHandler = (p: Phaser.Input.Pointer) => {
+      this.upBtn.handleClick(p);
+      this.downBtn.handleClick(p);
+    };
+    this.scene.input.on('pointerdown', this.clickHandler);
     this.fadeIn();
   }
 
   hide(): void {
+    if (this.clickHandler) {
+      this.scene.input.off('pointerdown', this.clickHandler);
+      this.clickHandler = null;
+    }
     this.fadeOut();
   }
 
@@ -96,13 +102,6 @@ export class NPCPhotobookPanel extends BasePanel {
     if (!this._visible) return;
     if (!this.dirty) return;
     this.dirty = false;
-
-    this.overlay.clear();
-    this.overlay.fillStyle(0x0a0a1a, 0.92);
-    this.overlay.fillRect(0, 0, VW(), VH());
-    const pad = 16;
-    this.overlay.lineStyle(1, 0x3a3a4a, 0.5);
-    this.overlay.strokeRect(pad, 56, VW() - pad * 2, VH() - 56 - pad);
 
     const rescued = gameState.rescuedVillagers;
     this.entries = rescued.map((r) => {

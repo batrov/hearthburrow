@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { VW, VH, CX, CY } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { NineSliceBg } from './NineSliceBg';
+import { UiButton } from './UiButton';
 
 export class ConfirmPopup {
   private scene: Phaser.Scene;
@@ -10,13 +12,11 @@ export class ConfirmPopup {
   private onCancelCb: (() => void) | null = null;
 
   private overlay: Phaser.GameObjects.Graphics;
-  private popupBg: Phaser.GameObjects.Graphics;
+  private popupBg!: Phaser.GameObjects.NineSlice;
   private messageText: Phaser.GameObjects.Text;
   private subText: Phaser.GameObjects.Text;
-  private yesBtn: Phaser.GameObjects.Text;
-  private noBtn: Phaser.GameObjects.Text;
-  private yesBtnZone: Phaser.GameObjects.Rectangle;
-  private noBtnZone: Phaser.GameObjects.Rectangle;
+  private yesBtn: UiButton;
+  private noBtn: UiButton;
   private footerText: Phaser.GameObjects.Text;
   private keyHandler: ((e: KeyboardEvent) => void) | null = null;
   private blocker: Phaser.GameObjects.Rectangle;
@@ -25,9 +25,6 @@ export class ConfirmPopup {
 
   private selectedYes = true;
 
-  // Fixed-size modal box, always centered via CY() — box top is `CY() - BOX_H/2`,
-  // every internal element's Y is rebased from that live box top rather than a
-  // literal absolute value, so the popup stays centered at any clamped viewport height.
   private static readonly BOX_W = 320;
   private static readonly BOX_H = 220;
 
@@ -49,9 +46,6 @@ export class ConfirmPopup {
     this.blocker.on('pointerdown', () => {});
     this.container.add(this.blocker);
 
-    this.popupBg = scene.add.graphics();
-    this.container.add(this.popupBg);
-
     const boxTop = this.boxTop();
 
     this.messageText = createText(scene, CX(), boxTop + 50, '', {
@@ -64,23 +58,17 @@ export class ConfirmPopup {
     }).setOrigin(0.5);
     this.container.add(this.subText);
 
-    this.yesBtn = createText(scene, CX() - 60, boxTop + 130, '[ YES ]', {
-      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#cc6666',
-      backgroundColor: '#3a1a1acc', padding: { x: 12, y: 4 },
-    }).setOrigin(0.5);
-    this.container.add(this.yesBtn);
-    const yesZone = scene.add.rectangle(CX() - 60, boxTop + 130, 80, 44, 0xffffff, 0).setScrollFactor(0).setDepth(251);
-    this.container.add(yesZone);
-    this.yesBtnZone = yesZone;
+    this.yesBtn = new UiButton(scene, CX() - 60, boxTop + 130, 'YES', 80, 36, () => {
+      this.selectedYes = true;
+      this.confirm();
+    }, { color: '#cc6666' });
+    for (const child of this.yesBtn.getChildren()) this.container.add(child);
 
-    this.noBtn = createText(scene, CX() + 60, boxTop + 130, '[Cancel]', {
-      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#aaaacc',
-      backgroundColor: '#1a1a3acc', padding: { x: 10, y: 4 },
-    }).setOrigin(0.5);
-    this.container.add(this.noBtn);
-    const noZone = scene.add.rectangle(CX() + 60, boxTop + 130, 90, 44, 0xffffff, 0).setScrollFactor(0).setDepth(251);
-    this.container.add(noZone);
-    this.noBtnZone = noZone;
+    this.noBtn = new UiButton(scene, CX() + 60, boxTop + 130, 'Cancel', 90, 36, () => {
+      this.selectedYes = false;
+      this.hide();
+    }, { color: '#aaaacc' });
+    for (const child of this.noBtn.getChildren()) this.container.add(child);
 
     this.footerText = createText(scene, CX(), boxTop + 190, '[← →] switch  [SPACE] confirm  [ESC] cancel', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#8a7a9a',
@@ -99,17 +87,11 @@ export class ConfirmPopup {
     this.messageText.setPosition(CX(), boxTop + 50);
     this.subText.setPosition(CX(), boxTop + 80);
     this.yesBtn.setPosition(CX() - 60, boxTop + 130);
-    this.yesBtnZone.setPosition(CX() - 60, boxTop + 130);
     this.noBtn.setPosition(CX() + 60, boxTop + 130);
-    this.noBtnZone.setPosition(CX() + 60, boxTop + 130);
     this.footerText.setPosition(CX(), boxTop + 190);
 
     if (this.visible) {
-      this.popupBg.clear();
-      this.popupBg.fillStyle(0x0a0a1a, 0.95);
-      this.popupBg.fillRoundedRect(CX() - ConfirmPopup.BOX_W / 2, boxTop, ConfirmPopup.BOX_W, ConfirmPopup.BOX_H, 10);
-      this.popupBg.lineStyle(2, 0x6a5a8a);
-      this.popupBg.strokeRoundedRect(CX() - ConfirmPopup.BOX_W / 2, boxTop, ConfirmPopup.BOX_W, ConfirmPopup.BOX_H, 10);
+      NineSliceBg.updateSize(this.popupBg, ConfirmPopup.BOX_W, ConfirmPopup.BOX_H);
     }
   }
 
@@ -126,11 +108,10 @@ export class ConfirmPopup {
     this.selectedYes = false;
 
     const boxTop = this.boxTop();
-    this.popupBg.clear();
-    this.popupBg.fillStyle(0x0a0a1a, 0.95);
-    this.popupBg.fillRoundedRect(CX() - ConfirmPopup.BOX_W / 2, boxTop, ConfirmPopup.BOX_W, ConfirmPopup.BOX_H, 10);
-    this.popupBg.lineStyle(2, 0x6a5a8a);
-    this.popupBg.strokeRoundedRect(CX() - ConfirmPopup.BOX_W / 2, boxTop, ConfirmPopup.BOX_W, ConfirmPopup.BOX_H, 10);
+
+    this.popupBg = NineSliceBg.modal(this.scene, CX(), boxTop + ConfirmPopup.BOX_H / 2, ConfirmPopup.BOX_W, ConfirmPopup.BOX_H);
+    this.popupBg.setDepth(249);
+    this.container.addAt(this.popupBg, 2);
 
     this.keyHandler = (e: KeyboardEvent) => {
       switch (e.key) {
@@ -149,20 +130,8 @@ export class ConfirmPopup {
         this.hide();
         return;
       }
-      const yesX = CX() - 60, yesY = boxTop + 130, yesW = 80, yesH = 44;
-      if (p.x >= yesX - yesW / 2 && p.x <= yesX + yesW / 2 &&
-          p.y >= yesY - yesH / 2 && p.y <= yesY + yesH / 2) {
-        this.selectedYes = true;
-        this.confirm();
-        return;
-      }
-      const noX = CX() + 60, noY = boxTop + 130, noW = 90, noH = 44;
-      if (p.x >= noX - noW / 2 && p.x <= noX + noW / 2 &&
-          p.y >= noY - noH / 2 && p.y <= noY + noH / 2) {
-        this.selectedYes = false;
-        this.hide();
-        return;
-      }
+      if (this.yesBtn.handleClick(p)) return;
+      if (this.noBtn.handleClick(p)) return;
     };
     this.scene.input.on('pointerdown', this.clickHandler);
 
@@ -178,10 +147,8 @@ export class ConfirmPopup {
   }
 
   private render(): void {
-    this.yesBtn.setStyle({
-      backgroundColor: this.selectedYes ? '#4a2222cc' : '#2a1a1acc',
-      color: this.selectedYes ? '#ff6666' : '#886666',
-    });
+    this.yesBtn.setSelected(this.selectedYes);
+    this.noBtn.setSelected(!this.selectedYes);
   }
 
   private confirm(): void {
@@ -200,6 +167,10 @@ export class ConfirmPopup {
     if (this.clickHandler) {
       this.scene.input.off('pointerdown', this.clickHandler);
       this.clickHandler = null;
+    }
+    if (this.popupBg) {
+      this.popupBg.destroy();
+      (this.popupBg as unknown) = undefined;
     }
     this.scene.tweens.add({
       targets: this.container,
@@ -222,6 +193,8 @@ export class ConfirmPopup {
     if (this.destroyed) return;
     this.destroyed = true;
     this.hide();
+    this.yesBtn.destroy();
+    this.noBtn.destroy();
     this.container.destroy(true);
   }
 }

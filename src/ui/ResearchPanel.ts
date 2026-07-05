@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { gameState, itemDisplayName } from '../systems/GameState';
 import { audio } from '../systems/AudioSystem';
 import { BasePanel } from './BasePanel';
+import { NineSliceBg } from './NineSliceBg';
+import { UiButton } from './UiButton';
 import { VW, VH, CX } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
 
@@ -56,7 +58,7 @@ export class ResearchPanel extends BasePanel {
   private labels: Phaser.GameObjects.Text[] = [];
   private clickZones: Phaser.GameObjects.Zone[] = [];
   private selectionGfx!: Phaser.GameObjects.Graphics;
-  private descBg!: Phaser.GameObjects.Graphics;
+  private descBg!: Phaser.GameObjects.NineSlice | null;
   private descName!: Phaser.GameObjects.Text;
   private descDetail!: Phaser.GameObjects.Text;
   private descStatus!: Phaser.GameObjects.Text;
@@ -81,7 +83,8 @@ export class ResearchPanel extends BasePanel {
     this.selectionGfx = scene.add.graphics();
     this.scrollContainer.add(this.selectionGfx);
 
-    this.descBg = scene.add.graphics().setDepth(206).setScrollFactor(0);
+    this.descBg = NineSliceBg.modal(scene, CX(), 460, VW() - 32, 60);
+    this.descBg.setDepth(206);
     this.container.add(this.descBg);
 
     this.descSprite = scene.add.image(24 + 20, 440 + 28, 'stone_ore').setDepth(207).setScrollFactor(0).setScale(1.5).setVisible(false);
@@ -201,17 +204,10 @@ export class ResearchPanel extends BasePanel {
     this.promptContainer.removeAll(true);
     this.promptContainer.setVisible(true);
 
-    const bg = this.scene.add.graphics();
-    bg.fillStyle(0x0a0a1a, 0.85);
-    bg.fillRect(0, 0, VW(), VH());
-    this.promptContainer.add(bg);
-
     const px = CX(), py = 340, pw = 300, ph = 160;
-    const box = this.scene.add.graphics();
-    box.fillStyle(0x16162a, 0.95);
-    box.fillRoundedRect(px - pw / 2, py - ph / 2, pw, ph, 8);
-    box.lineStyle(1, 0x5a4a7a, 0.6);
-    box.strokeRoundedRect(px - pw / 2, py - ph / 2, pw, ph, 8);
+
+    const box = NineSliceBg.modal(this.scene, px, py, pw, ph);
+    box.setDepth(210);
     this.promptContainer.add(box);
 
     const title = createText(this.scene, px, py - 48, `Research ${node.name}?`, {
@@ -232,38 +228,23 @@ export class ResearchPanel extends BasePanel {
     }).setOrigin(0.5);
     this.promptContainer.add(effectDesc);
 
-    const confirmBg = this.scene.add.graphics();
-    confirmBg.fillStyle(0x1a3a1a, 0.9);
-    confirmBg.fillRoundedRect(px - 90, py + 24, 80, 24, 4);
-    confirmBg.lineStyle(1, 0x44aa44, 0.6);
-    confirmBg.strokeRoundedRect(px - 90, py + 24, 80, 24, 4);
-    this.promptContainer.add(confirmBg);
+    const confirmBtn = new UiButton(this.scene, px - 50, py + 36, 'Confirm', 80, 24, () => {
+      this.executeResearch(node);
+    }, { color: '#88ff88', fontSize: fs(11) });
+    confirmBtn.setDepth(211);
+    for (const c of confirmBtn.getChildren()) this.promptContainer.add(c);
 
-    const confirmText = createText(this.scene, px - 50, py + 36, 'Confirm', {
-      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#88ff88',
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-    this.promptContainer.add(confirmText);
-
-    const cancelBg = this.scene.add.graphics();
-    cancelBg.fillStyle(0x1a1a2e, 0.9);
-    cancelBg.fillRoundedRect(px + 10, py + 24, 80, 24, 4);
-    cancelBg.lineStyle(1, 0x5a4a7a, 0.6);
-    cancelBg.strokeRoundedRect(px + 10, py + 24, 80, 24, 4);
-    this.promptContainer.add(cancelBg);
-
-    const cancelText = createText(this.scene, px + 50, py + 36, 'Cancel', {
-      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b8a8d8',
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-    this.promptContainer.add(cancelText);
+    const cancelBtn = new UiButton(this.scene, px + 50, py + 36, 'Cancel', 80, 24, () => {
+      this.state = 'idle';
+      this.pendingNode = null;
+      this.render();
+    }, { color: '#b8a8d8', fontSize: fs(11) });
+    cancelBtn.setDepth(211);
+    for (const c of cancelBtn.getChildren()) this.promptContainer.add(c);
 
     this.promptPointerHandler = (pointer: Phaser.Input.Pointer) => {
-      if (confirmText.getBounds().contains(pointer.x, pointer.y)) {
-        this.executeResearch(node);
-      } else if (cancelText.getBounds().contains(pointer.x, pointer.y)) {
-        this.state = 'idle';
-        this.pendingNode = null;
-        this.render();
-      }
+      if (confirmBtn.handleClick(pointer)) return;
+      if (cancelBtn.handleClick(pointer)) return;
     };
     this.scene.input.on('pointerdown', this.promptPointerHandler);
   }
@@ -419,12 +400,9 @@ export class ResearchPanel extends BasePanel {
     const level = gameState.getResearchLevel(node.id);
     const prereqDone = !node.prereqId || gameState.getResearchLevel(node.prereqId) >= 1;
 
-    const bx = 16, by = 430, bw = VW() - 32, bh = 60;
-    this.descBg.clear();
-    this.descBg.fillStyle(0x12121e, 0.85);
-    this.descBg.fillRoundedRect(bx, by, bw, bh, 5);
-    this.descBg.lineStyle(1, 0x2a2a3a, 0.5);
-    this.descBg.strokeRoundedRect(bx, by, bw, bh, 5);
+    const bw = VW() - 32, bh = 60;
+    NineSliceBg.updateSize(this.descBg, bw, bh);
+    this.descBg!.setPosition(CX(), 460);
 
     this.descSprite.setTexture(node.spriteKey).setVisible(true).clearTint();
     if (!prereqDone) {

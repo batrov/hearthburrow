@@ -161,6 +161,14 @@ export class BootScene extends Phaser.Scene {
     this.load.audio('music_tavern', 'music/tavern.mp3');
     this.load.setPath('assets/sprites');
 
+    // UI 9-slice textures
+    this.load.image('ui_panel_bg', 'ui/ui_panel_bg.png');
+    this.load.image('ui_card_bg', 'ui/ui_card_bg.png');
+    this.load.image('ui_slot_bg', 'ui/ui_slot_bg.png');
+    this.load.image('ui_modal_bg', 'ui/ui_modal_bg.png');
+    this.load.image('ui_btn_bg', 'ui/ui_btn_bg.png');
+    this.load.image('ui_btn_sm', 'ui/ui_btn_sm.png');
+
     this.load.on('progress', (progress: number) => {
       const pct = Math.floor(progress * 100);
       this.loadingBar.clear();

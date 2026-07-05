@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
 import { itemIconKey, itemDisplayName } from '../systems/GameState';
-import { VW, VH, CX } from '../systems/Viewport';
+import { VW, VH, CX, CY } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { NineSliceBg } from './NineSliceBg';
+import { UiButton } from './UiButton';
 
 export class ConsumablePicker {
   private scene: Phaser.Scene;
@@ -12,16 +14,16 @@ export class ConsumablePicker {
   private maxQty = 0;
   private onConfirmCb: ((id: string, qty: number) => void) | null = null;
 
-  private overlay: Phaser.GameObjects.Graphics;
+  private overlay: Phaser.GameObjects.NineSlice;
   private blocker: Phaser.GameObjects.Rectangle;
-  private popupBg: Phaser.GameObjects.Graphics;
+  private popupBg!: Phaser.GameObjects.NineSlice;
   private icon: Phaser.GameObjects.Image;
   private nameText: Phaser.GameObjects.Text;
   private descText: Phaser.GameObjects.Text;
   private stashText: Phaser.GameObjects.Text;
   private qtyText: Phaser.GameObjects.Text;
-  private minusBtn: Phaser.GameObjects.Text;
-  private plusBtn: Phaser.GameObjects.Text;
+  private minusBtn: UiButton;
+  private plusBtn: UiButton;
   private footerText: Phaser.GameObjects.Text;
   private keyHandler: ((e: KeyboardEvent) => void) | null = null;
   private clickHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
@@ -37,9 +39,8 @@ export class ConsumablePicker {
     this.scene = scene;
     this.container = scene.add.container(0, 0).setDepth(250).setScrollFactor(0).setVisible(false);
 
-    this.overlay = scene.add.graphics();
-    this.overlay.fillStyle(0x000000, 0.55);
-    this.overlay.fillRect(0, 0, VW(), VH());
+    this.overlay = NineSliceBg.panel(this.scene, CX(), CY(), VW(), VH());
+    this.overlay.setDepth(249);
     this.container.add(this.overlay);
 
     this.blocker = scene.add.rectangle(CX(), VH() / 2, VW(), VH(), 0x000000, 0)
@@ -48,8 +49,15 @@ export class ConsumablePicker {
     this.blocker.on('pointerdown', () => {});
     this.container.add(this.blocker);
 
-    this.popupBg = scene.add.graphics();
-    this.container.add(this.popupBg);
+    this.minusBtn = new UiButton(scene, CX() - 60, 370, '\u2212', 44, 36, () => { this.adjustQty(-1); }, {
+      color: '#cc8888', fontSize: fs(22),
+    });
+    for (const child of this.minusBtn.getChildren()) this.container.add(child);
+
+    this.plusBtn = new UiButton(scene, CX() + 60, 370, '+', 44, 36, () => { this.adjustQty(1); }, {
+      color: '#88cc88', fontSize: fs(22),
+    });
+    for (const child of this.plusBtn.getChildren()) this.container.add(child);
 
     this.icon = scene.add.image(CX(), 220, 'item_stamina_potion').setScale(2);
     this.container.add(this.icon);
@@ -73,16 +81,6 @@ export class ConsumablePicker {
       fontSize: fs(24), fontFamily: 'Inter', resolution: 4, color: '#ffddaa',
     }).setOrigin(0.5);
     this.container.add(this.qtyText);
-
-    this.minusBtn = createText(scene, CX() - 60, 370, '[−]', {
-      fontSize: fs(22), fontFamily: 'Inter', resolution: 4, color: '#cc8888',
-    }).setOrigin(0.5);
-    this.container.add(this.minusBtn);
-
-    this.plusBtn = createText(scene, CX() + 60, 370, '[+]', {
-      fontSize: fs(22), fontFamily: 'Inter', resolution: 4, color: '#88cc88',
-    }).setOrigin(0.5);
-    this.container.add(this.plusBtn);
 
     this.footerText = createText(scene, CX(), 440, '[← →] adjust  [SPACE] confirm  [ESC] cancel', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#8a7a9a',
@@ -119,13 +117,8 @@ export class ConsumablePicker {
         this.confirm();
         return;
       }
-      const btnY = popY + 198;
-      const hw = 22, hh = 22;
-      if (p.x >= CX() - 60 - hw && p.x <= CX() - 60 + hw && p.y >= btnY - hh && p.y <= btnY + hh) {
-        this.adjustQty(-1);
-      } else if (p.x >= CX() + 60 - hw && p.x <= CX() + 60 + hw && p.y >= btnY - hh && p.y <= btnY + hh) {
-        this.adjustQty(1);
-      }
+      if (this.minusBtn.handleClick(p)) return;
+      if (this.plusBtn.handleClick(p)) return;
     };
     this.scene.input.on('pointerdown', this.clickHandler);
 
@@ -143,12 +136,12 @@ export class ConsumablePicker {
   private render(): void {
     const popH = 310;
     const popY = Math.floor((VH() - popH) / 2);
+    const popCx = CX();
+    const popCy = popY + popH / 2;
 
-    this.popupBg.clear();
-    this.popupBg.fillStyle(0x0a0a1a, 0.95);
-    this.popupBg.fillRoundedRect(CX() - 160, popY, 320, popH, 10);
-    this.popupBg.lineStyle(2, 0x6a5a8a);
-    this.popupBg.strokeRoundedRect(CX() - 160, popY, 320, popH, 10);
+    this.popupBg = NineSliceBg.modal(this.scene, popCx, popCy, 320, popH);
+    this.popupBg.setDepth(249);
+    this.container.addAt(this.popupBg, 2);
 
     const iconKey = itemIconKey(this.consumableId);
     if (this.scene.textures.exists(iconKey)) {
@@ -169,10 +162,10 @@ export class ConsumablePicker {
     this.qtyText.setPosition(CX(), popY + 198);
 
     this.minusBtn.setPosition(CX() - 60, popY + 198);
-    this.minusBtn.setAlpha(this.currentQty <= 0 ? 0.3 : 1);
+    this.minusBtn.setEnabled(this.currentQty > 0);
 
     this.plusBtn.setPosition(CX() + 60, popY + 198);
-    this.plusBtn.setAlpha(this.currentQty >= this.maxQty ? 0.3 : 1);
+    this.plusBtn.setEnabled(this.currentQty < this.maxQty);
 
     this.footerText.setPosition(CX(), popY + popH - 18);
   }
@@ -199,6 +192,10 @@ export class ConsumablePicker {
     if (this.clickHandler) {
       this.scene.input.off('pointerdown', this.clickHandler);
       this.clickHandler = null;
+    }
+    if (this.popupBg) {
+      this.popupBg.destroy();
+      (this.popupBg as unknown) = undefined;
     }
     this.scene.tweens.add({
       targets: this.container,

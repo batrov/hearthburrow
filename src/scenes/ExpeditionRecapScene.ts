@@ -4,6 +4,7 @@ import { VW, VH, CX, CY } from '../systems/Viewport';
 import { viewportManager } from '../systems/ViewportManager';
 import { textStyle, fs, createText } from '../systems/Font';
 import { SCENES } from '../constants/scenes';
+import { NineSliceBg } from '../ui/NineSliceBg';
 
 export class ExpeditionRecapScene extends Phaser.Scene {
   private scrollY: number = 0;
@@ -62,11 +63,8 @@ export class ExpeditionRecapScene extends Phaser.Scene {
     const viewportW = panelW - 12;
     const viewportH = panelH - 34;
 
-    const bg = this.add.graphics();
-    bg.fillStyle(0x12121e, 0.8);
-    bg.fillRoundedRect(panelX, panelY, panelW, panelH, 8);
-    bg.lineStyle(1, 0x2a2a3a, 0.6);
-    bg.strokeRoundedRect(panelX, panelY, panelW, panelH, 8);
+    const bg = NineSliceBg.modal(this, panelX + panelW / 2, panelY + panelH / 2, panelW, panelH);
+    bg.setAlpha(0.8);
 
     this.contentContainer = this.add.container(0, 0).setVisible(false);
 
@@ -167,11 +165,8 @@ export class ExpeditionRecapScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     const btnX = CX() - 80, btnY = hintY + 20, btnW = 160, btnH = 28;
-    const btnBg = this.add.graphics();
-    btnBg.fillStyle(0x1a1a2e, 0.9);
-    btnBg.fillRoundedRect(btnX, btnY, btnW, btnH, 6);
-    btnBg.lineStyle(1, 0x5a4a7a, 0.6);
-    btnBg.strokeRoundedRect(btnX, btnY, btnW, btnH, 6);
+    const btnBg = NineSliceBg.btn(this, btnX + btnW / 2, btnY + btnH / 2, btnW, btnH);
+    btnBg.setAlpha(0.9);
 
     const btnText = createText(this, btnX + btnW / 2, btnY + btnH / 2, 'Return to Homeland', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b8a8d8',

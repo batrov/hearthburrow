@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
-import { VW, VH, CX } from '../systems/Viewport';
+import { VW, VH, CX, CY } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { NineSliceBg } from './NineSliceBg';
+import { UiButton } from './UiButton';
 
 export class SeedEntryPopup {
   private scene: Phaser.Scene;
@@ -10,15 +12,14 @@ export class SeedEntryPopup {
   private onConfirmCb: ((seed: string) => void) | null = null;
   private onCancelCb: (() => void) | null = null;
 
-  private overlay: Phaser.GameObjects.Graphics;
+  private overlay: Phaser.GameObjects.NineSlice;
   private blocker: Phaser.GameObjects.Rectangle;
-  private popupBg: Phaser.GameObjects.Graphics;
+  private popupBg!: Phaser.GameObjects.NineSlice;
   private titleText: Phaser.GameObjects.Text;
   private seedText: Phaser.GameObjects.Text;
   private cursorText: Phaser.GameObjects.Text;
   private hintText: Phaser.GameObjects.Text;
-  private randomizeBtn: Phaser.GameObjects.Text;
-  private randomizeZone: Phaser.GameObjects.Rectangle;
+  private randomizeBtn: UiButton;
   private keyHandler: ((e: KeyboardEvent) => void) | null = null;
   private clickHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
   private destroyed = false;
@@ -29,9 +30,8 @@ export class SeedEntryPopup {
     this.scene = scene;
     this.container = scene.add.container(0, 0).setDepth(250).setScrollFactor(0).setVisible(false);
 
-    this.overlay = scene.add.graphics();
-    this.overlay.fillStyle(0x000000, 0.55);
-    this.overlay.fillRect(0, 0, VW(), VH());
+    this.overlay = NineSliceBg.panel(this.scene, CX(), CY(), VW(), VH());
+    this.overlay.setDepth(249);
     this.container.add(this.overlay);
 
     this.blocker = scene.add.rectangle(CX(), VH() / 2, VW(), VH(), 0x000000, 0)
@@ -40,9 +40,6 @@ export class SeedEntryPopup {
       .setData('isUI', true);
     this.blocker.on('pointerdown', () => {});
     this.container.add(this.blocker);
-
-    this.popupBg = scene.add.graphics();
-    this.container.add(this.popupBg);
 
     this.titleText = createText(scene, CX(), 170, 'Enter Run Seed', {
       fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
@@ -60,14 +57,10 @@ export class SeedEntryPopup {
     this.cursorText.setVisible(false);
     this.container.add(this.cursorText);
 
-    this.randomizeBtn = createText(scene, CX(), 270, '[ RANDOMIZE ]', {
-      fontSize: fs(13), fontFamily: 'Inter', resolution: 4, color: '#88aa88',
-    }).setOrigin(0.5);
-    this.container.add(this.randomizeBtn);
-    const randZone = scene.add.rectangle(CX(), 270, 130, 44, 0xffffff, 0)
-      .setScrollFactor(0).setDepth(251);
-    this.container.add(randZone);
-    this.randomizeZone = randZone;
+    this.randomizeBtn = new UiButton(scene, CX(), 270, '[ RANDOMIZE ]', 130, 44, () => { this.randomize(); }, {
+      color: '#88aa88', fontSize: fs(13),
+    });
+    for (const child of this.randomizeBtn.getChildren()) this.container.add(child);
 
     this.hintText = createText(scene, CX(), 308, '', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#8a7a9a', align: 'center',
@@ -84,11 +77,9 @@ export class SeedEntryPopup {
     this.onConfirmCb = onConfirm;
     this.onCancelCb = onCancel ?? null;
 
-    this.popupBg.clear();
-    this.popupBg.fillStyle(0x0a0a1a, 0.95);
-    this.popupBg.fillRoundedRect(CX() - 160, 140, 320, 200, 10);
-    this.popupBg.lineStyle(2, 0x6a5a8a);
-    this.popupBg.strokeRoundedRect(CX() - 160, 140, 320, 200, 10);
+    this.popupBg = NineSliceBg.modal(this.scene, CX(), 240, 320, 200);
+    this.popupBg.setDepth(249);
+    this.container.addAt(this.popupBg, 2);
 
     this.hintText.setText('Type to edit  [SPACE] done  [ESC] cancel');
 
@@ -117,11 +108,7 @@ export class SeedEntryPopup {
         this.confirm();
         return;
       }
-      const randBounds = this.randomizeZone.getBounds();
-      if (p.x >= randBounds.x && p.x <= randBounds.x + randBounds.width &&
-          p.y >= randBounds.y && p.y <= randBounds.y + randBounds.height) {
-        this.randomize();
-      }
+      if (this.randomizeBtn.handleClick(p)) return;
     };
     this.scene.input.on('pointerdown', this.clickHandler);
 
@@ -174,6 +161,10 @@ export class SeedEntryPopup {
       this.scene.input.off('pointerdown', this.clickHandler);
       this.clickHandler = null;
     }
+    if (this.popupBg) {
+      this.popupBg.destroy();
+      (this.popupBg as unknown) = undefined;
+    }
     this.scene.tweens.add({
       targets: this.container,
       alpha: 0,
@@ -193,6 +184,7 @@ export class SeedEntryPopup {
     if (this.destroyed) return;
     this.destroyed = true;
     this.hide();
+    this.randomizeBtn.destroy();
     this.container.destroy(true);
   }
 }

@@ -4,13 +4,15 @@ import { audio } from '../systems/AudioSystem';
 import { BasePanel } from './BasePanel';
 import { VW, VH, CX } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { NineSliceBg } from './NineSliceBg';
+import { UiButton } from './UiButton';
 
 export class FarmPanel extends BasePanel {
   private readonly MAX_FARM_PLOTS = 6;
   private bg: Phaser.GameObjects.Graphics;
   private text: Phaser.GameObjects.Text;
-  private plantBtn: Phaser.GameObjects.Text;
-  private harvestBtn: Phaser.GameObjects.Text;
+  private plantBtn!: UiButton;
+  private harvestBtn!: UiButton;
 
   constructor(scene: Phaser.Scene) {
     super(scene);
@@ -24,25 +26,32 @@ export class FarmPanel extends BasePanel {
     }).setOrigin(0.5, 0);
     this.container.add(this.text);
 
-    this.plantBtn = createText(scene, CX() - 80, VH() - 80, '[PLANT]', {
-      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#44cc66',
-      backgroundColor: '#1a2a1a', padding: { x: 12, y: 6 },
-    }).setOrigin(0.5).setDepth(210).setScrollFactor(0);
-    this.container.add(this.plantBtn);
-    const plantZone = scene.add.rectangle(CX() - 80, VH() - 80, 80, 44, 0xffffff, 0)
-      .setScrollFactor(0).setInteractive({ useHandCursor: true }).setDepth(210);
-    plantZone.on('pointerdown', () => this.plant());
-    this.container.add(plantZone);
+    const plantBtn = new UiButton(scene, CX() - 80, VH() - 80, 'PLANT', 80, 28,
+      () => this.plant(),
+      { color: '#44cc66', fontSize: fs(12) }
+    );
+    plantBtn.setDepth(210);
+    for (const c of plantBtn.getChildren()) this.container.add(c);
+    this.plantBtn = plantBtn;
 
-    this.harvestBtn = createText(scene, CX() + 80, VH() - 80, '[HARVEST]', {
-      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#ccaa44',
-      backgroundColor: '#2a1a0a', padding: { x: 12, y: 6 },
-    }).setOrigin(0.5).setDepth(210).setScrollFactor(0);
-    this.container.add(this.harvestBtn);
-    const harvestZone = scene.add.rectangle(CX() + 80, VH() - 80, 100, 44, 0xffffff, 0)
-      .setScrollFactor(0).setInteractive({ useHandCursor: true }).setDepth(210);
-    harvestZone.on('pointerdown', () => this.harvest());
-    this.container.add(harvestZone);
+    const harvestBtn = new UiButton(scene, CX() + 80, VH() - 80, 'HARVEST', 100, 28,
+      () => this.harvest(),
+      { color: '#ccaa44', fontSize: fs(12) }
+    );
+    harvestBtn.setDepth(210);
+    for (const c of harvestBtn.getChildren()) this.container.add(c);
+    this.harvestBtn = harvestBtn;
+
+    this.scene.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      if (!this._visible) return;
+      this.plantBtn.handleClick(p);
+      this.harvestBtn.handleClick(p);
+    });
+    this.scene.input.on('pointerup', (p: Phaser.Input.Pointer) => {
+      if (!this._visible) return;
+      this.plantBtn.handleRelease(p);
+      this.harvestBtn.handleRelease(p);
+    });
 
     this.addCloseButton(VW() - 40, 40);
   }

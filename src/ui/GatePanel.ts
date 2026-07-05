@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { BasePanel } from './BasePanel';
+import { NineSliceBg } from './NineSliceBg';
+import { UiButton } from './UiButton';
 import { gameState } from '../systems/GameState';
 import { EquipmentPicker, PickerOption } from './EquipmentPicker';
 import { ConsumablePicker } from './ConsumablePicker';
@@ -53,21 +55,20 @@ export class GatePanel extends BasePanel {
   private gateSeed = '';
   private resetConfirm = false;
 
-  private bg!: Phaser.GameObjects.Graphics;
   private panelBlocker!: Phaser.GameObjects.Rectangle;
   private title!: Phaser.GameObjects.Text;
   private portraitSprite!: Phaser.GameObjects.Image;
   private statTexts: Phaser.GameObjects.Text[] = [];
 
   private equipSlots: {
-    bg: Phaser.GameObjects.Graphics;
+    bg: Phaser.GameObjects.NineSlice;
     icon: Phaser.GameObjects.Image;
     badge: Phaser.GameObjects.Text;
     zone: Phaser.GameObjects.Rectangle;
   }[] = [];
 
   private consSlots: {
-    bg: Phaser.GameObjects.Graphics;
+    bg: Phaser.GameObjects.NineSlice;
     icon: Phaser.GameObjects.Image;
     badge: Phaser.GameObjects.Text;
     zone: Phaser.GameObjects.Rectangle;
@@ -75,11 +76,10 @@ export class GatePanel extends BasePanel {
 
   private settingsTexts: Phaser.GameObjects.Text[] = [];
   private settingsZones: Phaser.GameObjects.Rectangle[] = [];
-  private descBg!: Phaser.GameObjects.Graphics;
+  private descBg!: Phaser.GameObjects.NineSlice;
   private descLines: Phaser.GameObjects.Text[] = [];
   private footerText!: Phaser.GameObjects.Text;
-  private embarkBtn!: Phaser.GameObjects.Text;
-  private embarkBtnZone!: Phaser.GameObjects.Rectangle;
+  private embarkBtn!: UiButton;
 
   // Equipment slot grid, CX()-relative (tuned originally for CX()=195 at
   // VW()=390) so the rightmost slots don't clip off-screen at the narrowest
@@ -113,8 +113,9 @@ export class GatePanel extends BasePanel {
   }
 
   private buildUI(): void {
-    this.bg = this.scene.add.graphics();
-    this.container.add(this.bg);
+    this.overlayPanel = NineSliceBg.panel(this.scene, CX(), VH() / 2, VW(), VH());
+    this.overlayPanel.setDepth(199).setAlpha(0.85);
+    this.container.add(this.overlayPanel);
 
     this.panelBlocker = this.scene.add.rectangle(CX(), VH() / 2, VW(), VH(), 0x000000, 0)
       .setScrollFactor(0).setData('isUI', true).setInteractive();
@@ -140,7 +141,9 @@ export class GatePanel extends BasePanel {
 
     const equipYX = this.equipYX();
     for (let i = 0; i < 5; i++) {
-      const bg = this.scene.add.graphics();
+      const slotSize = i === 0 ? 104 : 52;
+      const bg = NineSliceBg.slot(this.scene, equipYX[i].x, equipYX[i].y, slotSize, slotSize);
+      bg.setDepth(200);
       this.container.add(bg);
       const iconScale = i === 0 ? 1.6 : 0.8;
       const icon = this.scene.add.image(equipYX[i].x, equipYX[i].y, 'item_pickaxe_1').setScale(iconScale);
@@ -151,8 +154,7 @@ export class GatePanel extends BasePanel {
       }).setOrigin(0.5);
       badge.setVisible(false);
       this.container.add(badge);
-      const zoneSize = i === 0 ? 104 : 52;
-      const zone = this.scene.add.rectangle(equipYX[i].x, equipYX[i].y, zoneSize, zoneSize, 0xffffff, 0)
+      const zone = this.scene.add.rectangle(equipYX[i].x, equipYX[i].y, slotSize, slotSize, 0xffffff, 0)
         .setScrollFactor(0);
       zone.setVisible(false);
       this.container.add(zone);
@@ -169,7 +171,8 @@ export class GatePanel extends BasePanel {
       { x: CX() + 76, y: 302 },
     ];
     for (let i = 0; i < 3; i++) {
-      const bg = this.scene.add.graphics();
+      const bg = NineSliceBg.slot(this.scene, consYX[i].x, consYX[i].y, 64, 42);
+      bg.setDepth(200);
       this.container.add(bg);
       const icon = this.scene.add.image(consYX[i].x, consYX[i].y, 'item_stamina_potion').setScale(0.8);
       icon.setVisible(false);
@@ -207,19 +210,14 @@ export class GatePanel extends BasePanel {
       fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
     }).setOrigin(0.5));
 
-    this.embarkBtn = createText(this.scene, CX(), 462, '[  EMBARK  ]', {
-      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#ffcc44',
-      backgroundColor: '#442a1acc', padding: { x: 16, y: 4 },
-    }).setOrigin(0.5).setScrollFactor(0);
-    this.embarkBtn.setVisible(false);
-    this.container.add(this.embarkBtn);
-    this.embarkBtnZone = this.scene.add.rectangle(CX(), 442, 140, 44, 0xffffff, 0)
-      .setScrollFactor(0).setInteractive({ useHandCursor: true });
-    this.embarkBtnZone.on('pointerdown', () => this.embark());
-    this.embarkBtnZone.setVisible(false);
-    this.container.add(this.embarkBtnZone);
+    this.embarkBtn = new UiButton(this.scene, CX(), 462, 'EMBARK', 140, 44, () => this.embark(), {
+      color: '#ffcc44', fontSize: fs(14),
+    });
+    this.embarkBtn.setDepth(210).setVisible(false);
+    for (const child of this.embarkBtn.getChildren()) this.container.add(child);
 
-    this.descBg = this.scene.add.graphics();
+    this.descBg = NineSliceBg.modal(this.scene, CX(), 511, 340, 34);
+    this.descBg.setDepth(200);
     this.container.add(this.descBg);
 
     for (let i = 0; i < 2; i++) {
@@ -267,7 +265,6 @@ export class GatePanel extends BasePanel {
 
     this.render();
     this.embarkBtn.setVisible(true);
-    this.embarkBtnZone.setVisible(true);
     this.equipSlots.forEach(s => s.zone.setVisible(true));
     this.consSlots.forEach(s => s.zone.setVisible(true));
     this.settingsZones.forEach(z => z.setVisible(true));
@@ -278,11 +275,7 @@ export class GatePanel extends BasePanel {
           this.confirmPopup.isVisible()) {
         return;
       }
-      const eb = this.embarkBtn.getBounds();
-      if (eb.contains(p.x, p.y)) {
-        if (this.isVisible()) this.embark();
-        return;
-      }
+      if (this.embarkBtn.handleClick(p)) return;
       for (let i = 0; i < 5; i++) {
         const z = this.equipSlots[i].zone;
         if (z.visible) {
@@ -322,7 +315,6 @@ export class GatePanel extends BasePanel {
   hide(): void {
     this.resetConfirm = false;
     this.embarkBtn.setVisible(false);
-    this.embarkBtnZone.setVisible(false);
     this.equipSlots.forEach(s => s.zone.setVisible(false));
     this.consSlots.forEach(s => s.zone.setVisible(false));
     this.settingsZones.forEach(z => z.setVisible(false));
@@ -345,11 +337,7 @@ export class GatePanel extends BasePanel {
   }
 
   private renderBackground(): void {
-    this.bg.clear();
-    this.bg.fillStyle(0x0a0a1a, 0.88);
-    this.bg.fillRect(0, 0, VW(), VH());
-    this.bg.lineStyle(1, 0x3a3a4a, 0.4);
-    this.bg.strokeRect(4, 4, VW() - 8, VH() - 8);
+    NineSliceBg.updateSize(this.overlayPanel, VW(), VH());
   }
 
   private renderStats(): void {
@@ -380,8 +368,6 @@ export class GatePanel extends BasePanel {
       const baseX = equipYX[i].x;
       const baseY = equipYX[i].y;
       const half = i === 0 ? 52 : 26;
-
-      slot.bg.clear();
 
       let opt: { id: string; tier?: number; name?: string; runs?: number } | null = null;
       let iconKey = '';
@@ -432,26 +418,15 @@ export class GatePanel extends BasePanel {
         slot.badge.setVisible(!!badgeText);
         slot.badge.setColor(isSelected ? '#ffddaa' : '#999999');
 
-        if (isSelected) {
-          slot.bg.fillStyle(0x3a3a5a, 0.6);
-          slot.bg.fillRoundedRect(baseX - half, baseY - half, half * 2, half * 2, 5);
-          slot.bg.lineStyle(1, 0x8a7aaa);
-          slot.bg.strokeRoundedRect(baseX - half, baseY - half, half * 2, half * 2, 5);
-        } else {
-          slot.bg.fillStyle(0x1a1a2a, 0.3);
-          slot.bg.lineStyle(1, 0x3a3a4a);
-          slot.bg.fillRoundedRect(baseX - half, baseY - half, half * 2, half * 2, 5);
-          slot.bg.strokeRoundedRect(baseX - half, baseY - half, half * 2, half * 2, 5);
-        }
+        slot.bg.setTint(isSelected ? 0x8a7aaa : 0x3a3a4a);
+        slot.bg.setAlpha(isSelected ? 0.8 : 0.5);
       } else {
         const placeholderKey = ['item_pickaxe_1', 'item_ring_critical', 'item_ring_critical', 'item_boots_stamina_bronze', 'item_lantern_bronze'][i];
         slot.icon.setTexture(placeholderKey).setAlpha(0.15);
         slot.icon.setVisible(true);
         slot.badge.setVisible(false);
-        slot.bg.fillStyle(0x1a1a2a, 0.3);
-        slot.bg.lineStyle(1, 0x3a3a4a);
-        slot.bg.fillRoundedRect(baseX - half, baseY - half, half * 2, half * 2, 5);
-        slot.bg.strokeRoundedRect(baseX - half, baseY - half, half * 2, half * 2, 5);
+        slot.bg.setTint(0x3a3a4a);
+        slot.bg.setAlpha(0.3);
       }
     }
   }
@@ -480,18 +455,8 @@ export class GatePanel extends BasePanel {
       slot.badge.setVisible(true);
       slot.badge.setColor(isSelected ? '#ffddaa' : (qty > 0 ? '#88cc88' : '#666666'));
 
-      slot.bg.clear();
-      if (isSelected) {
-        slot.bg.fillStyle(0x3a3a5a, 0.6);
-        slot.bg.fillRoundedRect(baseX - 32, baseY - 21, 64, 42, 5);
-        slot.bg.lineStyle(1, 0x8a7aaa);
-        slot.bg.strokeRoundedRect(baseX - 32, baseY - 21, 64, 42, 5);
-      } else {
-        slot.bg.fillStyle(0x1a1a2a, 0.3);
-        slot.bg.lineStyle(1, 0x3a3a4a);
-        slot.bg.fillRoundedRect(baseX - 32, baseY - 21, 64, 42, 5);
-        slot.bg.strokeRoundedRect(baseX - 32, baseY - 21, 64, 42, 5);
-      }
+      slot.bg.setTint(isSelected ? 0x8a7aaa : 0x3a3a4a);
+      slot.bg.setAlpha(isSelected ? 0.8 : 0.5);
     }
   }
 
@@ -518,11 +483,8 @@ export class GatePanel extends BasePanel {
   }
 
   private renderDescription(): void {
-    this.descBg.clear();
-    this.descBg.fillStyle(0x1a1a2a, 0.7);
-    this.descBg.fillRoundedRect(CX() - 170, 494, 340, 34, 5);
-    this.descBg.lineStyle(1, 0x3a3a5a);
-    this.descBg.strokeRoundedRect(CX() - 170, 494, 340, 34, 5);
+    NineSliceBg.updateSize(this.descBg, 340, 34);
+    this.descBg.setPosition(CX(), 511);
 
     const lines = this.getDescriptionLines();
     for (let i = 0; i < 2; i++) {
@@ -899,10 +861,13 @@ export class GatePanel extends BasePanel {
     super.onViewportResize();
     this.panelBlocker.setPosition(CX(), VH() / 2).setSize(VW(), VH());
     this.footerText.setPosition(CX(), VH() - 30);
+    this.embarkBtn.setPosition(CX(), 462);
+    NineSliceBg.updateSize(this.overlayPanel, VW(), VH());
 
     const equipYX = this.equipYX();
     for (let i = 0; i < 5; i++) {
       const slot = this.equipSlots[i];
+      slot.bg.setPosition(equipYX[i].x, equipYX[i].y);
       slot.icon.setPosition(equipYX[i].x, equipYX[i].y);
       slot.badge.setPosition(equipYX[i].x, equipYX[i].y + 26);
       slot.zone.setPosition(equipYX[i].x, equipYX[i].y);

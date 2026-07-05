@@ -4,6 +4,8 @@ import { audio } from '../systems/AudioSystem';
 import { BasePanel } from './BasePanel';
 import { VW, VH, CX } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
+import { NineSliceBg } from './NineSliceBg';
+import { UiButton } from './UiButton';
 
 interface TradeItem {
   id: string;
@@ -95,13 +97,6 @@ export class TradePanel extends BasePanel {
   }
 
   private render(): void {
-    this.overlay!.clear();
-    this.overlay!.fillStyle(0x0a0a1a, 0.92);
-    this.overlay!.fillRect(0, 0, VW(), VH());
-    const pad = 16;
-    this.overlay!.lineStyle(1, 0x3a3a4a, 0.5);
-    this.overlay!.strokeRect(pad, pad, VW() - pad * 2, VH() - pad * 2);
-
     this.clickZones.forEach(z => z.destroy());
     this.clickZones = [];
 

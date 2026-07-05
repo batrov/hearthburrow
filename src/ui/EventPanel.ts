@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { audio } from '../systems/AudioSystem';
 import { BasePanel } from './BasePanel';
+import { NineSliceBg } from './NineSliceBg';
 import { VW, VH, CX } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
 
@@ -103,11 +104,10 @@ export class EventPanel extends BasePanel {
     this.currentChoices = config.choices;
 
     this.overlay!.clear();
-    this.overlay!.fillStyle(0x0a0a1a, 0.9);
-    this.overlay!.fillRect(0, 0, VW(), VH());
-
-    this.overlay!.lineStyle(2, 0x5a4a7a, 0.6);
-    this.overlay!.strokeRoundedRect(CX() - 170, 80, 340, VH() - 160, 10);
+    const boxH = VH() - 160;
+    const modal = NineSliceBg.modal(this.scene, CX(), 80 + boxH / 2, 340, boxH);
+    modal.setDepth(199);
+    this.container.addAt(modal, 1);
 
     this.titleText.setText(config.title);
     this.descText.setText(config.description);

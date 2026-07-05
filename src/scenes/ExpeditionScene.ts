@@ -25,6 +25,8 @@ import {
 } from '../systems/Viewport';
 import { viewportManager } from '../systems/ViewportManager';
 import { textStyle, fs, createText } from '../systems/Font';
+import { NineSliceBg } from '../ui/NineSliceBg';
+import { UiButton } from '../ui/UiButton';
 
 const BIOMES = ['FOREST', 'CAVE', 'ICE', 'LAVA', 'RUINS'];
 
@@ -127,7 +129,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private selectedObject!: Phaser.GameObjects.Graphics;
   private facingHighlight!: Phaser.GameObjects.Graphics;
   private portraitSprite!: Phaser.GameObjects.Image;
-  private staminaBg!: Phaser.GameObjects.Graphics;
+  private staminaBg!: Phaser.GameObjects.NineSlice;
   private staminaBarGfx!: Phaser.GameObjects.Graphics;
   private staminaAnimGfx!: Phaser.GameObjects.Graphics;
   private staminaValueText!: Phaser.GameObjects.Text;
@@ -138,8 +140,8 @@ export class ExpeditionScene extends Phaser.Scene {
   private invBtnSprite!: Phaser.GameObjects.Image;
   private invBtnRing!: Phaser.GameObjects.Graphics;
   private invSlotText!: Phaser.GameObjects.Text;
-  private pickBg!: Phaser.GameObjects.Graphics;
-  private invBg!: Phaser.GameObjects.Graphics;
+  private pickBg!: Phaser.GameObjects.NineSlice;
+  private invBg!: Phaser.GameObjects.NineSlice;
   private invZone!: Phaser.GameObjects.Rectangle;
   private actionBtnHit!: Phaser.GameObjects.Rectangle;
   private _onViewportResize?: () => void;
@@ -184,6 +186,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private _stairCancelBtn?: Phaser.GameObjects.Text;
   private _stairPointerHandler?: (pointer: Phaser.Input.Pointer) => void;
   private _stairMoveHandler?: (pointer: Phaser.Input.Pointer) => void;
+  private _animatingStamina = false;
   private floorEntry: boolean = false;
   private stairDismissCell: { x: number; y: number } | null = null;
   private exhausted: boolean = false;
@@ -284,7 +287,9 @@ export class ExpeditionScene extends Phaser.Scene {
     this.stepsTaken = 0;
     this.floorEntry = true;
     this.stamina = new StaminaSystem(staminaMax);
+    this._animatingStamina = false;
     this.stamina.onChange = (prev, current) => {
+      if (this._animatingStamina) return;
       this.animateStaminaBar(prev / this.stamina.maxStamina, current / this.stamina.maxStamina);
     };
     if (gameState.getResearchLevel('second_wind') >= 1) this.stamina.refill(5);
@@ -725,10 +730,8 @@ export class ExpeditionScene extends Phaser.Scene {
     const pickaxeY = staminaY + STAMINA_BLOCK_H + TOPLEFT_GAP;
 
     // === TOP-LEFT: Stamina Block (portrait + bar + value) ===
-    this.staminaBg = this.add.graphics();
-    this.staminaBg.fillStyle(0x0a0a1a, 0.75);
-    this.staminaBg.fillRoundedRect(4, staminaY, VW() - 8, STAMINA_BLOCK_H, 6);
-    this.staminaBg.setScrollFactor(0).setDepth(211);
+    this.staminaBg = NineSliceBg.card(this, 4 + (VW() - 8) / 2, staminaY + STAMINA_BLOCK_H / 2, VW() - 8, STAMINA_BLOCK_H);
+    this.staminaBg.setScrollFactor(0).setDepth(211).setAlpha(0.75);
     this.cameras.main.ignore(this.staminaBg);
 
     this.portraitSprite = this.add.image(42, staminaY + 84, 'portrait')
@@ -764,12 +767,9 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.ignore(this.depthTextCentered);
 
     // === LEFT-TOP: Pickaxe Block (below stamina) ===
-    const pickBg = this.add.graphics();
-    pickBg.fillStyle(0x0a0a1a, 0.75);
-    pickBg.fillRoundedRect(4, pickaxeY, 80, 42, 4);
-    pickBg.setScrollFactor(0).setDepth(DEPTH.HUD_BG);
-    this.cameras.main.ignore(pickBg);
-    this.pickBg = pickBg;
+    this.pickBg = NineSliceBg.card(this, 4 + 40, pickaxeY + 21, 80, 42);
+    this.pickBg.setScrollFactor(0).setDepth(DEPTH.HUD_BG).setAlpha(0.75);
+    this.cameras.main.ignore(this.pickBg);
 
     const tier = gameState.currentPickaxeTier;
     this.pickaxeSprite = this.add.image(30, pickaxeY + 21, `item_pickaxe_${tier}`)
@@ -785,12 +785,9 @@ export class ExpeditionScene extends Phaser.Scene {
     this.drawPickaxeRing();
 
     // === BOTTOM-LEFT: Inventory Button ===
-    const invBg = this.add.graphics();
-    invBg.fillStyle(0x0a0a1a, 0.75);
-    invBg.fillRoundedRect(6, anchorBottom(78), 68, 72, 6);
-    invBg.setScrollFactor(0).setDepth(DEPTH.HUD_BG);
-    this.cameras.main.ignore(invBg);
-    this.invBg = invBg;
+    this.invBg = NineSliceBg.card(this, 6 + 34, anchorBottom(78) + 36, 68, 72);
+    this.invBg.setScrollFactor(0).setDepth(DEPTH.HUD_BG).setAlpha(0.75);
+    this.cameras.main.ignore(this.invBg);
 
     const invCx = 40;
     const invCy = anchorBottom(42);
@@ -880,25 +877,22 @@ export class ExpeditionScene extends Phaser.Scene {
     const staminaY = HUD_TOP_SAFE;
     const pickaxeY = staminaY + STAMINA_BLOCK_H + TOPLEFT_GAP;
 
-    this.staminaBg.clear();
-    this.staminaBg.fillStyle(0x0a0a1a, 0.75);
-    this.staminaBg.fillRoundedRect(4, staminaY, VW() - 8, STAMINA_BLOCK_H, 6);
+    NineSliceBg.updateSize(this.staminaBg, VW() - 8, STAMINA_BLOCK_H);
+    this.staminaBg.setPosition(4 + (VW() - 8) / 2, staminaY + STAMINA_BLOCK_H / 2);
     this.portraitSprite.setPosition(42, staminaY + 84);
     this.staminaValueText.setPosition(VW() - 8, staminaY + 6);
     this.carrotCountText.setPosition(CX(), pickaxeY + 7);
     this.depthTextCentered.setPosition(CX(), anchorBottom(36));
     this.drawStaminaBar();
 
-    this.pickBg.clear();
-    this.pickBg.fillStyle(0x0a0a1a, 0.75);
-    this.pickBg.fillRoundedRect(4, pickaxeY, 80, 42, 4);
+    NineSliceBg.updateSize(this.pickBg, 80, 42);
+    this.pickBg.setPosition(4 + 40, pickaxeY + 21);
     this.pickaxeSprite.setPosition(30, pickaxeY + 21);
     this.pickaxeUsesText.setPosition(60, pickaxeY + 21);
     this.drawPickaxeRing();
 
-    this.invBg.clear();
-    this.invBg.fillStyle(0x0a0a1a, 0.75);
-    this.invBg.fillRoundedRect(6, anchorBottom(78), 68, 72, 6);
+    NineSliceBg.updateSize(this.invBg, 68, 72);
+    this.invBg.setPosition(6 + 34, anchorBottom(78) + 36);
     const invCx = 40;
     const invCy = anchorBottom(42);
     this.invBtnSprite.setPosition(invCx, invCy - 4);
@@ -1131,7 +1125,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.staminaValueText.setText(`${this.stamina.remaining}/${this.stamina.maxStamina}`);
   }
 
-  private animateStaminaBar(fromRatio: number, toRatio: number): void {
+  private animateStaminaBar(fromRatio: number, toRatio: number, duration?: number): void {
     if (fromRatio === toRatio) return;
     this.staminaAnimGfx.clear();
 
@@ -1140,7 +1134,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const fromFill = fillW * fromRatio;
     const toFill = fillW * toRatio;
     const decreasing = fromRatio > toRatio;
-    const duration = decreasing ? 200 : 300;
+    const animDuration = duration ?? (decreasing ? 200 : 300);
 
     this.drawStaminaBar();
 
@@ -1149,7 +1143,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.tweens.add({
         targets: { p: 1 },
         p: 0,
-        duration,
+        duration: animDuration,
         ease: 'Quad.easeOut',
         onUpdate: (tween) => {
           const prog = tween.progress;
@@ -1163,7 +1157,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.tweens.add({
         targets: { a: 0.6 },
         a: 0,
-        duration,
+        duration: animDuration,
         ease: 'Quad.easeOut',
         onUpdate: (tween) => {
           const raw = (tween.targets[0] as { a: number }).a;
@@ -2094,7 +2088,7 @@ export class ExpeditionScene extends Phaser.Scene {
         title: 'Blessing Fountain',
         description: 'A mystical fountain pulses with energy. Drinking from it could restore your stamina.',
         choices: [
-          { label: 'Drink (+30 Stamina)', action: () => { this.stamina.refill(30); audio.playFountain(); } },
+          { label: 'Drink (+30 Stamina)', action: () => { const prevR = this.stamina.ratio; this._animatingStamina = true; this.stamina.refill(30); audio.playFountain(); this.animateStaminaBar(prevR, this.stamina.ratio, 900); this._animatingStamina = false; } },
           { label: 'Skip', action: () => {} },
         ],
       }),
@@ -2229,39 +2223,17 @@ export class ExpeditionScene extends Phaser.Scene {
     const cy = CY();
     const action = this.stairAction === 'ascend' ? 'Ascend' : 'Descend';
 
-    const bg = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.OVERLAY);
-    bg.fillStyle(0x0a0a1a, 0.9);
-    bg.fillRect(0, 0, VW(), VH());
-    bg.lineStyle(2, 0x5a4a7a, 0.6);
-    bg.strokeRoundedRect(cx - 180, cy - 55, 360, 145, 10);
+    const bg = NineSliceBg.modal(this, CX(), CY(), 260, 82);
+    bg.setScrollFactor(0).setDepth(DEPTH.OVERLAY).setAlpha(0.85);
     this.cameras.main.ignore(bg);
 
-    const text = createText(this, cx, cy - 20, 'Use stairs?', {
+    const title = createText(this, cx, cy - 10, 'Use stairs?', {
       fontSize: fs(20), fontFamily: 'Inter', resolution: 4, color: '#ffffff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
-    this.cameras.main.ignore(text);
+    this.cameras.main.ignore(title);
 
-    const hint = createText(this, cx, cy + 10, `[SPACE] ${action}  [ESC] Cancel`, {
-      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#aaaaaa',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
-    this.cameras.main.ignore(hint);
-
-    const proceedBtn = createText(this, cx - 70, cy + 48, `[ ${action} ]`, {
-      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#66dd66',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
-    this.cameras.main.ignore(proceedBtn);
-
-    const cancelBtn = createText(this, cx + 70, cy + 48, '[ Cancel ]', {
-      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#cc6666',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
-    this.cameras.main.ignore(cancelBtn);
-
-    this._stairProceedBtn = proceedBtn;
-    this._stairCancelBtn = cancelBtn;
-
-    const handler = (p: Phaser.Input.Pointer) => {
-      if (!proceedBtn.active || !cancelBtn.active) return;
-      if (proceedBtn.getBounds().contains(p.x, p.y)) {
+    const proceedBtn = new UiButton(this, cx - 70, cy + 20, action, 100, 28,
+      () => {
         this.hideStairPrompt();
         const a = this.stairAction;
         this.stairAction = null;
@@ -2269,33 +2241,32 @@ export class ExpeditionScene extends Phaser.Scene {
         this.playerY = this.stairTargetY;
         if (a === 'ascend') this.handleAscend();
         else this.handleDescend();
-      } else if (cancelBtn.getBounds().contains(p.x, p.y)) {
+      },
+      { fontSize: fs(13), color: '#66dd66' });
+    for (const c of proceedBtn.getChildren()) this.cameras.main.ignore(c);
+
+    const cancelBtn = new UiButton(this, cx + 70, cy + 20, 'Cancel', 100, 28,
+      () => {
         this.hideStairPrompt();
         this.stairAction = null;
         this.interactTarget = null;
         this.hideActionBubble();
         this.stairDismissCell = { x: this.playerX, y: this.playerY };
-      }
+      },
+      { fontSize: fs(13), color: '#cc6666' });
+    for (const c of cancelBtn.getChildren()) this.cameras.main.ignore(c);
+
+    const handler = (p: Phaser.Input.Pointer) => {
+      if (proceedBtn.handleClick(p)) return;
+      cancelBtn.handleClick(p);
     };
     this._stairPointerHandler = handler;
     this.input.on('pointerdown', handler);
 
-    const moveHandler = (p: Phaser.Input.Pointer) => {
-      if (!proceedBtn.active || !cancelBtn.active) {
-        this.input.setDefaultCursor('default');
-        return;
-      }
-      if (proceedBtn.getBounds().contains(p.x, p.y) || cancelBtn.getBounds().contains(p.x, p.y)) {
-        this.input.setDefaultCursor('pointer');
-      } else {
-        this.input.setDefaultCursor('default');
-      }
-    };
-    this._stairMoveHandler = moveHandler;
-    this.input.on('pointermove', moveHandler);
-
-    this.stairPrompt = this.add.container(0, 0, [bg, text, hint, proceedBtn, cancelBtn])
-      .setDepth(DEPTH.OVERLAY).setScrollFactor(0);
+    this.stairPrompt = this.add.container(0, 0, [bg]).setDepth(DEPTH.OVERLAY).setScrollFactor(0);
+    for (const c of proceedBtn.getChildren()) this.stairPrompt.add(c);
+    for (const c of cancelBtn.getChildren()) this.stairPrompt.add(c);
+    this.stairPrompt.add(title);
     this.cameras.main.ignore(this.stairPrompt);
   }
 
@@ -2304,13 +2275,6 @@ export class ExpeditionScene extends Phaser.Scene {
       this.input.off('pointerdown', this._stairPointerHandler);
       this._stairPointerHandler = undefined;
     }
-    if (this._stairMoveHandler) {
-      this.input.off('pointermove', this._stairMoveHandler);
-      this._stairMoveHandler = undefined;
-    }
-    this.input.setDefaultCursor('default');
-    this._stairProceedBtn = undefined;
-    this._stairCancelBtn = undefined;
     if (this.stairPrompt) {
       this.stairPrompt.destroy();
       this.stairPrompt = null;
