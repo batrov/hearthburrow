@@ -20,6 +20,7 @@ export class AnalogStickInput {
   private stickCenterY: number = 0;
   private pointerDragged: boolean = false;
   private uiHitOnDown: boolean = false;
+  private wasModalOnDown: boolean = false;
   private readonly stickRadius = 40;
   private readonly deadZone = 12;
 
@@ -59,8 +60,7 @@ export class AnalogStickInput {
   }
 
   private onPointerDown(pointer: Phaser.Input.Pointer): void {
-    if (this.config.isModal()) return;
-
+    this.wasModalOnDown = this.config.isModal();
     this.uiHitOnDown = this.config.isPointerOverUI?.(pointer) || false;
     this.stickCenterX = pointer.x;
     this.stickCenterY = pointer.y;
@@ -128,6 +128,12 @@ export class AnalogStickInput {
 
   private onPointerUp(pointer: Phaser.Input.Pointer): void {
     this.reset();
+
+    if (this.wasModalOnDown) {
+      this.wasModalOnDown = false;
+      this.uiHitOnDown = false;
+      return;
+    }
 
     if (this.uiHitOnDown) {
       this.uiHitOnDown = false;

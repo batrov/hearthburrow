@@ -797,8 +797,8 @@ export class ExpeditionScene extends Phaser.Scene {
     this.invBtnRing = this.add.graphics().setScrollFactor(0).setDepth(DEPTH.HUD + 1);
     this.cameras.main.ignore(this.invBtnRing);
     this.invSlotText = createText(this, invCx, invCy + 16, '', {
-      fontSize: fs(9), fontFamily: 'Inter', resolution: 4, color: '#cccccc', align: 'center',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#cccccc', align: 'center',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD + 2);
     this.cameras.main.ignore(this.invSlotText);
 
     const invZone = this.add.rectangle(invCx, invCy, 64, 52, 0x000000, 0)
@@ -1307,7 +1307,7 @@ export class ExpeditionScene extends Phaser.Scene {
             if (g.x === tx && g.y === ty) {
               const tile = floor.tiles[ty][tx];
     const interactive = this.isBlocked(tile)
-      || tile.type === 'stairs_down' || tile.type === 'stairs_up' || tile.type === 'pressure_plate';
+      || tile.type === 'pressure_plate';
               
               if (interactive) {
                 this.movePath = [];
@@ -1330,8 +1330,6 @@ export class ExpeditionScene extends Phaser.Scene {
                   if (!tile.broken) {
                     this.triggerTileEvent(tx, ty, tile.eventId);
                   }
-                } else if (tile.type === 'stairs_down' || tile.type === 'stairs_up') {
-                  this.checkEventProximity();
                 } else if (tile.type === 'pressure_plate') {
                   this.tryMove(this.facingX, this.facingY);
                 }
@@ -1823,13 +1821,15 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.analog.reset();
     this.eventPanel.show(config, () => {
+      this.eventActive = false;
       this.time.delayedCall(0, () => {
-        this.eventActive = false;
-        tile.broken = true;
+        if (eventId !== 'trapped_villager') {
+          tile.broken = true;
+          this.drawFloor();
+          this.drawMinimap();
+        }
         this.interactTarget = null;
         this.hideActionBubble();
-        this.drawFloor();
-        this.drawMinimap();
       });
     });
   }
@@ -2064,8 +2064,6 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private buildEventConfig(id: string): EventConfig | null {
-    const stone = () => this.inventory.count('stone');
-    const removeStone = (n: number) => this.inventory.removeItem('stone', n);
     const addItem = (id: string, qty: number) => {
       this.giveItem(id, qty);
       audio.playItemPickup();
@@ -2094,19 +2092,27 @@ export class ExpeditionScene extends Phaser.Scene {
       }),
 
       wandering_trader: () => {
+        const depth = this.expeditionState.depth;
+        const tiers = ['stone', 'bronze_ore', 'silver_ore', 'gold_ore', 'crystal'];
+        const ti = Math.min(Math.floor(depth / 5), tiers.length - 2);
+        const payId = tiers[ti];
+        const getItem = tiers[ti + 1];
         const cost = 5;
-        const canTrade = stone() >= cost;
+        const rewardQty = 3;
+        const canTrade = this.inventory.count(payId) >= cost;
         const knowsScroll = gameState.crafting.isDiscovered('teleport_scroll');
+        const payName = itemDisplayName(payId);
+        const getName = itemDisplayName(getItem);
         return {
           title: 'Wandering Trader',
-          description: 'A hooded figure offers to trade: 5 Stone for 3 Bronze Ore.',
+          description: `A hooded figure offers to trade: ${cost} ${payName} for ${rewardQty} ${getName}.`,
           choices: [
             {
-              label: `Trade 5 Stone → 3 Bronze Ore ${canTrade ? '' : '(not enough stone)'}`,
+              label: `Trade ${cost} ${payName} → ${rewardQty} ${getName} ${canTrade ? '' : '(not enough)'}`,
               action: () => {
-                if (stone() >= cost) {
-                  removeStone(cost);
-                  addItem('bronze_ore', 3);
+                if (this.inventory.count(payId) >= cost) {
+                  this.inventory.removeItem(payId, cost);
+                  addItem(getItem, rewardQty);
                   if (!knowsScroll) {
                     gameState.crafting.discover('teleport_scroll');
                     this.showRecipeDiscovery('Teleport Scroll');
@@ -2143,6 +2149,12 @@ export class ExpeditionScene extends Phaser.Scene {
                     gameState.runVillagersRescued.push({ variant, name });
                 gameState.save();
                 this.createPopup(`Rescued: ${name}!`, this.cameras.main.width / 2, 300, '#44cc66');
+                const floor = this.currentFloor;
+                if (floor && this.interactTarget) {
+                  floor.tiles[this.interactTarget.y][this.interactTarget.x].broken = true;
+                  this.drawFloor();
+                  this.drawMinimap();
+                }
               },
             },
             { label: 'Leave them', action: () => {} },
@@ -2151,16 +2163,29 @@ export class ExpeditionScene extends Phaser.Scene {
       },
 
       midrun_shop: () => {
+        const depth = this.expeditionState.depth;
+        const priceScale = 1 + Math.floor(depth / 5);
         const hasCarrots = (n: number) => gameState.inventory.count('carrot') >= n;
+        const hasOre = (id: string) => gameState.inventory.count(id) >= 1;
+        const choices: EventChoice[] = [
+          { label: `Stamina Potion — ${3 * priceScale} carrots ${hasCarrots(3 * priceScale) ? '' : '(not enough)'}`, action: () => this.buyAtShop('stamina_potion', 3 * priceScale) },
+          { label: `Mining Bomb — ${4 * priceScale} carrots ${hasCarrots(4 * priceScale) ? '' : '(not enough)'}`, action: () => this.buyAtShop('mining_bomb', 4 * priceScale) },
+          { label: `Teleport Scroll — ${6 * priceScale} carrots ${hasCarrots(6 * priceScale) ? '' : '(not enough)'}`, action: () => this.buyAtShop('teleport_scroll', 6 * priceScale) },
+        ];
+        if (depth >= 3) {
+          choices.push({ label: `Sell Bronze Ore → ${2 * priceScale} carrots ${hasOre('bronze_ore') ? '' : '(none)'}`, action: () => this.sellAtShop('bronze_ore', 2 * priceScale) });
+        }
+        if (depth >= 6) {
+          choices.push({ label: `Sell Silver Ore → ${4 * priceScale} carrots ${hasOre('silver_ore') ? '' : '(none)'}`, action: () => this.sellAtShop('silver_ore', 4 * priceScale) });
+        }
+        if (depth >= 10) {
+          choices.push({ label: `Sell Gold Ore → ${8 * priceScale} carrots ${hasOre('gold_ore') ? '' : '(none)'}`, action: () => this.sellAtShop('gold_ore', 8 * priceScale) });
+        }
+        choices.push({ label: 'Leave', action: () => {} });
         return {
           title: 'Wandering Shop',
-          description: `A merchant has set up shop mid-dungeon. You have ${gameState.inventory.count('carrot')} carrots in storage. What catches your eye?`,
-          choices: [
-            { label: `Stamina Potion — 5 carrots ${hasCarrots(5) ? '' : '(not enough)'}`, action: () => this.buyAtShop('stamina_potion', 5) },
-            { label: `Teleport Scroll — 8 carrots ${hasCarrots(8) ? '' : '(not enough)'}`, action: () => this.buyAtShop('teleport_scroll', 8) },
-            { label: `Mining Bomb — 6 carrots ${hasCarrots(6) ? '' : '(not enough)'}`, action: () => this.buyAtShop('mining_bomb', 6) },
-            { label: 'Leave', action: () => {} },
-          ],
+          description: `A merchant has set up shop mid-dungeon (Floor ${depth}). You have ${gameState.inventory.count('carrot')} carrots. What catches your eye?`,
+          choices,
         };
       },
 
@@ -2215,6 +2240,15 @@ export class ExpeditionScene extends Phaser.Scene {
       gameState.inventory.removeItem('carrot', cost);
       gameState.save();
       this.giveItem(itemId, 1);
+    }
+  }
+
+  private sellAtShop(itemId: string, price: number): void {
+    if (gameState.inventory.count(itemId) >= 1) {
+      gameState.inventory.removeItem(itemId, 1);
+      gameState.inventory.addItem('carrot', price);
+      gameState.save();
+      audio.playItemPickup();
     }
   }
 
@@ -3122,9 +3156,7 @@ export class ExpeditionScene extends Phaser.Scene {
         if (result === 'victory') {
           const lootMult = ringEffects.doubleLoot ? 2 : 1;
         for (const r of rewards) {
-          this.giveItem(r.id, r.quantity * lootMult);
-          this.createItemPopup(tx, ty, r.id);
-          audio.playItemPickup();
+          this.spawnEnemyDrop(tx, ty, r.id, r.quantity * lootMult);
         }
 
         if (!isBoss && (enemyType === 'slime' || enemyType === 'rat' || enemyType === 'bat')) {
@@ -3520,6 +3552,50 @@ export class ExpeditionScene extends Phaser.Scene {
     this.carrotCountText.setText(`🥕 ${count}`);
   }
 
+  private spawnEnemyDrop(tx: number, ty: number, itemId: string, quantity: number): void {
+    const textureKey = itemIconKey(itemId);
+    if (!this.textures.exists(textureKey)) return;
+    const p = gridToIso(tx, ty);
+
+    const sprite = this.add.image(p.x, p.y, textureKey)
+      .setDepth(DEPTH.ITEM_SPRITE)
+      .setScale(0);
+    this.hudCam.ignore(sprite);
+    sprite.setData('quantity', quantity);
+
+    const dirs: [number, number][] = [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
+    const glowImages: Phaser.GameObjects.Image[] = [];
+    for (let t = 1; t <= 3; t++) {
+      const targetAlpha = t === 1 ? 0.6 : t === 2 ? 0.3 : 0.1;
+      for (const [dx, dy] of dirs) {
+        const img = this.add.image(p.x + dx * t, p.y + dy * t, textureKey)
+          .setDepth(DEPTH.ITEM_GLOW)
+          .setTint(0xffffff).setTintMode(Phaser.TintModes.FILL)
+          .setAlpha(0);
+        this.hudCam.ignore(img);
+        this.dropGlowImages.push(img);
+        glowImages.push(img);
+        this.tweens.add({
+          targets: img,
+          alpha: targetAlpha,
+          duration: 150,
+          ease: 'Quad.easeOut',
+        });
+      }
+    }
+    sprite.setData('glowImages', glowImages);
+
+    this.tweens.add({
+      targets: sprite,
+      scale: 1,
+      duration: 300,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        this.queueItemFly(sprite, itemId);
+      },
+    });
+  }
+
   private flySpriteToBackpack(sprite: Phaser.GameObjects.Image, resource: string): void {
     const cam = this.cameras.main;
     const screenX = sprite.x - cam.scrollX;
@@ -3575,7 +3651,8 @@ export class ExpeditionScene extends Phaser.Scene {
           glowImages.forEach(img => { if (img.active) img.destroy(); });
         }
         audio.playResourcePickup(resource);
-        this.giveItem(resource, 1);
+        const qty = sprite.getData('quantity') ?? 1;
+        this.giveItem(resource, qty);
         sprite.destroy();
         this.time.delayedCall(100, () => this.processItemFlyQueue());
       }

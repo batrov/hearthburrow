@@ -517,6 +517,25 @@ Resolved Bugs:
 - **`_animatingStamina` flag** — suppresses the generic `onChange` handler so the custom-duration animation isn't overridden
 - **Optional `duration` parameter** — `animateStaminaBar()` accepts an optional 3rd argument; defaults to existing 200/300ms when omitted
 
+## ✅ Depth-Based Merchant Economy (July 2026)
+- **`midrun_shop` dynamic pricing** — buy prices scale with depth (`priceScale = 1 + floor(depth / 5)`): Potion 3×, Bomb 4×, Scroll 6×, all ×`priceScale`
+- **Depth-gated sell options** — Bronze Ore sell at depth ≥3, Silver at ≥6, Gold at ≥10; selling yields carrots
+- **`wandering_trader` ore ladder** — depth-indexed trades: Stone→Bronze (depth 1-4), Bronze→Silver (5-9), Silver→Gold (10-14), Gold→Crystal (15+); Teleport Scroll discovery preserved on first trade
+- **`sellAtShop()` helper** — removes ore, adds carrots, saves, plays pickup SFX
+
+## ✅ Enemy Loot Drops (July 2026)
+- **Physical pop-out sprites** — defeating an enemy spawns item sprites at its position with bounce-up animation (scale 0→1, `Back.easeOut`, 300ms) and white glow
+- **Auto-fly to backpack** — after the pop-up, items queue into the existing parabolic arc flight system; quantity correctly passed via `sprite.setData('quantity', qty)`
+- **Removed floating text** — `createItemPopup()` no longer called for combat rewards; the sprite IS the visual feedback
+
+## ✅ NPC Dungeon Persistence (July 2026)
+- **"Leave them" preserves villager** — choosing "Leave them" on a trapped villager no longer marks the tile as broken; the villager stays in the dungeon for later interaction
+- **"Rescue" still breaks tile** — Rescue action manually breaks the tile after saving, maintaining correct behavior
+- **General events unaffected** — merchant, fountain, trader, and relic tiles still break after interaction as before
+
+## Resolved Bugs (July 2026)
+- **EventPanel choices silently fail** — `selectChoice()` called `this.currentChoices[index].action()` but `currentChoices` was never assigned from `config.choices` after the UiButton refactoring; both click and keyboard (SPACE) paths were broken. Fixed by adding `this.currentChoices = config.choices.slice()` in `show()`.
+
 ## ✅ Chat Bubble Action Prompts (July 2026)
 - **All three scenes** — Tavern, Expedition, Homeland action prompts replaced with styled chat bubbles (rounded rect `#1a1410` at 0.9α, 6px radius, 5px triangular tail, golden text) positioned above the player's head
 - **Tavern NPC hover tooltip removed** — redundant with persistent NPC name labels added earlier (Jul 2026)
