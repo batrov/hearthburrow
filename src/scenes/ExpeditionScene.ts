@@ -215,8 +215,14 @@ export class ExpeditionScene extends Phaser.Scene {
   private playerSprite: Phaser.GameObjects.Image | null = null;
   private previewTile: Phaser.GameObjects.Image | null = null;
   private facingOutlineImages: Phaser.GameObjects.Image[] = [];
+  private facedEnemyKey: string | null = null;
+  private facingOutlineBaseY: number = 0;
   private oreImageMap: Map<string, Phaser.GameObjects.Image> = new Map();
   private wallImageMap: Map<string, Phaser.GameObjects.Image> = new Map();
+  private enemyFlipMap: Map<string, boolean> = new Map();
+  private enemyImageMap: Map<string, Phaser.GameObjects.Image> = new Map();
+  private enemyBobPhase: Map<string, number> = new Map();
+  private enemyBaseY: Map<string, number> = new Map();
   private rocksBrokenThisRun: number = 0;
   private itemFlyQueue: Array<{ sprite: Phaser.GameObjects.Image; resource: string }> = [];
   private itemFlyBusy: boolean = false;
@@ -396,6 +402,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.tileObjects = [];
     this.oreImageMap.clear();
     this.wallImageMap.clear();
+    this.enemyImageMap.clear();
     if (this.previewTile) { this.previewTile.destroy(); this.previewTile = null; }
     this.facingHighlight.clear();
     this.selectedObject.clear();
@@ -563,13 +570,28 @@ export class ExpeditionScene extends Phaser.Scene {
           } else if (tile.type.startsWith('event_') && tile.type !== 'event_boss' && !tile.broken) {
             if (this.textures.exists(tile.type)) makeImg(tile.type);
           } else if (tile.type === 'enemy' && !tile.broken) {
-            if (this.textures.exists('enemy_' + tile.resource)) makeImg('enemy_' + tile.resource);
+            const key = 'enemy_' + tile.resource;
+            if (this.textures.exists(key)) {
+              const img = makeImg(key);
+              const mapKey = `${x},${y}`;
+              this.enemyImageMap.set(mapKey, img);
+              if (!this.enemyFlipMap.has(mapKey)) this.enemyFlipMap.set(mapKey, Math.random() > 0.5);
+              img.setFlipX(this.enemyFlipMap.get(mapKey)!);
+              if (!this.enemyBaseY.has(mapKey)) this.enemyBaseY.set(mapKey, img.y);
+              if (!this.enemyBobPhase.has(mapKey)) this.enemyBobPhase.set(mapKey, Math.random() * Math.PI * 2);
+            }
           } else if (tile.type === 'event_boss' && !tile.broken) {
             const bossBiome = tile.resource || getBiomeKey(floor.depth);
             const bossKey = `enemy_boss_${bossBiome}`;
             if (this.textures.exists(bossKey)) {
               const img = makeImg(bossKey);
               img.setDepth(interactiveDepth(x, y, 0.003));
+              const mapKey = `${x},${y}`;
+              this.enemyImageMap.set(mapKey, img);
+              if (!this.enemyFlipMap.has(mapKey)) this.enemyFlipMap.set(mapKey, Math.random() > 0.5);
+              img.setFlipX(this.enemyFlipMap.get(mapKey)!);
+              if (!this.enemyBaseY.has(mapKey)) this.enemyBaseY.set(mapKey, img.y);
+              if (!this.enemyBobPhase.has(mapKey)) this.enemyBobPhase.set(mapKey, Math.random() * Math.PI * 2);
             }
           }
           break;
@@ -583,6 +605,7 @@ export class ExpeditionScene extends Phaser.Scene {
     if (this.previewTile) { this.previewTile.destroy(); this.previewTile = null; }
     this.facingOutlineImages.forEach(img => img.destroy());
     this.facingOutlineImages = [];
+    this.facedEnemyKey = null;
     const floor = this.currentFloor;
     if (!floor) return;
     const tx = this.playerX + this.facingX;
@@ -629,39 +652,26 @@ export class ExpeditionScene extends Phaser.Scene {
           previewY = cp.y;
         }
       }
-      const playerDep = playerDepth(this.playerX, this.playerY);
       const facingDep = interactiveDepth(tx, ty);
-      const previewDepth = facingDep > playerDep ? playerDep + 0.001 : playerDep - 0.001;
-      this.selectedObject.setDepth(previewDepth - 0.001);
+      this.selectedObject.setDepth(facingDep - 0.001);
       const previewCfg = getSpriteConfig(texKey);
       previewX += previewCfg.offsetX ?? 0;
       previewY += previewCfg.offsetY ?? 0;
-      this.previewTile = this.add.image(previewX, previewY, texKey).setDepth(previewDepth);
-      this.hudCam.ignore(this.previewTile);
-      if (previewCfg.originX !== undefined || previewCfg.originY !== undefined) {
-        this.previewTile.setOrigin(previewCfg.originX ?? 0.5, previewCfg.originY ?? 0.5);
-      }
-      if (previewCfg.scale !== undefined) this.previewTile.setScale(previewCfg.scale);
-      if (tile.type === 'mineable' || tile.type === 'wall') {
-        if (tile.maxDurability > 0) {
-          const ratio = tile.durability / tile.maxDurability;
-          if (ratio <= 0.33) {
-            this.previewTile.setTint(0x777777);
-          } else if (ratio <= 0.66) {
-            this.previewTile.setTint(0xaaaaaa);
-          }
-        }
-      }
+      this.facingOutlineBaseY = previewY;
+      const isEnemy = tile.type === 'enemy' || tile.type === 'event_boss' || tile.type === 'boss_body';
+      if (isEnemy) this.facedEnemyKey = `${tx},${ty}`;
 
       const dirs: [number, number][] = [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
-      const s = this.previewTile.scaleX;
+      const s = previewCfg.scale ?? 1;
       for (let t = 1; t <= 3; t++) {
         const alpha = t === 1 ? 0.85 : t === 2 ? 0.4 : 0.12;
         for (const [dx, dy] of dirs) {
-          const img = this.add.image(previewX + dx * t, previewY + dy * t, texKey)
-            .setDepth(previewDepth - 0.0005)
+          const outlineDY = dy * t;
+          const img = this.add.image(previewX + dx * t, previewY + outlineDY, texKey)
+            .setDepth(facingDep - 0.0005)
             .setTint(0xffffff).setTintMode(Phaser.TintModes.FILL)
-            .setAlpha(alpha);
+            .setAlpha(alpha)
+            .setData('outlineDY', outlineDY);
           if (s !== 1) img.setScale(s);
           if (previewCfg.originX !== undefined || previewCfg.originY !== undefined) {
             img.setOrigin(previewCfg.originX ?? 0.5, previewCfg.originY ?? 0.5);
@@ -673,6 +683,14 @@ export class ExpeditionScene extends Phaser.Scene {
     }
   }
 
+  private clearFacingHighlight(): void {
+    this.facingHighlight.clear();
+    this.selectedObject.clear();
+    this.facingOutlineImages.forEach(img => img.destroy());
+    this.facingOutlineImages = [];
+    if (this.previewTile) { this.previewTile.destroy(); this.previewTile = null; }
+    this.facedEnemyKey = null;
+  }
 
   private createPlayer(): void {
     const p = gridToIso(this.playerX, this.playerY);
@@ -1704,6 +1722,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.updateActionButton();
     this.drawPickaxeRing();
     this.updateDarkness();
+    this.updateEnemyBob();
   }
 
   private showActionBubble(msg: string): void {
@@ -1774,6 +1793,10 @@ export class ExpeditionScene extends Phaser.Scene {
     const tile = floor.tiles[ty][tx];
     if (tile.type === 'enemy' && !tile.broken) {
       this.interactTarget = { x: tx, y: ty, id: tile.eventId };
+      const eImg = this.enemyImageMap.get(`${tx},${ty}`);
+      if (eImg) {
+        eImg.setFlipX((tx < this.playerX) || (tx === this.playerX && ty > this.playerY));
+      }
       if (this.stamina.remaining <= 10) {
         this.showActionBubble('Not enough stamina!');
       } else {
@@ -1791,6 +1814,10 @@ export class ExpeditionScene extends Phaser.Scene {
         bossY = center.y;
       }
       this.interactTarget = { x: bossX, y: bossY, id: 'boss' };
+      const eImg = this.enemyImageMap.get(`${bossX},${bossY}`);
+      if (eImg) {
+        eImg.setFlipX((bossX < this.playerX) || (bossX === this.playerX && bossY > this.playerY));
+      }
       if (this.stamina.remaining <= 10) {
         this.showActionBubble('Not enough stamina!');
       } else {
@@ -1816,6 +1843,32 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.interactTarget = null;
     this.hideActionBubble();
+    for (const [k, img] of this.enemyImageMap) {
+      img.setFlipX(this.enemyFlipMap.get(k) ?? false);
+    }
+  }
+
+  private updateEnemyBob(): void {
+    const t = Date.now() * 0.003;
+    for (const [key, img] of this.enemyImageMap) {
+      const baseY = this.enemyBaseY.get(key);
+      const phase = this.enemyBobPhase.get(key);
+      if (baseY !== undefined && phase !== undefined && img.active) {
+        img.y = baseY + Math.sin(t + phase) * 3;
+      }
+    }
+    if (this.facedEnemyKey) {
+      const eImg = this.enemyImageMap.get(this.facedEnemyKey);
+      const baseY = this.enemyBaseY.get(this.facedEnemyKey);
+      const phase = this.enemyBobPhase.get(this.facedEnemyKey);
+      if (eImg && eImg.active && baseY !== undefined && phase !== undefined) {
+        const bobOff = Math.sin(t + phase) * 3;
+        for (const outImg of this.facingOutlineImages) {
+          const dy = outImg.getData('outlineDY') as number ?? 0;
+          outImg.y = this.facingOutlineBaseY + dy + bobOff;
+        }
+      }
+    }
   }
 
   private triggerTileEvent(tx: number, ty: number, eventId: string): void {
@@ -2622,6 +2675,7 @@ export class ExpeditionScene extends Phaser.Scene {
       if (tile.durability <= 0) {
         tile.type = 'corridor';
         tile.broken = true;
+        this.clearFacingHighlight();
         audio.playWallBreak();
         this.createWallBreakParticles(tx, ty);
         this.cameras.main.shake(120, 0.015);
@@ -2684,6 +2738,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     if (tile.durability <= 0) {
       tile.broken = true;
+      this.clearFacingHighlight();
       const minedResource = tile.resource;
       floor.mineableCount--;
       this.spawnStairsOnBreak(tx, ty);
@@ -3053,7 +3108,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.updateLevelDisplay();
     gameState.save();
     this.createPopup(`Level Up! Lv.${gameState.playerLevel}`, CX(), 200, '#ffdd44', { duration: 2000 });
-    audio.playPuzzleComplete();
+    audio.playLevelUp();
   }
 
   private handleExhaustion(): void {

@@ -579,3 +579,13 @@ Resolved Bugs:
 - **Depth HP multiplier** — enemy HP scaled by `1 + (depth - 1) * 0.15` (depth 1=1.0×, depth 25=4.6×); applies to both regular enemies and bosses
 - **Pickaxe combat bonus** — `pickaxeBonusDamage = max(0, pickaxeTier - 1)`: tier 1=+0, tier 2=+1, tier 3=+2, tier 4=+3; stacks additively with ring and research damage bonuses
 - **Additive formula** — damage = `1 + ringBonusDamage + researchBonusDamage + pickaxeBonusDamage` (×2 for crit hits)
+
+## ✅ Enemy Idle Animation & Highlight Depth Fix (July 2026)
+- **Randomized sprite flip** — each enemy/boss spawns with 50/50 `setFlipX` stored in persistent `enemyFlipMap` surviving `drawFloor()` redraws
+- **Player-facing on interaction** — enemy flips toward the player when adjacent and faced; reverts to random base flip when player walks away
+- **Idle bob animation** — enemies oscillate ±3px on a per-enemy-phase sine wave (`Date.now() * 0.003`, `Math.random() * 2π` phase) driven by `update()` instead of tweens, avoiding reset on the 23+ `drawFloor()` call sites
+- **Persistent bob state** — `enemyBaseY` and `enemyBobPhase` maps survive redraws; `updateEnemyBob()` checks `img.active` before modifying, skipping destroyed sprites
+- **Highlight glow follows bob** — the 24-image white outline glow syncs its Y with the faced enemy's sine bob via `facingOutlineBaseY` + `outlineDY` data per image
+- **Highlight depth always behind sprite** — outline glow at `facingDep - 0.0005`, selected backdrop at `facingDep - 0.001`, enemy sprite at `facingDep`; no longer depends on player direction so glow never renders on top when player is south/east
+- **Boss sprites case-corrected** — `boss_FOREST.png` → `boss_forest.png` etc. via `git mv` (was silently failing on case-sensitive Linux)
+- **Frost Wyrm accelerate toned down** — `Math.max(300, speed * 0.93)` instead of `Math.max(200, speed * 0.88)`: reaches floor 300ms at hit 16 instead of hit 12

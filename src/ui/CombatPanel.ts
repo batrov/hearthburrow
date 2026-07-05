@@ -460,7 +460,7 @@ export class CombatPanel extends BasePanel {
 
       // ICE: accelerate marker on each hit
       if (this.currentEnemy?.bossMechanic === 'accelerate') {
-        this.currentSpeed = Math.max(200, this.currentSpeed * 0.88);
+        this.currentSpeed = Math.max(300, this.currentSpeed * 0.93);
       }
 
       this.markerTween?.pause();
