@@ -579,6 +579,8 @@ Resolved Bugs:
 - **Depth HP multiplier** — enemy HP scaled by `1 + (depth - 1) * 0.15` (depth 1=1.0×, depth 25=4.6×); applies to both regular enemies and bosses
 - **Pickaxe combat bonus** — `pickaxeBonusDamage = max(0, pickaxeTier - 1)`: tier 1=+0, tier 2=+1, tier 3=+2, tier 4=+3; stacks additively with ring and research damage bonuses
 - **Additive formula** — damage = `1 + ringBonusDamage + researchBonusDamage + pickaxeBonusDamage` (×2 for crit hits)
+- **Min HP floor** — all enemies guaranteed at least 1 HP via `Math.max(1, ...)` guardrail, preventing zero-HP enemies at shallow depths
+- **Boss HP halved** — base boss HP reduced ~50% (Forest 25→12, Cave 30→15, Ice 35→18, Lava 40→20, Ruins 50→25) for gentler early boss fights while maintaining depth scaling
 
 ## ✅ Enemy Idle Animation & Highlight Depth Fix (July 2026)
 - **Randomized sprite flip** — each enemy/boss spawns with 50/50 `setFlipX` stored in persistent `enemyFlipMap` surviving `drawFloor()` redraws
