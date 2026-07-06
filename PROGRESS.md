@@ -392,6 +392,10 @@ Resolved Bugs:
 - **3 scenes**: Homeland hudCam + zoom 0.85, Tavern OFFSET_X=CX-40 + zoom 1.2, ExpeditionRecap single-column 358w
 - **Touch-size audit**: all interactive zones ≥40px height, standalone buttons ≥44px (FarmPanel, GatePanel embark, SeedEntryPopup randomize, ConfirmPopup yes/no, ConsumablePicker ±, NPCPhotobook ▲▼, CombatPanel timing)
 
+## ✅ NineSlice Action Buttons in Expedition HUD (July 2026)
+- **Consumable action buttons wrapped** — Potion, Bomb, and Escape (Teleport) icons now each have a `NineSliceBg.btn` background, matching the existing pickaxe block and inventory button which already used `NineSliceBg.card`
+- **Dimming synced** — backgrounds dim alongside their icons when modals are active, using `dimmed * 0.75` alpha (base 0.75, dimmed to ~0.225)
+
 ## ✅ Developer Menu & Loadout Cleanup (July 2026)
 - **Developer Menu panel** — new `DeveloperPanel` (F2 toggle) with Debug ON/OFF toggle, Seed editor (reuses `SeedEntryPopup`), and Reset Game with confirmation (reuses `ConfirmPopup`)
 - **Loadout settings segregated** — Seed, Debug, and Reset Game removed from GatePanel's SETTINGS section; Start Floor (elevator) kept as a single dedicated row in the expedition loadout

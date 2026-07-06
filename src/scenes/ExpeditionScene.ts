@@ -162,10 +162,13 @@ export class ExpeditionScene extends Phaser.Scene {
   private minimapW: number = 0;
   private minimapH: number = 0;
   private potionImg!: Phaser.GameObjects.Image;
+  private potionBg!: Phaser.GameObjects.NineSlice;
   private bombImg!: Phaser.GameObjects.Image;
+  private bombBg!: Phaser.GameObjects.NineSlice;
   private potionCountText!: Phaser.GameObjects.Text;
   private bombCountText!: Phaser.GameObjects.Text;
   private escapeSprite!: Phaser.GameObjects.Image;
+  private escapeBg!: Phaser.GameObjects.NineSlice;
   private escapeLabel!: Phaser.GameObjects.Text;
   private carrotCountText!: Phaser.GameObjects.Text;
   private keys!: {
@@ -869,6 +872,9 @@ export class ExpeditionScene extends Phaser.Scene {
     // === BOTTOM-RIGHT: Action Buttons ===
 
     // Escape (above minimap) — scene-level handler to avoid Phaser 4 camera-routing issues
+    this.escapeBg = NineSliceBg.btn(this, 0, 0, 40, 46)
+      .setScrollFactor(0).setDepth(DEPTH.HUD_BG).setAlpha(0.75);
+    this.cameras.main.ignore(this.escapeBg);
     this.escapeSprite = this.add.image(0, 0, 'item_teleport_scroll')
       .setScrollFactor(0).setDepth(DEPTH.HUD).setInteractive({ useHandCursor: true }).setData('isUI', true);
     this.cameras.main.ignore(this.escapeSprite);
@@ -879,6 +885,9 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.ignore(this.escapeLabel);
 
     // Potion
+    this.potionBg = NineSliceBg.btn(this, 0, 0, 36, 30)
+      .setScrollFactor(0).setDepth(DEPTH.HUD_BG).setAlpha(0.75);
+    this.cameras.main.ignore(this.potionBg);
     this.potionImg = this.add.image(0, 0, 'item_stamina_potion')
       .setScrollFactor(0).setDepth(DEPTH.HUD).setInteractive({ useHandCursor: true }).setData('isUI', true);
     this.cameras.main.ignore(this.potionImg);
@@ -893,6 +902,9 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.ignore(this.potionCountText);
 
     // Bomb
+    this.bombBg = NineSliceBg.btn(this, 0, 0, 36, 30)
+      .setScrollFactor(0).setDepth(DEPTH.HUD_BG).setAlpha(0.75);
+    this.cameras.main.ignore(this.bombBg);
     this.bombImg = this.add.image(0, 0, 'item_mining_bomb')
       .setScrollFactor(0).setDepth(DEPTH.HUD).setInteractive({ useHandCursor: true }).setData('isUI', true);
     this.cameras.main.ignore(this.bombImg);
@@ -1285,6 +1297,9 @@ export class ExpeditionScene extends Phaser.Scene {
     }
 
     const dimmed = this.isModalActive ? 0.3 : 1;
+    this.potionBg.setAlpha(dimmed * 0.75);
+    this.bombBg.setAlpha(dimmed * 0.75);
+    this.escapeBg.setAlpha(dimmed * 0.75);
     this.potionImg.setAlpha(dimmed);
     this.bombImg.setAlpha(dimmed);
     this.escapeSprite.setAlpha(dimmed);
@@ -1301,12 +1316,15 @@ export class ExpeditionScene extends Phaser.Scene {
     const bombY = escapeY - ACTION_ICON_GAP;
     const potionY = bombY - ACTION_ICON_GAP;
 
+    this.potionBg.setPosition(cx, potionY);
     this.potionImg.setPosition(cx, potionY);
     this.potionCountText.setPosition(this.potionImg.x + 14, this.potionImg.y - 14);
 
+    this.bombBg.setPosition(cx, bombY);
     this.bombImg.setPosition(cx, bombY);
     this.bombCountText.setPosition(this.bombImg.x + 14, this.bombImg.y - 14);
 
+    this.escapeBg.setPosition(cx, escapeY);
     this.escapeSprite.setPosition(cx, escapeY);
     this.escapeLabel.setPosition(this.escapeSprite.x, this.escapeSprite.y + 16);
   }
