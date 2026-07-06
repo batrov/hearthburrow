@@ -618,3 +618,9 @@ Resolved Bugs:
 - **Selective nearest-neighbor** — `BootScene.create()` sets NEAREST (`setFilter(1)`) on characters (`player_*`, `npc_*`), enemies (`enemy_*`, `boss_body`), items (`item_*`, all ore nodes/drops), events (`event_*`); title, UI, terrain, walls, decorations stay LINEAR
 - **Inventory count outline** — `invSlotText` in ExpeditionScene gets 3px black stroke for readability against dungeon background
 - **Storage label lowered** — Storage building label in Homeland adjusted from `c.y - 200` to `c.y - 180` for better visual spacing
+
+## ✅ Floor Drops When Inventory Full (July 2026)
+- **Items stay on floor when full** — mining, enemy drops, and chest rewards check `canFitInInventory()` before flying: if slots are full (and for stacked mode, no matching stack), the sprite remains on the dungeon floor with glow + bob animation instead of flying to the backpack
+- **Pickup on approach** — `tryMove()` calls `checkFloorPickup()`: when the player walks onto a tile with a floor drop and inventory space is available, the item flies to the backpack
+- **Stacked/non-stacked aware** — `canFitInInventory()` correctly handles both modes: non-stacked (expedition, `isFull()` = no room) and stacked (homeland, `isFull() && !has(resource)` = no matching stack)
+- **Glow follows bob** — `registerFloorDrop()` syncs glow image positions with the sprite's bob animation via `onUpdate`

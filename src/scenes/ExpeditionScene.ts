@@ -55,13 +55,22 @@ function playerDepth(x: number, y: number): number {
   return interactiveDepth(x, y, 0.0005);
 }
 
-const DEPTH = {
-  TERRAIN: 4, INTERACTIVE_BASE: 6, SELECTED_BACKDROP: 7, PREVIEW_TILE: 7.1,
-  FACING_HIGHLIGHT: 12, EFFECTS: 14, PARTICLES: 15, BOMB: 20,
-  ITEM_POPUP: 25, ITEM_GLOW: 25, ITEM_SPRITE: 26, DARKNESS: 48, HUD_BG: 50, HUD: 51, MINIMAP_DOT: 52,
-  INTERACT_PROMPT: 55, OVERLAY: 100, OVERLAY_TEXT: 101,
-  POPUP: 200, CLICK_ZONES: 210, ANALOG: 250,
-};
+	const DEPTH = {
+	  TERRAIN: 4, INTERACTIVE_BASE: 6, SELECTED_BACKDROP: 7, PREVIEW_TILE: 7.1,
+	  FACING_HIGHLIGHT: 12, EFFECTS: 14, PARTICLES: 15, BOMB: 20,
+	  ITEM_POPUP: 25, ITEM_GLOW: 25, ITEM_SPRITE: 26, DARKNESS: 48, HUD_BG: 50, HUD: 51, MINIMAP_DOT: 52,
+	  INTERACT_PROMPT: 55, OVERLAY: 100, OVERLAY_TEXT: 101,
+	  POPUP: 200, CLICK_ZONES: 210, ANALOG: 250,
+	};
+
+	interface FloorDrop {
+	  sprite: Phaser.GameObjects.Image;
+	  glowImages: Phaser.GameObjects.Image[];
+	  resource: string;
+	  quantity: number;
+	  tx: number;
+	  ty: number;
+	}
 
 // Top-left HUD stack (stamina block -> pickaxe block/minimap row) is built by
 // accumulating offsets from the top edge, so the blocks can never drift out of
@@ -90,26 +99,26 @@ interface BossConfig {
 
 const BOSS_CONFIGS: Record<string, BossConfig> = {
   FOREST: {
-    name: 'Forest Guardian', hp: 25, timingSpeed: 600, hitZoneWidth: 60,
+    name: 'Forest Guardian', hp: 12, timingSpeed: 600, hitZoneWidth: 60,
     rewards: [{ id: 'crystal', quantity: 3 }, { id: 'bronze_ore', quantity: 3 }, { id: 'silver_ore', quantity: 2 }, { id: 'forest_gem', quantity: 1 }],
   },
   CAVE: {
-    name: 'Cave Behemoth', hp: 30, timingSpeed: 550, hitZoneWidth: 100,
+    name: 'Cave Behemoth', hp: 15, timingSpeed: 550, hitZoneWidth: 100,
     mechanic: 'shrink',
     rewards: [{ id: 'crystal', quantity: 3 }, { id: 'silver_ore', quantity: 3 }, { id: 'gold_ore', quantity: 2 }, { id: 'cave_heart', quantity: 1 }],
   },
   ICE: {
-    name: 'Frost Wyrm', hp: 35, timingSpeed: 800, hitZoneWidth: 50,
+    name: 'Frost Wyrm', hp: 18, timingSpeed: 800, hitZoneWidth: 50,
     mechanic: 'accelerate',
     rewards: [{ id: 'crystal', quantity: 4 }, { id: 'gold_ore', quantity: 4 }, { id: 'ice_shard', quantity: 1 }],
   },
   LAVA: {
-    name: 'Magma Colossus', hp: 40, timingSpeed: 450, hitZoneWidth: 45,
+    name: 'Magma Colossus', hp: 20, timingSpeed: 450, hitZoneWidth: 45,
     mechanic: 'fake_zone',
     rewards: [{ id: 'crystal', quantity: 5 }, { id: 'gold_ore', quantity: 4 }, { id: 'magma_core', quantity: 1 }],
   },
   RUINS: {
-    name: 'Void Lich', hp: 50, timingSpeed: 400, hitZoneWidth: 40,
+    name: 'Void Lich', hp: 25, timingSpeed: 400, hitZoneWidth: 40,
     mechanic: 'invert',
     rewards: [{ id: 'monster_drop', quantity: 3 }, { id: 'crystal', quantity: 3 }, { id: 'gold_ore', quantity: 3 }, { id: 'void_essence', quantity: 1 }],
   },
@@ -128,6 +137,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private floorSpriteObjects: Phaser.GameObjects.Image[] = [];
   private tileObjects: Phaser.GameObjects.Image[] = [];
   private dropGlowImages: Phaser.GameObjects.Image[] = [];
+  private floorDrops: FloorDrop[] = [];
   private selectedObject!: Phaser.GameObjects.Graphics;
   private facingHighlight!: Phaser.GameObjects.Graphics;
   private portraitSprite!: Phaser.GameObjects.Image;
@@ -179,6 +189,8 @@ export class ExpeditionScene extends Phaser.Scene {
   private isMining: boolean = false;
   private pendingMineTx: number = -1;
   private pendingMineTy: number = -1;
+  private launchChestTx: number = -1;
+  private launchChestTy: number = -1;
   private stepsTaken: number = 0;
   private stairTargetX: number = -1;
   private stairTargetY: number = -1;
@@ -2003,6 +2015,8 @@ export class ExpeditionScene extends Phaser.Scene {
     tile: DungeonTile,
     animChest: Phaser.GameObjects.Image,
   ): void {
+    this.launchChestTx = tx;
+    this.launchChestTy = ty;
     let idx = 0;
     const launchNext = () => {
       if (idx >= rewards.length) {
@@ -2048,6 +2062,13 @@ export class ExpeditionScene extends Phaser.Scene {
     reward: { id: string; qty: number },
     onDone: () => void,
   ): void {
+    if (!this.canFitInInventory(reward.id)) {
+      sprite.destroy();
+      this.spawnFloorDropItem(reward.id, reward.qty, this.launchChestTx, this.launchChestTy);
+      onDone();
+      return;
+    }
+
     const cam = this.cameras.main;
     const screenX = sprite.x - cam.scrollX;
     const screenY = sprite.y - cam.scrollY;
@@ -2495,6 +2516,11 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.dropGlowImages.forEach(g => { if (g.active) g.destroy(); });
     this.dropGlowImages = [];
+    for (const drop of this.floorDrops) {
+      if (drop.sprite.active) drop.sprite.destroy();
+      drop.glowImages.forEach(g => { if (g.active) g.destroy(); });
+    }
+    this.floorDrops = [];
     this.stairsSpawned = false;
     this.floorEntry = true;
     this.interactTarget = null;
@@ -2556,6 +2582,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.activatePressurePlate(nx, ny);
     this.checkCarrotPickup(nx, ny);
+    this.checkFloorPickup(nx, ny);
 
     audio.playStep();
     this.revealSurroundings();
@@ -3153,7 +3180,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const exhaustionText = createText(this, 
       cx, cy,
       'EXHAUSTED\nTeleporting home...',
-      { fontSize: fs(24), fontFamily: 'Inter', resolution: 4, color: '#cc4444', align: 'center' }
+      { fontSize: fs(24), fontFamily: 'Inter', resolution: 4, color: '#cc4444', align: 'center', stroke: '#000000', strokeThickness: 2 }
     ).setOrigin(0.5).setDepth(DEPTH.OVERLAY_TEXT).setScrollFactor(0);
     this.cameras.main.ignore(exhaustionText);
 
@@ -3178,7 +3205,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const safeExtractText = createText(this, 
       cx, cy,
       'Returning to Homeland...',
-      { fontSize: fs(20), fontFamily: 'Inter', resolution: 4, color: '#44cc66' }
+      { fontSize: fs(20), fontFamily: 'Inter', resolution: 4, color: '#44cc66', stroke: '#000000', strokeThickness: 2 }
     ).setOrigin(0.5).setDepth(DEPTH.OVERLAY_TEXT).setScrollFactor(0);
     this.cameras.main.ignore(safeExtractText);
 
@@ -3210,7 +3237,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const emergencyText = createText(this, 
       cx, cy,
       'Giving Up...\nLosing some items...',
-      { fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#cc8844', align: 'center' }
+      { fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#cc8844', align: 'center', stroke: '#000000', strokeThickness: 2 }
     ).setOrigin(0.5).setDepth(DEPTH.OVERLAY_TEXT).setScrollFactor(0);
     this.cameras.main.ignore(emergencyText);
 
@@ -3253,7 +3280,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const enemyData: Record<string, { name: string; hp: number; speed: number; zoneWidth: number; rewards: { id: string; quantity: number }[] }> = {
       slime: { name: 'Slime', hp: 2, speed: 800, zoneWidth: 80, rewards: [{ id: 'monster_drop', quantity: 1 }] },
       rat: { name: 'Giant Rat', hp: 4, speed: 600, zoneWidth: 60, rewards: [{ id: 'monster_drop', quantity: 1 }, { id: 'stone', quantity: 1 }] },
-      bat: { name: 'Cave Bat', hp: 1, speed: 450, zoneWidth: 50, rewards: [{ id: 'monster_drop', quantity: 1 }, { id: 'crystal', quantity: 1 }] },
+      bat: { name: 'Cave Bat', hp: 1, speed: 450, zoneWidth: 100, rewards: [{ id: 'monster_drop', quantity: 1 }, { id: 'crystal', quantity: 1 }] },
     };
 
     const depth = this.expeditionState.depth;
@@ -3268,7 +3295,7 @@ export class ExpeditionScene extends Phaser.Scene {
       const bossCfg = BOSS_CONFIGS[biomeKey] ?? BOSS_CONFIGS.FOREST;
       config = {
         name: bossCfg.name,
-        hp: Math.floor(bossCfg.hp * hpMult),
+        hp: Math.max(1, Math.floor(bossCfg.hp * hpMult)),
         timingSpeed: bossCfg.timingSpeed,
         hitZoneWidth: Math.round(bossCfg.hitZoneWidth * ringEffects.precisionMult),
         spriteKey: `enemy_boss_${biomeKey}`,
@@ -3285,7 +3312,7 @@ export class ExpeditionScene extends Phaser.Scene {
       const data = enemyData[enemyType] ?? enemyData.slime;
       config = {
         name: data.name,
-        hp: Math.floor(data.hp * hpMult),
+        hp: Math.max(1, Math.floor(data.hp * hpMult)),
         timingSpeed: data.speed,
         hitZoneWidth: Math.round(data.zoneWidth * ringEffects.precisionMult),
         spriteKey: `enemy_${enemyType}`,
@@ -3644,8 +3671,11 @@ export class ExpeditionScene extends Phaser.Scene {
     }
     sprite.setData('glowImages', glowImages);
 
-    // Fly directly — no pop-in delay
-    this.queueItemFly(sprite, resource);
+    if (this.canFitInInventory(resource)) {
+      this.queueItemFly(sprite, resource);
+    } else {
+      this.registerFloorDrop({ sprite, glowImages, resource, quantity: 1, tx, ty });
+    }
   }
 
   private queueItemFly(sprite: Phaser.GameObjects.Image, resource: string): void {
@@ -3760,7 +3790,11 @@ export class ExpeditionScene extends Phaser.Scene {
       duration: 300,
       ease: 'Back.easeOut',
       onComplete: () => {
-        this.queueItemFly(sprite, itemId);
+        if (this.canFitInInventory(itemId)) {
+          this.queueItemFly(sprite, itemId);
+        } else {
+          this.registerFloorDrop({ sprite, glowImages, resource: itemId, quantity, tx, ty });
+        }
       },
     });
   }
@@ -3826,5 +3860,94 @@ export class ExpeditionScene extends Phaser.Scene {
         this.time.delayedCall(100, () => this.processItemFlyQueue());
       }
     });
+  }
+
+  private registerFloorDrop(drop: FloorDrop): void {
+    this.floorDrops.push(drop);
+
+    const baseY = drop.sprite.y;
+    const glowOffsets: { dx: number; dy: number }[] = [];
+    for (const img of drop.glowImages) {
+      glowOffsets.push({ dx: img.x - drop.sprite.x, dy: img.y - baseY });
+    }
+
+    this.tweens.add({
+      targets: drop.sprite,
+      y: baseY - 3,
+      duration: 800,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+      onUpdate: () => {
+        for (let i = 0; i < drop.glowImages.length; i++) {
+          drop.glowImages[i].x = drop.sprite.x + glowOffsets[i].dx;
+          drop.glowImages[i].y = drop.sprite.y + glowOffsets[i].dy;
+        }
+      },
+    });
+  }
+
+  private spawnFloorDropItem(itemId: string, quantity: number, tx: number, ty: number): void {
+    const textureKey = itemIconKey(itemId);
+    if (!this.textures.exists(textureKey)) return;
+    const p = gridToIso(tx, ty);
+
+    const sprite = this.add.image(p.x, p.y, textureKey)
+      .setDepth(DEPTH.ITEM_SPRITE)
+      .setScale(0);
+    this.hudCam.ignore(sprite);
+    sprite.setData('quantity', quantity);
+
+    const dirs: [number, number][] = [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
+    const glowImages: Phaser.GameObjects.Image[] = [];
+    for (let t = 1; t <= 3; t++) {
+      const targetAlpha = t === 1 ? 0.6 : t === 2 ? 0.3 : 0.1;
+      for (const [dx, dy] of dirs) {
+        const img = this.add.image(p.x + dx * t, p.y + dy * t, textureKey)
+          .setDepth(DEPTH.ITEM_GLOW)
+          .setTint(0xffffff).setTintMode(Phaser.TintModes.FILL)
+          .setAlpha(0);
+        this.hudCam.ignore(img);
+        this.dropGlowImages.push(img);
+        glowImages.push(img);
+        this.tweens.add({
+          targets: img,
+          alpha: targetAlpha,
+          duration: 150,
+          ease: 'Quad.easeOut',
+        });
+      }
+    }
+    sprite.setData('glowImages', glowImages);
+
+    // Pop in then register as floor drop
+    this.tweens.add({
+      targets: sprite,
+      scale: 1,
+      duration: 300,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        this.registerFloorDrop({ sprite, glowImages, resource: itemId, quantity, tx, ty });
+      },
+    });
+  }
+
+  private canFitInInventory(resource: string): boolean {
+    if (!this.inventory.isFull()) return true;
+    if (this.inventory.stacked && this.inventory.has(resource)) return true;
+    return false;
+  }
+
+  private checkFloorPickup(tx: number, ty: number): void {
+    for (let i = this.floorDrops.length - 1; i >= 0; i--) {
+      const drop = this.floorDrops[i];
+      if (drop.tx !== tx || drop.ty !== ty) continue;
+      if (this.canFitInInventory(drop.resource)) {
+        this.floorDrops.splice(i, 1);
+        drop.sprite.setData('quantity', drop.quantity);
+        drop.sprite.setData('glowImages', drop.glowImages);
+        this.queueItemFly(drop.sprite, drop.resource);
+      }
+    }
   }
 }

@@ -217,6 +217,7 @@ export class HomelandScene extends Phaser.Scene {
   private pendingBuilding: HubBuildingDef | null = null;
   private facingOutlineImages: Phaser.GameObjects.Image[] = [];
   private isMoving: boolean = false;
+  private isConstructing: boolean = false;
   private actionBtnBg!: Phaser.GameObjects.Graphics;
   private actionBtnText!: Phaser.GameObjects.Text;
   private actionBtnHit!: Phaser.GameObjects.Rectangle;
@@ -258,6 +259,7 @@ export class HomelandScene extends Phaser.Scene {
     this.animFrame = 0;
     this.animTimer = 0;
     this.isMoving = false;
+    this.isConstructing = false;
 
     this.decorationImages.forEach(img => img.destroy());
     this.decorationImages = [];
@@ -550,7 +552,8 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private get isModalActive(): boolean {
-    return this.buildingInfoPanel.isVisible() || this.restorePanel.isVisible() || this.gatePanel.isVisible()
+    return this.isConstructing
+      || this.buildingInfoPanel.isVisible() || this.restorePanel.isVisible() || this.gatePanel.isVisible()
       || this.craftingPanel.isVisible() || this.inventoryPanel.isVisible()
       || this.tradePanel.isVisible() || this.researchPanel.isVisible()
       || this.farmPanel.isVisible();
@@ -573,6 +576,7 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private doClickToMove(worldX: number, worldY: number): void {
+    if (this.isConstructing) return;
     const g = isoToGrid(worldX, worldY);
     if (g.x < 0 || g.x >= HUB_COLS || g.y < 0 || g.y >= HUB_ROWS) return;
     if (g.x === this.playerGx && g.y === this.playerGy) return;
@@ -808,6 +812,7 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private handleMovement(_delta: number): void {
+    if (this.isConstructing) return;
     let dx = 0;
     let dy = 0;
 
@@ -1101,6 +1106,7 @@ export class HomelandScene extends Phaser.Scene {
     }
 
     audio.playConstruction();
+    this.isConstructing = true;
 
     this.tweens.addCounter({
       from: 0,
@@ -1116,6 +1122,7 @@ export class HomelandScene extends Phaser.Scene {
       },
       onComplete: () => {
         container.destroy(true);
+        this.isConstructing = false;
 
         const success = restoreBuilding(buildingId);
         if (success) {
