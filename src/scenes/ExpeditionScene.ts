@@ -3,6 +3,7 @@ import { StaminaSystem } from '../systems/StaminaSystem';
 import { MiningSystem } from '../systems/MiningSystem';
 import { InventorySystem } from '../systems/InventorySystem';
 import { DungeonGenerator, DungeonFloor, DungeonTile } from '../systems/DungeonGenerator';
+import { HERMIT_DECORATION_NAMES, HERMIT_DECORATION_LINES } from '../data/HermitDecorations';
 import { ExpeditionState } from '../systems/ExpeditionState';
 import { SCENES } from '../constants/scenes';
 import { gameState, itemDisplayName, itemIconKey, NPC_PERSONALITIES } from '../systems/GameState';
@@ -197,7 +198,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private stepsTaken: number = 0;
   private stairTargetX: number = -1;
   private stairTargetY: number = -1;
-  private stairAction: 'ascend' | 'descend' | null = null;
+  private stairAction: 'ascend' | 'descend' | 'enter_secret_room' | null = null;
   private stairPrompt: Phaser.GameObjects.Container | null = null;
   private _stairProceedBtn?: Phaser.GameObjects.Text;
   private _stairCancelBtn?: Phaser.GameObjects.Text;
@@ -208,6 +209,10 @@ export class ExpeditionScene extends Phaser.Scene {
   private stairDismissCell: { x: number; y: number } | null = null;
   private exhausted: boolean = false;
   private stairsSpawned: boolean = false;
+  private wallsBrokenThisFloor: number = 0;
+  private secretSpawned: boolean = false;
+  private decoSprites: Map<string, Phaser.GameObjects.Image> = new Map();
+  private floorBgSprite: Phaser.GameObjects.Image | null = null;
   private facingX: number = 0;
   private facingY: number = 1;
   private debugMode: boolean = false;
@@ -270,7 +275,9 @@ export class ExpeditionScene extends Phaser.Scene {
     return tile.type === 'wall' || tile.type === 'blocked' || tile.type === 'boss_body'
       || (tile.type === 'mineable' && !tile.broken)
       || ((tile.type === 'enemy' || tile.type === 'event_boss') && !tile.broken)
-      || (tile.type.startsWith('event_') && !tile.broken);
+      || (tile.type.startsWith('event_') && !tile.broken)
+      || (tile.type === 'secret_npc' && !tile.broken)
+      || (tile.type === 'decoration' && !tile.broken);
   }
 
   private getDamageTint(tile: DungeonTile): number | null {
@@ -310,6 +317,8 @@ export class ExpeditionScene extends Phaser.Scene {
     const bootStaminaBonus = gameState.getBootEffects().maxStaminaBonus;
     const staminaMax = this.debugMode ? 10000 : Math.floor((100 + gameState.maxStaminaBonus + bootStaminaBonus) * (1 + gameState.staminaPercentBonus / 100));
     this.rocksBrokenThisRun = 0;
+    this.wallsBrokenThisFloor = 0;
+    this.secretSpawned = false;
     this.stairsSpawned = false;
     this.stepsTaken = 0;
     this.floorEntry = true;
@@ -418,6 +427,8 @@ export class ExpeditionScene extends Phaser.Scene {
     this.oreImageMap.clear();
     this.wallImageMap.clear();
     this.enemyImageMap.clear();
+    this.decoSprites.clear();
+    this.floorBgSprite = null;
     if (this.previewTile) { this.previewTile.destroy(); this.previewTile = null; }
     this.facingHighlight.clear();
     this.selectedObject.clear();
@@ -425,32 +436,44 @@ export class ExpeditionScene extends Phaser.Scene {
     const floor = this.currentFloor;
     if (!floor) return;
 
-    const biome = getBiomeKey(floor.depth);
+    if (floor.isSecretRoom) {
+      const cx = (floor.cols - 1) / 2;
+      const cy = (floor.rows - 1) / 2;
+      const center = gridToIso(cx, cy);
+      const floorImg = this.add.image(center.x, center.y, 'secret_room_floor')
+        .setDepth(DEPTH.TERRAIN);
+      this.hudCam.ignore(floorImg);
+      this.floorSpriteObjects.push(floorImg);
+      this.floorBgSprite = floorImg;
+      if (!floor.isDarknessLifted) floorImg.setTint(0x111111);
+    } else {
+      const biome = getBiomeKey(floor.depth);
 
-    const tiles: { x: number; y: number }[] = [];
-    for (let y = 0; y < floor.rows; y++) {
-      for (let x = 0; x < floor.cols; x++) {
-        tiles.push({ x, y });
+      const tiles: { x: number; y: number }[] = [];
+      for (let y = 0; y < floor.rows; y++) {
+        for (let x = 0; x < floor.cols; x++) {
+          tiles.push({ x, y });
+        }
       }
-    }
-    tiles.sort((a, b) => (a.x + a.y) - (b.x + b.y) || a.x - b.x);
+      tiles.sort((a, b) => (a.x + a.y) - (b.x + b.y) || a.x - b.x);
 
-    for (const { x, y } of tiles) {
-      const tile = floor.tiles[y][x];
-      if (tile.type === 'wall') continue;
+      for (const { x, y } of tiles) {
+        const tile = floor.tiles[y][x];
+        if (tile.type === 'wall') continue;
 
-      const p = gridToIso(x, y);
-      const isCorridor = tile.type === 'corridor';
-      const key = isCorridor ? `corridor_${biome}` : `floor_${biome}_a`;
+        const p = gridToIso(x, y);
+        const isCorridor = tile.type === 'corridor';
+        const key = isCorridor ? `corridor_${biome}` : `floor_${biome}_a`;
 
-      const img = this.add.image(p.x, p.y, key).setDepth(DEPTH.TERRAIN).setScale(0.5);
-      this.hudCam.ignore(img);
-      this.floorSpriteObjects.push(img);
+        const img = this.add.image(p.x, p.y, key).setDepth(DEPTH.TERRAIN).setScale(0.5);
+        this.hudCam.ignore(img);
+        this.floorSpriteObjects.push(img);
 
-      if (!isCorridor && (x + y) % 2 === 0) {
-        const check = this.add.image(p.x, p.y, `floor_${biome}_b`).setDepth(DEPTH.TERRAIN + 0.01).setScale(0.5);
-        this.hudCam.ignore(check);
-        this.floorSpriteObjects.push(check);
+        if (!isCorridor && (x + y) % 2 === 0) {
+          const check = this.add.image(p.x, p.y, `floor_${biome}_b`).setDepth(DEPTH.TERRAIN + 0.01).setScale(0.5);
+          this.hudCam.ignore(check);
+          this.floorSpriteObjects.push(check);
+        }
       }
     }
 
@@ -569,6 +592,25 @@ export class ExpeditionScene extends Phaser.Scene {
         case 'stairs_down':
           if (this.textures.exists('stairs_down')) makeImg('stairs_down');
           break;
+        case 'secret_stair':
+          if (this.textures.exists('secret_stair')) makeImg('secret_stair');
+          break;
+        case 'secret_npc':
+          if (!tile.broken) {
+            const npcKey = 'npc_' + tile.resource;
+            if (this.textures.exists(npcKey)) makeImg(npcKey);
+          }
+          break;
+        case 'decoration':
+          if (!tile.broken) {
+            const decoKey = 'secret_deco_' + tile.resource;
+            if (this.textures.exists(decoKey)) {
+              const img = makeImg(decoKey);
+              this.decoSprites.set(`${x},${y}`, img);
+              if (!floor.isDarknessLifted) img.setTint(0x000000);
+            }
+          }
+          break;
         case 'pressure_plate':
           if (!tile.broken && this.textures.exists('pressure_plate')) makeImg('pressure_plate');
           break;
@@ -627,7 +669,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const ty = this.playerY + this.facingY;
     if (tx < 0 || tx >= floor.cols || ty < 0 || ty >= floor.rows) return;
     const tile = floor.tiles[ty][tx];
-    if (tile.type === 'floor' || tile.type === 'corridor' || tile.type === 'carrot_pickup') return;
+    if (tile.type === 'floor' || tile.type === 'corridor' || tile.type === 'carrot_pickup' || tile.type === 'secret_stair' || tile.type === 'secret_npc') return;
     if (tile.broken) return;
     const p = gridToIso(tx, ty);
 
@@ -641,6 +683,7 @@ export class ExpeditionScene extends Phaser.Scene {
       case 'stairs_down': texKey = 'stairs_down'; break;
       case 'pressure_plate': texKey = 'pressure_plate'; break;
       case 'blocked': texKey = 'blocked'; break;
+      case 'decoration': texKey = 'secret_deco_' + tile.resource; break;
       case 'enemy': texKey = 'enemy_' + tile.resource; break;
       case 'event_boss':
         texKey = `enemy_boss_${tile.resource || getBiomeKey(floor.depth)}`; break;
@@ -754,11 +797,11 @@ export class ExpeditionScene extends Phaser.Scene {
     const floor = this.currentFloor;
     if (!floor) return;
     const depth = this.expeditionState.depth;
-    const isDarkFloor = depth > 0 && depth % 5 === 3;
+    const isDarkFloor = ((depth > 0 && depth % 5 === 3) || (floor.isSecretRoom ?? false)) && !floor.isDarknessLifted;
     let radius = 8;
     if (isDarkFloor) {
       const px = gameState.getLanternRange(depth);
-      radius = Math.floor(px / 45) || 1;
+      radius = Math.floor(px / 45) || (floor.isSecretRoom ? 2 : 1);
     }
     this.expeditionState.reveal(this.playerX, this.playerY, radius);
     this.drawMinimap();
@@ -1166,6 +1209,9 @@ export class ExpeditionScene extends Phaser.Scene {
             break;
           case 'stairs_down':
             this.minimapGfx.fillStyle(0x8866cc, 1);
+            break;
+          case 'secret_npc':
+            this.minimapGfx.fillStyle(0xaa66ff, 1);
             break;
           default:
             if ((tile.type === 'enemy' || tile.type === 'event_boss' || tile.type === 'boss_body') && !tile.broken) {
@@ -1674,6 +1720,8 @@ export class ExpeditionScene extends Phaser.Scene {
         this.playerY = this.stairTargetY;
         if (action === 'ascend') {
           this.handleAscend();
+        } else if (action === 'enter_secret_room') {
+          this.enterSecretRoom();
         } else {
           this.handleDescend();
         }
@@ -1850,7 +1898,7 @@ export class ExpeditionScene extends Phaser.Scene {
     if (!floor) return;
 
     const curTile = floor.tiles[this.playerY][this.playerX];
-    const onStairs = (curTile.type === 'stairs_up' || curTile.type === 'stairs_down') && !curTile.broken;
+    const onStairs = (curTile.type === 'stairs_up' || curTile.type === 'stairs_down' || curTile.type === 'secret_stair') && !curTile.broken;
 
     if (!onStairs) {
       this.stairDismissCell = null;
@@ -1863,7 +1911,11 @@ export class ExpeditionScene extends Phaser.Scene {
         this.hideActionBubble();
         this.stairTargetX = this.playerX;
         this.stairTargetY = this.playerY;
-        this.stairAction = curTile.type === 'stairs_up' ? 'ascend' : 'descend';
+        if (curTile.type === 'secret_stair') {
+          this.stairAction = 'enter_secret_room';
+        } else {
+          this.stairAction = curTile.type === 'stairs_up' ? 'ascend' : 'descend';
+        }
         this.showStairPrompt();
         return;
       }
@@ -1910,6 +1962,16 @@ export class ExpeditionScene extends Phaser.Scene {
       } else {
         this.showActionBubble('[SPACE] Face the Boss!');
       }
+      return;
+    }
+    if (tile.type === 'secret_npc' && !tile.broken) {
+      this.interactTarget = { x: tx, y: ty, id: tile.eventId };
+      this.showActionBubble('[SPACE] Speak to the Hermit');
+      return;
+    }
+    if (tile.type === 'decoration' && !tile.broken && this.currentFloor?.isDarknessLifted) {
+      this.interactTarget = { x: tx, y: ty, id: 'decoration' };
+      this.showActionBubble('[SPACE] Examine');
       return;
     }
     if (tile.type.startsWith('event_') && !tile.broken) {
@@ -1963,7 +2025,17 @@ export class ExpeditionScene extends Phaser.Scene {
     if (!floor) return;
 
     const tile = floor.tiles[ty][tx];
-    if (!tile.type.startsWith('event_') || tile.broken) return;
+    if (tile.type !== 'secret_npc' && tile.type !== 'decoration' && (!tile.type.startsWith('event_') || tile.broken)) return;
+
+    if (eventId === 'secret_npc') {
+      this.triggerHermitDialogue(tx, ty);
+      return;
+    }
+
+    if (eventId === 'decoration') {
+      this.triggerDecorationDialogue(tx, ty);
+      return;
+    }
 
     if (eventId === 'gambling_goblin') {
       this.triggerGamble(tx, ty, tile);
@@ -2110,6 +2182,28 @@ export class ExpeditionScene extends Phaser.Scene {
         .setScale(0);
       this.hudCam.ignore(sprite);
 
+      const glowDirs: [number, number][] = [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
+      const glowImages: Phaser.GameObjects.Image[] = [];
+      for (let t = 1; t <= 3; t++) {
+        const targetAlpha = t === 1 ? 0.6 : t === 2 ? 0.3 : 0.1;
+        for (const [dx, dy] of glowDirs) {
+          const img = this.add.image(origin.x + dx * t, origin.y + dy * t, exists ? texKey : '__DEFAULT')
+            .setDepth(interactiveDepth(tx, ty, 0.04))
+            .setTint(0xffffff).setTintMode(Phaser.TintModes.FILL)
+            .setAlpha(0);
+          this.hudCam.ignore(img);
+          this.dropGlowImages.push(img);
+          glowImages.push(img);
+          this.tweens.add({
+            targets: img,
+            alpha: targetAlpha,
+            duration: 150,
+            ease: 'Quad.easeOut',
+          });
+        }
+      }
+      sprite.setData('glowImages', glowImages);
+
       this.tweens.add({
         targets: sprite,
         scale: 1.2,
@@ -2136,7 +2230,16 @@ export class ExpeditionScene extends Phaser.Scene {
     reward: { id: string; qty: number },
     onDone: () => void,
   ): void {
+    const glowImages: Phaser.GameObjects.Image[] = sprite.getData('glowImages') ?? [];
+    const glowOffsets: { dx: number; dy: number }[] = [];
+    if (glowImages) {
+      for (const img of glowImages) {
+        glowOffsets.push({ dx: img.x - sprite.x, dy: img.y - sprite.y });
+      }
+    }
+
     if (!this.canFitInInventory(reward.id)) {
+      glowImages.forEach(img => { if (img.active) img.destroy(); });
       sprite.destroy();
       this.spawnFloorDropItem(reward.id, reward.qty, this.launchChestTx, this.launchChestTy);
       onDone();
@@ -2149,6 +2252,14 @@ export class ExpeditionScene extends Phaser.Scene {
     sprite.setScrollFactor(0).setPosition(screenX, screenY);
     sprite.cameraFilter &= ~this.hudCam.id;
     this.cameras.main.ignore(sprite);
+
+    if (glowImages) {
+      for (let i = 0; i < glowImages.length; i++) {
+        glowImages[i].setScrollFactor(0).setPosition(screenX + glowOffsets[i].dx, screenY + glowOffsets[i].dy);
+        glowImages[i].cameraFilter &= ~this.hudCam.id;
+        this.cameras.main.ignore(glowImages[i]);
+      }
+    }
 
     const startX = screenX;
     const startY = screenY;
@@ -2166,8 +2277,17 @@ export class ExpeditionScene extends Phaser.Scene {
         const t = tween.progress;
         sprite.x = startX + (targetX - startX) * t;
         sprite.y = startY - arcHeight * 4 * t * (1 - t) + (targetY - startY) * t;
+        if (glowImages) {
+          for (let i = 0; i < glowImages.length; i++) {
+            glowImages[i].x = sprite.x + glowOffsets[i].dx;
+            glowImages[i].y = sprite.y + glowOffsets[i].dy;
+          }
+        }
       },
       onComplete: () => {
+        if (glowImages) {
+          glowImages.forEach(img => { if (img.active) img.destroy(); });
+        }
         audio.playItemPickup();
         this.giveItem(reward.id, reward.qty);
         sprite.destroy();
@@ -2202,6 +2322,126 @@ export class ExpeditionScene extends Phaser.Scene {
         this.hideActionBubble();
       },
     );
+  }
+
+  private triggerHermitDialogue(tx: number, ty: number): void {
+    const floor = this.currentFloor;
+    if (!floor) return;
+    if (floor.hermitGreeted) { this.triggerHermitRepeat(); return; }
+
+    this.eventActive = true;
+    this.analog.reset();
+    this.interactTarget = null;
+    this.hideActionBubble();
+
+    const stages = [
+      'A cloaked figure steps from the shadows and raises a hand.\nThe darkness around you quivers.',
+
+      '"The seals recognize you. You who broke seven walls\nand reached this depth were always meant to find me."',
+
+      '"The shadows I have held at bay... I now release them\ninto your keeping."\n\nA warm light pulses from his palm and washes over the room.',
+
+      'The hermit lowers his hood and grins at you.\n"There. Much better, right? You know, I built this whole\nroom just for you."',
+
+      '"Twenty tiles wide, twenty-six tall. Seven walls to break.\nAll the way down on depth ten. Getting it yet?"',
+
+      '"It\'s your birthday, you goof! July 10th, 2026.\n10 / 07 / 2026.\n\nYou\'re my light from the darkness — and I mean that\nliterally, you just lit the place up. Happy birthday!"',
+    ];
+
+    const showStage = (index: number) => {
+      if (index >= stages.length) {
+        floor.hermitGreeted = true;
+        this.eventActive = false;
+        return;
+      }
+
+      this.showHermitDialogue(stages[index], () => {
+        if (index === 2) {
+          floor.isDarknessLifted = true;
+          this.placeDecorations();
+          this.drawFloor();
+          this.drawMinimap();
+          this.updateDarkness();
+          this.revealSurroundings();
+          this.cameras.main.flash(400, 255, 255, 255);
+          audio.playPuzzleComplete();
+        }
+        this.time.delayedCall(400, () => showStage(index + 1));
+      });
+    };
+
+    showStage(0);
+  }
+
+  private triggerDecorationDialogue(tx: number, ty: number): void {
+    const floor = this.currentFloor;
+    if (!floor) return;
+
+    const tile = floor.tiles[ty][tx];
+    const variant = parseInt(tile.resource, 10);
+    const name = HERMIT_DECORATION_NAMES[variant] ?? 'Decoration';
+    const text = HERMIT_DECORATION_LINES[variant] ?? HERMIT_DECORATION_LINES[0];
+
+    this.eventActive = true;
+    this.analog.reset();
+    this.interactTarget = null;
+    this.hideActionBubble();
+
+    this.showHermitDialogue(text, () => {
+      this.eventActive = false;
+    }, name);
+  }
+
+  private placeDecorations(): void {
+    const floor = this.currentFloor;
+    if (!floor || !floor.isSecretRoom) return;
+
+    const reserved = new Set(['13,10', `${floor.stairsDownY},${floor.stairsDownX}`, `${floor.entryY},${floor.entryX}`]);
+    const candidates: { x: number; y: number }[] = [];
+    for (let y = 1; y < floor.rows - 1; y++) {
+      for (let x = 1; x < floor.cols - 1; x++) {
+        if (reserved.has(`${y},${x}`)) continue;
+        if (x >= 8 && x <= 12 && y >= 12 && y <= 16) continue;
+        candidates.push({ x, y });
+      }
+    }
+    Phaser.Utils.Array.Shuffle(candidates);
+    const count = Math.min(26, candidates.length);
+    for (let i = 0; i < count; i++) {
+      const { x, y } = candidates[i];
+      floor.tiles[y][x].type = 'decoration';
+      floor.tiles[y][x].resource = String(i);
+    }
+  }
+
+  private updateFloorTint(): void {
+    const floor = this.currentFloor;
+    if (!floor || !this.floorBgSprite) return;
+    if (floor.isDarknessLifted) this.floorBgSprite.clearTint();
+    else this.floorBgSprite.setTint(0x111111);
+  }
+
+  private updateDecorationTints(): void {
+    const lifted = this.currentFloor?.isDarknessLifted ?? false;
+    for (const [, img] of this.decoSprites) {
+      if (lifted) img.clearTint();
+      else img.setTint(0x000000);
+    }
+  }
+
+  private triggerHermitRepeat(): void {
+    const line = [
+      'The hermit smiles warmly.',
+      '',
+      '"Happy birthday, friend! May your days be filled with',
+      'light, your pockets with treasure, and your heart with',
+      'joy. The dungeon will always remember you."',
+    ].join('\n');
+
+    this.eventActive = true;
+    this.showHermitDialogue(line, () => {
+      this.eventActive = false;
+    });
   }
 
   private getGambleSegments(depth: number): RouletteSegment[] {
@@ -2431,13 +2671,15 @@ export class ExpeditionScene extends Phaser.Scene {
   private showStairPrompt(): void {
     const cx = CX();
     const cy = CY();
-    const action = this.stairAction === 'ascend' ? 'Ascend' : 'Descend';
+    const isSecret = this.stairAction === 'enter_secret_room';
+    const action = isSecret ? 'Enter' : this.stairAction === 'ascend' ? 'Ascend' : 'Descend';
+    const titleText = isSecret ? 'Hidden Passage' : 'Use stairs?';
 
     const bg = NineSliceBg.modal(this, CX(), CY(), 260, 82);
     bg.setScrollFactor(0).setDepth(DEPTH.OVERLAY).setAlpha(0.85);
     this.cameras.main.ignore(bg);
 
-    const title = createText(this, cx, cy - 10, 'Use stairs?', {
+    const title = createText(this, cx, cy - 10, titleText, {
       fontSize: fs(20), fontFamily: 'Inter', resolution: 4, color: '#ffffff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.OVERLAY_TEXT);
     this.cameras.main.ignore(title);
@@ -2450,6 +2692,7 @@ export class ExpeditionScene extends Phaser.Scene {
         this.playerX = this.stairTargetX;
         this.playerY = this.stairTargetY;
         if (a === 'ascend') this.handleAscend();
+        else if (a === 'enter_secret_room') this.enterSecretRoom();
         else this.handleDescend();
       },
       { fontSize: fs(13), color: '#66dd66' });
@@ -2491,8 +2734,81 @@ export class ExpeditionScene extends Phaser.Scene {
     }
   }
 
+  private showHermitDialogue(text: string, onClose: () => void, title: string = 'The Hermit'): void {
+    const modal = NineSliceBg.modal(this, CX(), CY(), 340, 160);
+    modal.setDepth(DEPTH.POPUP).setScrollFactor(0).setAlpha(0.85);
+    this.cameras.main.ignore(modal);
+
+    const overlayText = createText(this, CX() - 155, CY() - 52, title, {
+      fontSize: fs(13), fontFamily: 'Inter', resolution: 4, color: '#cc88ff', fontStyle: 'bold',
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(DEPTH.POPUP + 1);
+    this.cameras.main.ignore(overlayText);
+
+    const speechText = createText(this, CX() - 155, CY() - 12, '', {
+      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#d8c8e8', align: 'left',
+      wordWrap: { width: 310 },
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(DEPTH.POPUP + 1);
+    this.cameras.main.ignore(speechText);
+
+    const closeHint = createText(this, CX(), CY() + 56, '[SPACE] skip', {
+      fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#6a5a4a',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.POPUP + 1);
+    this.cameras.main.ignore(closeHint);
+
+    let typingComplete = false;
+    let typingTimer: Phaser.Time.TimerEvent | null = null;
+    let revealedChars = 0;
+
+    const typingSpeed = 35;
+    typingTimer = this.time.addEvent({
+      delay: typingSpeed,
+      callback: () => {
+        revealedChars++;
+        speechText.setText(text.substring(0, revealedChars));
+        if (revealedChars >= text.length) {
+          typingComplete = true;
+          if (typingTimer) { typingTimer.remove(); typingTimer = null; }
+          closeHint.setText('[SPACE / ESC] close');
+        }
+      },
+      loop: true,
+    });
+
+    const close = () => {
+      if (typingTimer) { typingTimer.remove(); typingTimer = null; }
+      modal.destroy();
+      overlayText.destroy();
+      speechText.destroy();
+      closeHint.destroy();
+      this.input.off('pointerdown', advance);
+      this.input.keyboard?.off('keydown-SPACE', advance);
+      this.input.keyboard?.off('keydown-ESC', close);
+    };
+
+    const advance = () => {
+      if (!typingComplete) {
+        if (typingTimer) { typingTimer.remove(); typingTimer = null; }
+        revealedChars = text.length;
+        speechText.setText(text);
+        typingComplete = true;
+        closeHint.setText('[SPACE / ESC] close');
+      } else {
+        close();
+        onClose();
+      }
+    };
+
+    this.time.delayedCall(0, () => {
+      this.input.on('pointerdown', advance);
+      this.input.keyboard?.on('keydown-SPACE', advance);
+      this.input.keyboard?.on('keydown-ESC', close);
+    });
+  }
+
   private handleDescend(): void {
     this.expeditionState.descend();
+    this.wallsBrokenThisFloor = 0;
+    this.secretSpawned = false;
     audio.playStairs();
 
     if (this.expeditionState.depth >= 2 && !gameState.crafting.isDiscovered('mining_bomb')) {
@@ -2528,9 +2844,20 @@ export class ExpeditionScene extends Phaser.Scene {
     this.updateLevelDisplay();
   }
 
+  private enterSecretRoom(): void {
+    const depth = this.expeditionState.depth;
+    const floor = this.dungeonGen.generateSecretRoom(depth);
+    this.currentFloor = floor;
+    this.playerX = floor.entryX;
+    this.playerY = floor.entryY;
+    this.rebuildFloor();
+    this.expeditionState.initExplored(floor.cols, floor.rows);
+    this.revealSurroundings();
+  }
+
   private handleAscend(): void {
     audio.playStairs(true);
-    if (this.expeditionState.depth % 5 === 0) {
+    if (this.currentFloor?.isSecretRoom || this.expeditionState.depth % 5 === 0) {
       this.safeExtract();
     } else {
       this.expeditionState.ascend();
@@ -2540,8 +2867,8 @@ export class ExpeditionScene extends Phaser.Scene {
       this.currentFloor = floor;
       this.playerX = floor.stairsDownX;
       this.playerY = floor.stairsDownY;
-      this.rebuildFloor();
-      this.expeditionState.initExplored(floor.cols, floor.rows);
+    this.rebuildFloor();
+    this.expeditionState.initExplored(floor.cols, floor.rows);
       this.revealSurroundings();
     }
   }
@@ -2777,6 +3104,15 @@ export class ExpeditionScene extends Phaser.Scene {
       if (tile.durability <= 0) {
         tile.type = 'corridor';
         tile.broken = true;
+
+        this.wallsBrokenThisFloor++;
+        if (this.wallsBrokenThisFloor >= 7 && this.expeditionState.depth >= 10 && !this.secretSpawned) {
+          tile.type = 'secret_stair';
+          tile.broken = false;
+          this.secretSpawned = true;
+          audio.playSecretDiscovery();
+        }
+
         this.clearFacingHighlight();
         audio.playWallBreak();
         this.createWallBreakParticles(tx, ty);
@@ -3164,10 +3500,12 @@ export class ExpeditionScene extends Phaser.Scene {
   private updateDarkness(): void {
     this.darknessOverlay.clear();
     this.darknessMaskGfx.clear();
+    const floor = this.currentFloor;
     const depth = this.expeditionState.depth;
-    const isDarkFloor = depth > 0 && depth % 5 === 3;
+    const isDarkFloor = ((depth > 0 && depth % 5 === 3) || (floor?.isSecretRoom ?? false)) && !floor?.isDarknessLifted;
     if (!isDarkFloor) return;
-    const range = gameState.getLanternRange(depth);
+    let range = gameState.getLanternRange(depth);
+    if (floor?.isSecretRoom && range <= 0) range = 90;
     if (range <= 0) return;
     const r = range;
     const cx = this.player.x;
@@ -3610,6 +3948,15 @@ export class ExpeditionScene extends Phaser.Scene {
         if (tile.durability <= 0) {
           tile.type = 'corridor';
           tile.broken = true;
+
+          this.wallsBrokenThisFloor++;
+          if (this.wallsBrokenThisFloor >= 7 && this.expeditionState.depth >= 10 && !this.secretSpawned) {
+            tile.type = 'secret_stair';
+            tile.broken = false;
+            this.secretSpawned = true;
+            audio.playSecretDiscovery();
+          }
+
           this.createWallBreakParticles(tx, ty);
         }
         changed = true;
@@ -3663,7 +4010,7 @@ export class ExpeditionScene extends Phaser.Scene {
     if (this.activeObtainPopups.length >= 3) return;
 
     const anchorX = 18;
-    const anchorY = VH() - 90;
+    const anchorY = VH() - 110;
     const popY = anchorY - this.activeObtainPopups.length * 36;
     const container = this.add.container(anchorX, popY).setScrollFactor(0).setDepth(DEPTH.HUD + 2);
     this.cameras.main.ignore(container);

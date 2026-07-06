@@ -341,21 +341,48 @@ DECORATIONS = {
     'decoration_signpost':     (24, 48, deco_signpost),
 }
 
+# ─── Secret Room Decorations (26 variants, 64x64) ──────────────────────────
+
+import colorsys
+
+def hsv_to_rgba(h, s, v, a=255):
+    r, g, b = colorsys.hsv_to_rgb(h, s, v)
+    return (int(r * 255), int(g * 255), int(b * 255), a)
+
+def save_secret_decos():
+    shapes = [
+        # circle
+        lambda d, cx, cy, c: d.ellipse([cx - 18, cy - 18, cx + 18, cy + 18], fill=c) or d.ellipse([cx - 10, cy - 10, cx - 2, cy - 2], fill=hsv_to_rgba(0, 0, 1, 60)),
+        # square
+        lambda d, cx, cy, c: d.rectangle([cx - 14, cy - 14, cx + 14, cy + 14], fill=c) or d.rectangle([cx - 8, cy - 8, cx + 4, cy + 4], fill=hsv_to_rgba(0, 0, 1, 50)),
+        # diamond
+        lambda d, cx, cy, c: d.polygon([(cx, cy - 20), (cx + 20, cy), (cx, cy + 20), (cx - 20, cy)], fill=c),
+        # triangle
+        lambda d, cx, cy, c: d.polygon([(cx, cy - 18), (cx + 14, cy + 10), (cx - 14, cy + 10)], fill=c),
+    ]
+    for i in range(26):
+        hue = i / 26
+        main = hsv_to_rgba(hue, 0.55, 0.45)
+        accent = hsv_to_rgba(hue, 0.4, 0.7, 120)
+        img = Image.new('RGBA', (64, 64), RGBA)
+        d = ID.Draw(img)
+        cx, cy = 32, 32
+        # Shadow
+        d.ellipse([cx - 16, cy + 14, cx + 16, cy + 22], fill=(0, 0, 0, 40))
+        # Main shape
+        shapes[i % 4](d, cx, cy, main)
+        # Accent dot
+        d.ellipse([cx + 6, cy + 6, cx + 10, cy + 10], fill=accent)
+        path = os.path.join(TILE_DIR, f'secret_deco_{i}.png')
+        img.save(path)
+        print(f'  saved {path}')
+
 # ─── Main ─────────────────────────────────────────────────────────────────
 
 def main():
-    print('Generating terrain variants...')
-    save_terrain_grass_a()
-    save_terrain_grass_b()
-    save_terrain_path()
-    save_terrain_bridge()
-    save_terrain_water()
-
-    print('Generating decoration sprites...')
-    for name, (sw, sh, draw_fn) in DECORATIONS.items():
-        save_big(name, (sw, sh), draw_fn)
-
-    print(f'Done — {len(DECORATIONS)} decorations + 5 terrain variants.')
+    print('Generating secret room decorations...')
+    save_secret_decos()
+    print('Done — 26 secret room decorations.')
 
 if __name__ == '__main__':
     main()

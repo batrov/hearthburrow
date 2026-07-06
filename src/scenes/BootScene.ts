@@ -75,6 +75,11 @@ export class BootScene extends Phaser.Scene {
 
     this.load.image('stairs_up', 'tiles/stairs_up.png');
     this.load.image('stairs_down', 'tiles/stairs_down.png');
+    this.load.image('secret_stair', 'tiles/secret_stair.png');
+    this.load.image('secret_room_floor', 'tiles/secret_room_floor.png');
+    for (let i = 0; i < 26; i++) {
+      this.load.image(`secret_deco_${i}`, `tiles/secret_deco_${i}.png`);
+    }
     this.load.image('pressure_plate', 'tiles/pressure_plate.png');
     this.load.image('blocked', 'tiles/blocked.png');
 

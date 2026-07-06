@@ -647,3 +647,16 @@ Resolved Bugs:
 - **Teleport scroll safe-extract on exhaustion** — when stamina hits 0, `handleExhaustion()` now checks for teleport scroll: if held, consumes it and calls `safeExtract()` (full item retention) instead of emergency extraction (30% retention)
 - **Cursed Doll item** — new `cursed_doll` material (rare, maxStack 9) with placeholder sprite; trashing it during an expedition sets stamina to 1 via `StaminaSystem.setCurrent()`
 - **Debug mode** — grants teleport scroll + 3 cursed dolls alongside potions and bombs
+
+## ✅ Secret Room & Hermit NPC (July 2026)
+- **7-wall trigger** — breaking 7 walls spawns a `secret_stair` tile at depth ≥10; counter resets per floor, bombs count
+- **Dark 20×26 room** — full-floor sprite with darkness overlay + minimap fog; floor tinted `0x111111` before light is lifted
+- **Amythest hermit** — center NPC with 6-stage typewriter dialogue, lifts darkness at stage 3 with camera flash
+- **26 interactable decorations** — spawned at runtime after light lift (circle/diamond/square/triangle shapes, color-cycled); each shows unique name + description panel, repeatable on re-examine
+- **Birthday easter egg** — room dimensions (20×26), wall count (7), and depth gate (10) reference player's birthday 10/07/2026
+- **Secret stair → extraction** — secret stair leads to Homeland; returning via `stairs_up` calls `safeExtract()`
+- **Config persistence** — `isDarknessLifted`, `hermitGreeted` tracked per-room
+
+## ✅ Long-Press Portrait Opens Developer Menu (July 2026)
+- **GatePanel portrait long-hold** — pressing and holding the player portrait sprite for 500ms opens the Developer Menu (F2 panel); a short tap does nothing
+- **Timer-based detection** — `pointerdown` starts a 500ms delayed call, `pointerup` cancels it; clean lifecycle with proper handler cleanup in `hide()`

@@ -650,6 +650,15 @@ export class AudioSystem {
     this.playNote('sine', 440, 440, 0.10, 0.10, 0.10);
   }
 
+  /** Rumble + chime for discovering the hidden secret passage. */
+  playSecretDiscovery(): void {
+    this.playNote('sawtooth', 80, 40, 0.12, 0.3, 0);
+    this.playNote('sawtooth', 60, 30, 0.08, 0.4, 0.1);
+    this.playNote('sine', 300, 900, 0.1, 0.4, 0.15);
+    this.playNote('sine', 900, 1200, 0.07, 0.3, 0.35);
+    this.playNote('sine', 1400, 1400, 0.06, 0.4, 0.45);
+  }
+
   /** Ascending casino-style chime for roulette wins. */
   playBingo(): void {
     this.playNote('sine', 523, 523, 0.1, 0.08, 0);

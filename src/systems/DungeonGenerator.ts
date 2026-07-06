@@ -14,7 +14,10 @@ export type TileType = 'wall' | 'floor' | 'mineable' | 'stairs_up' | 'stairs_dow
   | 'event_relic'
   | 'enemy' | 'event_boss'
   | 'pressure_plate' | 'blocked' | 'boss_body'
-  | 'carrot_pickup';
+  | 'carrot_pickup'
+  | 'secret_stair'
+  | 'secret_npc'
+  | 'decoration';
 
 export interface DungeonTile {
   type: TileType;
@@ -38,6 +41,9 @@ export interface DungeonFloor {
   initialMineableCount: number;
   mineableCount: number;
   puzzle?: { totalPlates: number; pressedPlates: number; room: { x: number; y: number; w: number; h: number } };
+  isSecretRoom?: boolean;
+  isDarknessLifted?: boolean;
+  hermitGreeted?: boolean;
 }
 
 interface RoomRect {
@@ -644,7 +650,8 @@ export class DungeonGenerator {
       || tile.type === 'mineable'
       || tile.type === 'corridor'
       || tile.type === 'stairs_up'
-      || tile.type === 'stairs_down';
+      || tile.type === 'stairs_down'
+      || tile.type === 'secret_stair';
   }
 
   private placePuzzle(tiles: DungeonTile[][], rooms: RoomRect[]): { totalPlates: number; room: RoomRect } | null {
@@ -684,6 +691,45 @@ export class DungeonGenerator {
 
   private inBounds(tiles: DungeonTile[][], x: number, y: number): boolean {
     return y >= 0 && y < tiles.length && x >= 0 && x < tiles[0].length;
+  }
+
+  generateSecretRoom(depth: number): DungeonFloor {
+    const cols = 20;
+    const rows = 26;
+
+    const tiles: DungeonTile[][] = [];
+    for (let y = 0; y < rows; y++) {
+      tiles[y] = [];
+      for (let x = 0; x < cols; x++) {
+        tiles[y][x] = this.makeTile('floor');
+      }
+    }
+
+    const entryX = Math.floor(cols / 2);
+    const entryY = rows - 2;
+
+    const exitX = cols - 4;
+    const exitY = rows - 2;
+    tiles[exitY][exitX] = this.makeTile('stairs_up');
+
+    tiles[13][10] = this.makeTile('floor');
+    tiles[13][10].type = 'secret_npc';
+    tiles[13][10].eventId = 'secret_npc';
+    tiles[13][10].resource = 'hermit';
+
+    return {
+      tiles,
+      cols,
+      rows,
+      entryX,
+      entryY,
+      stairsDownX: entryX,
+      stairsDownY: entryY,
+      depth,
+      initialMineableCount: 0,
+      mineableCount: 0,
+      isSecretRoom: true,
+    };
   }
 
   private placeRelicChamber(tiles: DungeonTile[][], rooms: RoomRect[]): void {

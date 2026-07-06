@@ -302,6 +302,40 @@ export function generateAll(scene: Phaser.Scene): void {
     g.fillTriangle(cx - 10, cy - 8, cx, cy + 12, cx + 10, cy - 8);
   });
 
+  // --- Secret stair ---
+  make(scene, g, 'secret_stair', 40, 40, () => {
+    const { cx, cy } = centered(40, 40);
+    g.fillStyle(0x44aa44, 0.7);
+    g.fillTriangle(cx - 10, cy + 8, cx, cy - 12, cx + 10, cy + 8);
+    g.fillStyle(0x66cc66, 0.5);
+    g.fillTriangle(cx - 5, cy + 4, cx, cy - 6, cx + 5, cy + 4);
+  });
+
+  // --- Secret room floor (1840x920, full 20x26 tile diamond) ---
+  const SRF_W = 1840, SRF_H = 920;
+  make(scene, g, 'secret_room_floor', SRF_W, SRF_H, () => {
+    g.fillStyle(0x1a2216, 1);
+    g.beginPath();
+    g.moveTo(SRF_W / 2, 0);
+    g.lineTo(SRF_W, SRF_H / 2);
+    g.lineTo(SRF_W / 2, SRF_H);
+    g.lineTo(0, SRF_H / 2);
+    g.closePath();
+    g.fill();
+    // Subtle grid lines at each tile boundary
+    g.lineStyle(1, 0x2a3a22, 0.3);
+    for (let i = 0; i <= 20; i++) {
+      const sx = (i - 13) * 40 + SRF_W / 2;
+      const sy = (i + 13) * 20;
+      g.lineBetween(sx, 0, sx + SRF_W / 2 - sx, SRF_H);
+    }
+    for (let i = 0; i <= 26; i++) {
+      const sx = -i * 40 + SRF_W / 2;
+      const sy = i * 20;
+      g.lineBetween(sx, 0, sx + SRF_W / 2 - sx, SRF_H);
+    }
+  });
+
   // --- Pressure plate ---
   make(scene, g, 'pressure_plate', 40, 40, () => {
     const { cx, cy } = centered(40, 40);
@@ -702,6 +736,42 @@ export function generateAll(scene: Phaser.Scene): void {
       g.fillCircle(cx, cy + 2, 7);
       g.fillStyle(headColor, 1);
       g.fillRect(cx - 4, cy - 7, 8, 5);
+    });
+  }
+
+  // --- Secret hermit NPC (amethyst purple, larger) ---
+  make(scene, g, 'npc_hermit', 40, 40, () => {
+    const { cx, cy } = centered(40, 40);
+    g.fillStyle(0x000000, 0.3);
+    g.fillCircle(cx, cy + 6, 12);
+    g.fillStyle(0x6a3a9a, 1);
+    g.fillCircle(cx, cy - 2, 11);
+    g.fillStyle(0x8a5aba, 1);
+    g.fillRoundedRect(cx - 6, cy - 10, 12, 8, 2);
+    g.fillStyle(0xaa88dd, 0.8);
+    g.fillCircle(cx, cy - 2, 4);
+    // Glow aura
+    g.lineStyle(2, 0xcc88ff, 0.3);
+    g.strokeCircle(cx, cy - 2, 14);
+  });
+
+  // --- Secret room decorations (26 variants, color-cycled isometric shapes) ---
+  const decoShapes = [
+    (cx: number, cy: number) => { g.fillCircle(cx, cy, 18); g.fillStyle(0xffffff, 0.15); g.fillCircle(cx - 4, cy - 4, 8); },
+    (cx: number, cy: number) => { g.fillRect(cx - 14, cy - 14, 28, 28); g.fillStyle(0xffffff, 0.12); g.fillRect(cx - 8, cy - 8, 16, 16); },
+    (cx: number, cy: number) => { g.beginPath(); g.moveTo(cx, cy - 20); g.lineTo(cx + 20, cy); g.lineTo(cx, cy + 20); g.lineTo(cx - 20, cy); g.closePath(); g.fill(); },
+    (cx: number, cy: number) => { g.beginPath(); g.moveTo(cx, cy - 18); g.lineTo(cx + 14, cy + 10); g.lineTo(cx - 14, cy + 10); g.closePath(); g.fill(); },
+  ];
+  for (let i = 0; i < 26; i++) {
+    const hue = (i / 26) * 360;
+    const c = Phaser.Display.Color.HSLToColor(hue / 360, 0.6, 0.5).color;
+    const accent = Phaser.Display.Color.HSLToColor(hue / 360, 0.4, 0.7).color;
+    make(scene, g, `secret_deco_${i}`, 64, 64, () => {
+      const { cx, cy } = centered(64, 64);
+      g.fillStyle(c, 0.9);
+      decoShapes[i % decoShapes.length](cx, cy);
+      g.fillStyle(accent, 0.4);
+      g.fillCircle(cx + 6, cy + 6, 4);
     });
   }
 
