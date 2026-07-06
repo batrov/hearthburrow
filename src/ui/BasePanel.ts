@@ -85,8 +85,8 @@ import { UiButton } from './UiButton';
        this.scene.cameras.main.ignore(child);
      }
 
-    btn.hitZone.on('pointerdown', () => {
-      if (this.isVisible()) this.hide();
+    btn.hitZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (this.isVisible()) btn.handleClick(pointer);
     });
 
     this._closeBtn = btn;

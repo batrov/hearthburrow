@@ -861,9 +861,19 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.ignore(invZone);
     invZone.on('pointerdown', () => {
       if (this.isModalActive) return;
-      this.inventoryPanel.refresh();
-      this.analog.reset();
-      this.inventoryPanel.toggle();
+      this.invBg.setTint(0x666688);
+      this.tweens.add({
+        targets: this.invBg, scaleX: 0.95, scaleY: 0.95, duration: 60, ease: 'Quad.easeOut',
+        onComplete: () => {
+          this.invBg.clearTint();
+          this.inventoryPanel.refresh();
+          this.analog.reset();
+          this.inventoryPanel.toggle();
+          this.tweens.add({
+            targets: this.invBg, scaleX: 1, scaleY: 1, duration: 120, ease: 'Quad.easeOut',
+          });
+        },
+      });
     });
     this.invZone = invZone;
 
@@ -893,7 +903,17 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.ignore(this.potionImg);
     this.potionImg.on('pointerdown', () => {
       if (this.isModalActive) return;
-      this.tryUseConsumable('stamina_potion');
+      this.potionBg.setTint(0x666688);
+      this.tweens.add({
+        targets: this.potionBg, scaleX: 0.95, scaleY: 0.95, duration: 60, ease: 'Quad.easeOut',
+        onComplete: () => {
+          this.potionBg.clearTint();
+          this.tryUseConsumable('stamina_potion');
+          this.tweens.add({
+            targets: this.potionBg, scaleX: 1, scaleY: 1, duration: 120, ease: 'Quad.easeOut',
+          });
+        },
+      });
     });
     this.potionCountText = createText(this, 0, 0, '', {
       fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#ffdd88',
@@ -910,7 +930,17 @@ export class ExpeditionScene extends Phaser.Scene {
     this.cameras.main.ignore(this.bombImg);
     this.bombImg.on('pointerdown', () => {
       if (this.isModalActive) return;
-      this.tryUseConsumable('mining_bomb');
+      this.bombBg.setTint(0x666688);
+      this.tweens.add({
+        targets: this.bombBg, scaleX: 0.95, scaleY: 0.95, duration: 60, ease: 'Quad.easeOut',
+        onComplete: () => {
+          this.bombBg.clearTint();
+          this.tryUseConsumable('mining_bomb');
+          this.tweens.add({
+            targets: this.bombBg, scaleX: 1, scaleY: 1, duration: 120, ease: 'Quad.easeOut',
+          });
+        },
+      });
     });
     this.bombCountText = createText(this, 0, 0, '', {
       fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#ffdd88',
@@ -1419,21 +1449,31 @@ export class ExpeditionScene extends Phaser.Scene {
       if (this.confirmPopup.isVisible()) return;
       const b = this.escapeSprite.getBounds();
       if (b.contains(p.x, p.y)) {
-        const hasScroll = this.inventory.count('teleport_scroll') > 0;
-        this.time.delayedCall(0, () => {
-          this.confirmPopup.show(
-            hasScroll ? 'Use Teleport Scroll?' : 'Give Up?',
-            hasScroll
-              ? 'Return to Homeland safely.\nAll items kept.'
-              : 'Emergency teleport home.\nYou will lose some items.',
-            () => {
-              if (hasScroll) {
-                this.tryUseConsumable('teleport_scroll');
-              } else {
-                this.emergencyExtract();
-              }
-            },
-          );
+        this.escapeBg.setTint(0x666688);
+        this.tweens.add({
+          targets: this.escapeBg, scaleX: 0.95, scaleY: 0.95, duration: 60, ease: 'Quad.easeOut',
+          onComplete: () => {
+            this.escapeBg.clearTint();
+            const hasScroll = this.inventory.count('teleport_scroll') > 0;
+            this.time.delayedCall(0, () => {
+              this.confirmPopup.show(
+                hasScroll ? 'Use Teleport Scroll?' : 'Give Up?',
+                hasScroll
+                  ? 'Return to Homeland safely.\nAll items kept.'
+                  : 'Emergency teleport home.\nYou will lose some items.',
+                () => {
+                  if (hasScroll) {
+                    this.tryUseConsumable('teleport_scroll');
+                  } else {
+                    this.emergencyExtract();
+                  }
+                },
+              );
+            });
+            this.tweens.add({
+              targets: this.escapeBg, scaleX: 1, scaleY: 1, duration: 120, ease: 'Quad.easeOut',
+            });
+          },
         });
       }
     });

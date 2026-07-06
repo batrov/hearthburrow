@@ -5,7 +5,7 @@ import { UiButton } from './UiButton';
 import { gameState } from '../systems/GameState';
 import { EquipmentPicker, PickerOption } from './EquipmentPicker';
 import { ConsumablePicker } from './ConsumablePicker';
-import { FloorPicker } from './FloorPicker';
+import { DepthPicker } from './DepthPicker';
 import { VW, VH, CX } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
 import { getInputMode } from '../systems/InputMode';
@@ -48,8 +48,8 @@ export class GatePanel extends BasePanel {
   private selectedLanternIdx = -1;
   private consumableLoadout: Record<string, number> = {};
   debugMode = false;
-  private selectedElevatorFloor = 0;
-  private elevatorFloorOptions: number[] = [];
+  private selectedElevatorDepth = 0;
+  private elevatorDepthOptions: number[] = [];
   gateSeed = '';
 
   settingsDirty = false;
@@ -73,8 +73,9 @@ export class GatePanel extends BasePanel {
     zone: Phaser.GameObjects.Rectangle;
   }[] = [];
 
-  private floorText!: Phaser.GameObjects.Text;
-  private floorZone!: Phaser.GameObjects.Rectangle;
+  private depthText!: Phaser.GameObjects.Text;
+  private depthBg!: Phaser.GameObjects.NineSlice;
+  private depthZone!: Phaser.GameObjects.Rectangle;
   private descBg!: Phaser.GameObjects.NineSlice;
   private descLines: Phaser.GameObjects.Text[] = [];
   private footerText!: Phaser.GameObjects.Text;
@@ -96,14 +97,14 @@ export class GatePanel extends BasePanel {
 
   private equipPicker: EquipmentPicker;
   private consumablePicker: ConsumablePicker;
-  private floorPicker: FloorPicker;
+  private depthPicker: DepthPicker;
   private clickHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
 
   constructor(scene: Phaser.Scene) {
     super(scene);
     this.equipPicker = new EquipmentPicker(scene);
     this.consumablePicker = new ConsumablePicker(scene);
-    this.floorPicker = new FloorPicker(scene);
+    this.depthPicker = new DepthPicker(scene);
     this.buildUI();
   }
 
@@ -188,15 +189,18 @@ export class GatePanel extends BasePanel {
       fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
     }).setOrigin(0.5));
 
-    this.floorText = createText(this.scene, CX(), 362, '', {
+    this.depthBg = NineSliceBg.slot(this.scene, CX(), 362, 260, 44);
+    this.depthBg.setDepth(200);
+    this.container.add(this.depthBg);
+    this.depthText = createText(this.scene, CX(), 362, '', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b8a898',
     }).setOrigin(0.5);
-    this.container.add(this.floorText);
-    const floorZone = this.scene.add.rectangle(CX(), 362, 260, 44, 0xffffff, 0)
+    this.container.add(this.depthText);
+    const depthZone = this.scene.add.rectangle(CX(), 362, 260, 44, 0xffffff, 0)
       .setScrollFactor(0);
-    floorZone.setVisible(false);
-    this.container.add(floorZone);
-    this.floorZone = floorZone;
+    depthZone.setVisible(false);
+    this.container.add(depthZone);
+    this.depthZone = depthZone;
 
     this.embarkBtn = new UiButton(this.scene, CX(), 420, 'EMBARK', 140, 44, () => this.embark(), {
       color: '#ffcc44', fontSize: fs(14),
@@ -248,19 +252,19 @@ export class GatePanel extends BasePanel {
     }
 
     this.settingsDirty = false;
-    this.elevatorFloorOptions = gameState.getAvailableElevatorFloors();
-    this.selectedElevatorFloor = this.elevatorFloorOptions[this.elevatorFloorOptions.length - 1] ?? 0;
+    this.elevatorDepthOptions = gameState.getAvailableElevatorFloors();
+    this.selectedElevatorDepth = this.elevatorDepthOptions[this.elevatorDepthOptions.length - 1] ?? 0;
     this.gateTab = 0;
 
     this.render();
     this.embarkBtn.setVisible(true);
     this.equipSlots.forEach(s => s.zone.setVisible(true));
     this.consSlots.forEach(s => s.zone.setVisible(true));
-    this.floorZone.setVisible(true);
+    this.depthZone.setVisible(true);
 
     this.clickHandler = (p: Phaser.Input.Pointer) => {
       if (this.equipPicker.isVisible() || this.consumablePicker.isVisible() ||
-          this.floorPicker.isVisible()) {
+          this.depthPicker.isVisible()) {
         return;
       }
       if (this.embarkBtn.handleClick(p)) return;
@@ -284,9 +288,9 @@ export class GatePanel extends BasePanel {
           }
         }
       }
-      const fb = this.floorZone.getBounds();
-      if (this.floorZone.visible && fb.contains(p.x, p.y)) {
-        this.onFloorClick();
+      const fb = this.depthZone.getBounds();
+      if (this.depthZone.visible && fb.contains(p.x, p.y)) {
+        this.onDepthClick();
         return;
       }
     };
@@ -299,7 +303,7 @@ export class GatePanel extends BasePanel {
     this.embarkBtn.setVisible(false);
     this.equipSlots.forEach(s => s.zone.setVisible(false));
     this.consSlots.forEach(s => s.zone.setVisible(false));
-    this.floorZone.setVisible(false);
+    this.depthZone.setVisible(false);
     if (this.clickHandler) {
       this.scene.input.off('pointerdown', this.clickHandler);
       this.clickHandler = null;
@@ -313,7 +317,7 @@ export class GatePanel extends BasePanel {
     this.renderStats();
     this.renderEquipmentSlots();
     this.renderConsumableSlots();
-    this.renderFloorRow();
+    this.renderDepthRow();
     this.renderDescription();
     this.renderFooter();
   }
@@ -442,13 +446,15 @@ export class GatePanel extends BasePanel {
     }
   }
 
-  private renderFloorRow(): void {
-    const elevStr = this.selectedElevatorFloor === 0
+  private renderDepthRow(): void {
+    const elevStr = this.selectedElevatorDepth === 0
       ? '0'
-      : `Depth ${this.selectedElevatorFloor}`;
+      : `Depth ${this.selectedElevatorDepth}`;
     const isSelected = this.gateTab === 8;
-    this.floorText.setText(`Start Floor: ${elevStr}`);
-    this.floorText.setColor(isSelected ? '#ffddaa' : '#b8a898');
+    this.depthBg.setTint(isSelected ? 0x8a7aaa : 0x3a3a4a);
+    this.depthBg.setAlpha(isSelected ? 0.8 : 0.5);
+    this.depthText.setText(`Start Depth: ${elevStr}`);
+    this.depthText.setColor(isSelected ? '#ffddaa' : '#b8a898');
   }
 
   private renderDescription(): void {
@@ -473,7 +479,7 @@ export class GatePanel extends BasePanel {
       case 5: return this.descConsumable(0);
       case 6: return this.descConsumable(1);
       case 7: return this.descConsumable(2);
-      case 8: return ['Start Floor', this.selectedElevatorFloor === 0 ? 'Homeland' : `Floor ${this.selectedElevatorFloor}`];
+      case 8: return ['Start Depth', this.selectedElevatorDepth === 0 ? 'Homeland' : `Depth ${this.selectedElevatorDepth}`];
       case 9: return ['Ready to descend', getInputMode() !== 'keyboard' ? 'Tap to embark' : '[SPACE] to embark'];
       default: return ['', ''];
     }
@@ -529,25 +535,45 @@ export class GatePanel extends BasePanel {
       : '[W/S] nav  [SPACE] pick  [\u2190\u2192] floor  [ESC] cancel');
   }
 
+  private pressTween(target: Phaser.GameObjects.NineSlice, action: () => void): void {
+    this.scene.tweens.add({
+      targets: target,
+      scaleX: 0.95, scaleY: 0.95, duration: 60, ease: 'Quad.easeOut',
+      onComplete: () => {
+        action();
+        this.scene.tweens.add({
+          targets: target,
+          scaleX: 1, scaleY: 1, duration: 100, ease: 'Quad.easeOut',
+        });
+      },
+    });
+  }
+
   private onEquipClick(idx: number): void {
     if (!this.isVisible()) return;
-    this.gateTab = idx;
-    this.render();
-    this.openEquipPicker(idx);
+    this.pressTween(this.equipSlots[idx].bg, () => {
+      this.gateTab = idx;
+      this.render();
+      this.openEquipPicker(idx);
+    });
   }
 
   private onConsumableClick(idx: number): void {
     if (!this.isVisible()) return;
-    this.gateTab = 5 + idx;
-    this.render();
-    this.openConsumablePicker(idx);
+    this.pressTween(this.consSlots[idx].bg, () => {
+      this.gateTab = 5 + idx;
+      this.render();
+      this.openConsumablePicker(idx);
+    });
   }
 
-  private onFloorClick(): void {
+  private onDepthClick(): void {
     if (!this.isVisible()) return;
-    this.gateTab = 8;
-    this.render();
-    this.openFloorPicker();
+    this.pressTween(this.depthBg, () => {
+      this.gateTab = 8;
+      this.render();
+      this.openDepthPicker();
+    });
   }
 
   private openEquipPicker(slotIdx: number): void {
@@ -674,9 +700,9 @@ export class GatePanel extends BasePanel {
     });
   }
 
-  private openFloorPicker(): void {
-    this.floorPicker.show(this.elevatorFloorOptions, this.selectedElevatorFloor, (floor) => {
-      this.selectedElevatorFloor = floor;
+  private openDepthPicker(): void {
+    this.depthPicker.show(this.elevatorDepthOptions, this.selectedElevatorDepth, (depth: number) => {
+      this.selectedElevatorDepth = depth;
       this.render();
     });
   }
@@ -684,7 +710,7 @@ export class GatePanel extends BasePanel {
   isPickerOpen(): boolean {
     return this.equipPicker.isVisible()
       || this.consumablePicker.isVisible()
-      || this.floorPicker.isVisible();
+      || this.depthPicker.isVisible();
   }
 
   handleUp(): void {
@@ -701,16 +727,16 @@ export class GatePanel extends BasePanel {
 
   handleLeft(): void {
     if (this.gateTab === 8) {
-      const idx = this.elevatorFloorOptions.indexOf(this.selectedElevatorFloor);
-      if (idx > 0) this.selectedElevatorFloor = this.elevatorFloorOptions[idx - 1];
+      const idx = this.elevatorDepthOptions.indexOf(this.selectedElevatorDepth);
+      if (idx > 0) this.selectedElevatorDepth = this.elevatorDepthOptions[idx - 1];
       this.render();
     }
   }
 
   handleRight(): void {
     if (this.gateTab === 8) {
-      const idx = this.elevatorFloorOptions.indexOf(this.selectedElevatorFloor);
-      if (idx < this.elevatorFloorOptions.length - 1) this.selectedElevatorFloor = this.elevatorFloorOptions[idx + 1];
+      const idx = this.elevatorDepthOptions.indexOf(this.selectedElevatorDepth);
+      if (idx < this.elevatorDepthOptions.length - 1) this.selectedElevatorDepth = this.elevatorDepthOptions[idx + 1];
       this.render();
     }
   }
@@ -726,7 +752,7 @@ export class GatePanel extends BasePanel {
     } else if (t >= 5 && t <= 7) {
       this.openConsumablePicker(t - 5);
     } else if (t === 8) {
-      this.openFloorPicker();
+      this.openDepthPicker();
     } else if (t === 9) {
       this.embark();
     }
@@ -753,7 +779,7 @@ export class GatePanel extends BasePanel {
       consumables,
       seed: gameState.currentRunSeed,
       debug: this.debugMode,
-      startFloor: this.selectedElevatorFloor,
+      startFloor: this.selectedElevatorDepth,
     });
   }
 
@@ -782,13 +808,17 @@ export class GatePanel extends BasePanel {
       slot.zone.setPosition(equipYX[i].x, equipYX[i].y);
     }
 
+    this.depthBg.setPosition(CX(), 362);
+    this.depthText.setPosition(CX(), 362);
+    this.depthZone.setPosition(CX(), 362);
+
     if (this._visible) this.render();
   }
 
   destroy(): void {
     this.equipPicker.destroy();
     this.consumablePicker.destroy();
-    this.floorPicker.destroy();
+    this.depthPicker.destroy();
     super.destroy();
   }
 }

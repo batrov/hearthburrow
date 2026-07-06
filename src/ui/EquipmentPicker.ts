@@ -133,7 +133,18 @@ export class EquipmentPicker {
       for (let i = 0; i < count; i++) {
         const rowY = startY + i * 40;
         if (p.y >= rowY && p.y < rowY + 36) {
-          this.selectItem(i);
+          const row = this.rows[i];
+          row.bg.setTint(0x666688);
+          this.scene.tweens.add({
+            targets: row.bg, scaleX: 0.95, scaleY: 0.95, duration: 60, ease: 'Quad.easeOut',
+            onComplete: () => {
+              row.bg.clearTint();
+              this.selectItem(i);
+              this.scene.tweens.add({
+                targets: row.bg, scaleX: 1, scaleY: 1, duration: 100, ease: 'Quad.easeOut',
+              });
+            },
+          });
           return;
         }
       }

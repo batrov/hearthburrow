@@ -59,27 +59,29 @@ export class UiButton {
 
     this._pressed = true;
     this.bg.setTint(0x666688);
+
     this.scene.tweens.add({
       targets: this.bg,
       scaleX: 0.95,
       scaleY: 0.95,
       duration: 60,
       ease: 'Quad.easeOut',
-    });
-
-    this._callback();
-
-    this._pressed = false;
-    this.bg.clearTint();
-    if (this._hovered) {
-      this.bg.setTint(0xccccff);
-    }
-    this.scene.tweens.add({
-      targets: this.bg,
-      scaleX: 1,
-      scaleY: 1,
-      duration: 120,
-      ease: 'Quad.easeOut',
+      onComplete: () => {
+        if (!this._pressed) return;
+        this._pressed = false;
+        this.bg.clearTint();
+        if (this._hovered) {
+          this.bg.setTint(0xccccff);
+        }
+        this._callback();
+        this.scene.tweens.add({
+          targets: this.bg,
+          scaleX: 1,
+          scaleY: 1,
+          duration: 120,
+          ease: 'Quad.easeOut',
+        });
+      },
     });
     return true;
   }
@@ -88,6 +90,8 @@ export class UiButton {
   handleRelease(_pointer?: Phaser.Input.Pointer): void {
     if (!this._pressed) return;
     this._pressed = false;
+
+    this.scene.tweens.killTweensOf(this.bg);
 
     this.bg.clearTint();
     if (this._hovered) {

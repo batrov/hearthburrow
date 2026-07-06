@@ -392,9 +392,13 @@ Resolved Bugs:
 - **3 scenes**: Homeland hudCam + zoom 0.85, Tavern OFFSET_X=CX-40 + zoom 1.2, ExpeditionRecap single-column 358w
 - **Touch-size audit**: all interactive zones ≥40px height, standalone buttons ≥44px (FarmPanel, GatePanel embark, SeedEntryPopup randomize, ConfirmPopup yes/no, ConsumablePicker ±, NPCPhotobook ▲▼, CombatPanel timing)
 
-## ✅ NineSlice Action Buttons in Expedition HUD (July 2026)
-- **Consumable action buttons wrapped** — Potion, Bomb, and Escape (Teleport) icons now each have a `NineSliceBg.btn` background, matching the existing pickaxe block and inventory button which already used `NineSliceBg.card`
-- **Dimming synced** — backgrounds dim alongside their icons when modals are active, using `dimmed * 0.75` alpha (base 0.75, dimmed to ~0.225)
+## ✅ Press Feedback on All Clickable Buttons (July 2026)
+- **Sequential press feedback** — all clickable buttons now use a chained tween pattern: `setTint(0x666688)` → press tween (60ms scale 0.95) → `onComplete` → clearTint + action + release tween (120ms scale 1.0). The chained `onComplete` ensures the press animation renders **before** any action that hides/destroys the button (scene transition, panel fade, popup open)
+- **UiButton refactored** — `handleClick()` moved `_callback()` into the press tween's `onComplete` so buttons that trigger scene switches (Embark) or panel hides (Close) show feedback before the action; `handleRelease()` calls `killTweensOf()` to prevent double-release; added guard `if (!this._pressed) return` in `onComplete`
+- **BasePanel close button** — hitZone's `pointerdown` handler now routes through `btn.handleClick(pointer)` instead of calling `hide()` directly, giving the close button the same press+release animation
+- **GatePanel loadout slots** — all 9 equipment/consumable slots + depth row wrapped via `pressTween(target, action)` helper; depth row got its own `NineSliceBg.slot` background
+- **EquipmentPicker/DepthPicker rows** — click handler applies press tween + tint on each option row before calling `selectItem()`/`selectDepth()`
+- **Expedition HUD buttons** — Inventory (`invBg`), Potion (`potionBg`), Bomb (`bombBg`), and Escape (`escapeBg`) all wrapped with the same press chain
 
 ## ✅ Developer Menu & Loadout Cleanup (July 2026)
 - **Developer Menu panel** — new `DeveloperPanel` (F2 toggle) with Debug ON/OFF toggle, Seed editor (reuses `SeedEntryPopup`), and Reset Game with confirmation (reuses `ConfirmPopup`)

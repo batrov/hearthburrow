@@ -5,19 +5,19 @@ import { createAdaptiveText } from './AdaptiveText';
 import { NineSliceBg } from './NineSliceBg';
 import { UiButton } from './UiButton';
 
-export class FloorPicker {
+export class DepthPicker {
   private scene: Phaser.Scene;
   private container: Phaser.GameObjects.Container;
   private visible = false;
-  private floors: number[] = [];
+  private depths: number[] = [];
   private selectedIdx = 0;
-  private onSelectCb: ((floor: number) => void) | null = null;
+  private onSelectCb: ((depth: number) => void) | null = null;
   private onCancelCb: (() => void) | null = null;
 
   private overlay: Phaser.GameObjects.NineSlice;
   private popupBg: Phaser.GameObjects.NineSlice | null = null;
   private titleText: Phaser.GameObjects.Text;
-  private rows: { bg: Phaser.GameObjects.Graphics; text: Phaser.GameObjects.Text; zone: Phaser.GameObjects.Rectangle }[] = [];
+  private rows: { bg: Phaser.GameObjects.NineSlice; text: Phaser.GameObjects.Text; zone: Phaser.GameObjects.Rectangle }[] = [];
   private footerText: Phaser.GameObjects.Text;
   private keyHandler: ((e: KeyboardEvent) => void) | null = null;
   private blocker: Phaser.GameObjects.Rectangle;
@@ -39,13 +39,13 @@ export class FloorPicker {
     this.blocker.on('pointerdown', () => {});
     this.container.add(this.blocker);
 
-    this.titleText = createText(scene, CX(), 170, 'Select Start Floor', {
+    this.titleText = createText(scene, CX(), 170, 'Select Start Depth', {
       fontSize: fs(18), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.titleText);
 
     for (let i = 0; i < 10; i++) {
-      const bg = scene.add.graphics();
+      const bg = NineSliceBg.slot(scene, 0, 0, 1, 1);
       this.container.add(bg);
 
       const text = createText(scene, 0, 0, '', {
@@ -62,20 +62,20 @@ export class FloorPicker {
       this.rows.push({ bg, text, zone });
     }
 
-    this.footerText = createAdaptiveText(scene, CX(), 520, '[W/S] select  [SPACE] confirm  [ESC] cancel', 'Tap a floor to select', {
+    this.footerText = createAdaptiveText(scene, CX(), 520, '[W/S] select  [SPACE] confirm  [ESC] cancel', 'Tap a depth to select', {
       fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#8a7a9a',
     }).setOrigin(0.5);
     this.container.add(this.footerText);
   }
 
   show(
-    floors: number[],
-    currentFloor: number,
-    onSelect: (floor: number) => void,
+    depths: number[],
+    currentDepth: number,
+    onSelect: (depth: number) => void,
     onCancel?: () => void,
   ): void {
-    this.floors = floors;
-    this.selectedIdx = floors.indexOf(currentFloor);
+    this.depths = depths;
+    this.selectedIdx = depths.indexOf(currentDepth);
     if (this.selectedIdx < 0) this.selectedIdx = 0;
     this.onSelectCb = onSelect;
     this.onCancelCb = onCancel ?? null;
@@ -91,7 +91,7 @@ export class FloorPicker {
     this.scene.input.keyboard!.on('keydown', this.keyHandler);
 
     this.clickHandler = (p: Phaser.Input.Pointer) => {
-      const count = Math.min(this.floors.length, 10);
+      const count = Math.min(this.depths.length, 10);
       const popH = 60 + count * 38 + 24;
       const popY = Math.floor((VH() - popH) / 2);
       const popX = 16, popW = VW() - 32;
@@ -103,7 +103,18 @@ export class FloorPicker {
       for (let i = 0; i < count; i++) {
         const rowY = startY + i * 38;
         if (p.y >= rowY && p.y < rowY + 32) {
-          this.selectFloor(i);
+          const row = this.rows[i];
+          row.bg.setTint(0x666688);
+          this.scene.tweens.add({
+            targets: row.bg, scaleX: 0.95, scaleY: 0.95, duration: 60, ease: 'Quad.easeOut',
+            onComplete: () => {
+              row.bg.clearTint();
+              this.selectDepth(i);
+              this.scene.tweens.add({
+                targets: row.bg, scaleX: 1, scaleY: 1, duration: 100, ease: 'Quad.easeOut',
+              });
+            },
+          });
           return;
         }
       }
@@ -122,7 +133,7 @@ export class FloorPicker {
   }
 
   private render(): void {
-    const count = Math.min(this.floors.length, 10);
+    const count = Math.min(this.depths.length, 10);
     const popH = 60 + count * 38 + 24;
     const popY = Math.floor((VH() - popH) / 2);
 
@@ -141,22 +152,24 @@ export class FloorPicker {
     const startY = popY + 48;
     for (let i = 0; i < this.rows.length; i++) {
       const row = this.rows[i];
-      const floor = this.floors[i];
+      const depth = this.depths[i];
       const y = startY + i * 38;
 
-      row.bg.clear();
-
-      if (floor === undefined) {
+      if (depth === undefined) {
+        row.bg.setVisible(false);
         row.text.setVisible(false);
         row.zone.setVisible(false);
         continue;
       }
 
       const isSelected = i === this.selectedIdx;
-      row.bg.fillStyle(isSelected ? 0x3a3a5a : 0x1a1a2a, 0.8);
-      row.bg.fillRoundedRect(24, y, VW() - 48, 32, 4);
+      NineSliceBg.updateSize(row.bg, popW - 16, 32);
+      row.bg.setPosition(popX + 8 + (popW - 16) / 2, y + 16);
+      row.bg.setTint(isSelected ? 0x8a7aaa : 0x3a3a4a);
+      row.bg.setAlpha(isSelected ? 0.8 : 0.5);
+      row.bg.setVisible(true);
 
-      const label = `Floor ${floor}`;
+      const label = `Depth ${depth}`;
       row.text.setText(label);
       row.text.setPosition(CX(), y + 8);
       row.text.setOrigin(0.5);
@@ -170,22 +183,22 @@ export class FloorPicker {
 
   private navigate(dir: number): void {
     const newIdx = this.selectedIdx + (dir > 0 ? 1 : -1);
-    if (newIdx >= 0 && newIdx < this.floors.length) {
+    if (newIdx >= 0 && newIdx < this.depths.length) {
       this.selectedIdx = newIdx;
       this.render();
     }
   }
 
-  private selectFloor(idx: number): void {
-    if (idx < 0 || idx >= this.floors.length) return;
+  private selectDepth(idx: number): void {
+    if (idx < 0 || idx >= this.depths.length) return;
     this.selectedIdx = idx;
     this.render();
     this.confirm();
   }
 
   private confirm(): void {
-    if (this.selectedIdx < 0 || this.selectedIdx >= this.floors.length) return;
-    this.onSelectCb?.(this.floors[this.selectedIdx]);
+    if (this.selectedIdx < 0 || this.selectedIdx >= this.depths.length) return;
+    this.onSelectCb?.(this.depths[this.selectedIdx]);
     this.hide();
   }
 
