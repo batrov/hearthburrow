@@ -286,6 +286,9 @@ export class HomelandScene extends Phaser.Scene {
     this.gatePanel = new GatePanel(this);
     this.gatePanel.onEmbark = (config) => this.startExpedition(config);
     this.gatePanel.onCloseCb = () => {};
+    this.gatePanel.onDeveloperMenu = () => {
+      this.developerPanel.show(this.gatePanel.debugMode, this.gatePanel.gateSeed);
+    };
     this.developerPanel = new DeveloperPanel(this);
     this.developerPanel.onChange = (config) => {
       this.gatePanel.debugMode = config.debugMode;

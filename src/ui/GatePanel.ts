@@ -33,6 +33,7 @@ export class GatePanel extends BasePanel {
     consumables: Record<string, number>; seed: string; debug: boolean; startFloor: number;
   }) => void;
   onCloseCb!: () => void;
+  onDeveloperMenu?: () => void;
 
   gateTab = 0;
   maxTab = 9;
@@ -99,6 +100,8 @@ export class GatePanel extends BasePanel {
   private consumablePicker: ConsumablePicker;
   private depthPicker: DepthPicker;
   private clickHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
+  private pressTimer: Phaser.Time.TimerEvent | null = null;
+  private pointerUpHandler: (() => void) | null = null;
 
   constructor(scene: Phaser.Scene) {
     super(scene);
@@ -262,9 +265,27 @@ export class GatePanel extends BasePanel {
     this.consSlots.forEach(s => s.zone.setVisible(true));
     this.depthZone.setVisible(true);
 
+    const portraitBounds = new Phaser.Geom.Rectangle(
+      this.portraitSprite.x - this.portraitSprite.displayWidth / 2,
+      this.portraitSprite.y - this.portraitSprite.displayHeight / 2,
+      this.portraitSprite.displayWidth,
+      this.portraitSprite.displayHeight,
+    );
+
+    this.pointerUpHandler = () => {
+      if (this.pressTimer) { this.pressTimer.remove(); this.pressTimer = null; }
+    };
+    this.scene.input.on('pointerup', this.pointerUpHandler);
+
     this.clickHandler = (p: Phaser.Input.Pointer) => {
       if (this.equipPicker.isVisible() || this.consumablePicker.isVisible() ||
           this.depthPicker.isVisible()) {
+        return;
+      }
+      if (portraitBounds.contains(p.x, p.y)) {
+        this.pressTimer = this.scene.time.delayedCall(500, () => {
+          this.onDeveloperMenu?.();
+        });
         return;
       }
       if (this.embarkBtn.handleClick(p)) return;
@@ -304,6 +325,11 @@ export class GatePanel extends BasePanel {
     this.equipSlots.forEach(s => s.zone.setVisible(false));
     this.consSlots.forEach(s => s.zone.setVisible(false));
     this.depthZone.setVisible(false);
+    if (this.pressTimer) { this.pressTimer.remove(); this.pressTimer = null; }
+    if (this.pointerUpHandler) {
+      this.scene.input.off('pointerup', this.pointerUpHandler);
+      this.pointerUpHandler = null;
+    }
     if (this.clickHandler) {
       this.scene.input.off('pointerdown', this.clickHandler);
       this.clickHandler = null;
