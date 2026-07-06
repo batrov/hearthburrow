@@ -4,7 +4,7 @@
     { "id": "pickaxe_3", "result": "pickaxe_3", "quantity": 1, "ingredients": { "stone": 20, "silver_ore": 10 }, "discovered": false },
     { "id": "pickaxe_4", "result": "pickaxe_4", "quantity": 1, "ingredients": { "stone": 40, "gold_ore": 10 }, "discovered": false },
     { "id": "stamina_potion", "result": "stamina_potion", "quantity": 1, "ingredients": { "crystal": 3, "monster_drop": 2 }, "discovered": false },
-    { "id": "teleport_scroll", "result": "teleport_scroll", "quantity": 1, "ingredients": { "crystal": 5 }, "discovered": false },
+    { "id": "teleport_scroll", "result": "teleport_scroll", "quantity": 1, "ingredients": { "crystal": 3 }, "discovered": false },
     { "id": "mining_bomb", "result": "mining_bomb", "quantity": 1, "ingredients": { "stone": 5, "monster_drop": 3 }, "discovered": false },
     { "id": "ring_critical", "result": "ring_critical", "quantity": 1, "ingredients": { "monster_drop": 5, "crystal": 2 }, "discovered": false },
     { "id": "ring_damage", "result": "ring_damage", "quantity": 1, "ingredients": { "silver_ore": 5, "monster_drop": 3 }, "discovered": false },

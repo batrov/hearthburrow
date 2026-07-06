@@ -292,6 +292,7 @@ const ITEM_NAMES: Record<string, string> = {
   ice_shard: 'Ice Shard',
   magma_core: 'Magma Core',
   void_essence: 'Void Essence',
+  cursed_doll: 'Cursed Doll',
 };
 
 /** Get the human-readable display name for an item ID. Falls back to replacing underscores with spaces. */

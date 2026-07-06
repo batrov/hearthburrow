@@ -78,7 +78,7 @@ import { UiButton } from './UiButton';
 
      const btn = new UiButton(this.scene, x, y, '[X]', 48, 48, () => {
        if (this.isVisible()) this.hide();
-     }, { small: true, color: '#886666', fontSize: fs(24) });
+     }, { small: true, color: '#cd863f', fontSize: fs(24) });
      btn.setDepth(220);
      btn.setVisible(false);
      for (const child of btn.getChildren()) {

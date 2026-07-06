@@ -640,3 +640,10 @@ Resolved Bugs:
 - **Pickup on approach** — `tryMove()` calls `checkFloorPickup()`: when the player walks onto a tile with a floor drop and inventory space is available, the item flies to the backpack
 - **Stacked/non-stacked aware** — `canFitInInventory()` correctly handles both modes: non-stacked (expedition, `isFull()` = no room) and stacked (homeland, `isFull() && !has(resource)` = no matching stack)
 - **Glow follows bob** — `registerFloorDrop()` syncs glow image positions with the sprite's bob animation via `onUpdate`
+
+## ✅ Consumable Action Button BGs + Auto-Hide (July 2026)
+- **NineSliceBg backgrounds** — potion/bomb/escape action buttons wrapped in NineSliceBg.btn backgrounds, matching pickaxe/inventory block style
+- **Auto-hide on 0 count** — potion and bomb buttons hide entirely (bg + image + count text) when inventory count reaches 0; reappear when items are acquired
+- **Teleport scroll safe-extract on exhaustion** — when stamina hits 0, `handleExhaustion()` now checks for teleport scroll: if held, consumes it and calls `safeExtract()` (full item retention) instead of emergency extraction (30% retention)
+- **Cursed Doll item** — new `cursed_doll` material (rare, maxStack 9) with placeholder sprite; trashing it during an expedition sets stamina to 1 via `StaminaSystem.setCurrent()`
+- **Debug mode** — grants teleport scroll + 3 cursed dolls alongside potions and bombs

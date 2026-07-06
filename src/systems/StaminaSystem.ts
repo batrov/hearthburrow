@@ -46,6 +46,13 @@ export class StaminaSystem {
     this._onChange?.(prev, this.current);
   }
 
+  /** Set stamina to an exact value (clamped 0–max). */
+  setCurrent(value: number): void {
+    const prev = this.current;
+    this.current = Math.min(this.max, Math.max(0, value));
+    this._onChange?.(prev, this.current);
+  }
+
   /** Permanently increase max stamina and refill to new max. */
   upgradeMax(additional: number): void {
     const prev = this.current;

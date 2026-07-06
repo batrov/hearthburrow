@@ -148,6 +148,7 @@ export class BootScene extends Phaser.Scene {
       'boots_regen',
       'lantern_bronze', 'lantern_silver', 'lantern_gold',
       'stamina_potion', 'teleport_scroll', 'mining_bomb',
+      'cursed_doll',
       'arrow_left', 'arrow_right',
     ];
     for (const id of itemSprites) {

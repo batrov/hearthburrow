@@ -14,4 +14,5 @@ export const ITEMS = {
   ICE_SHARD: 'ice_shard',
   MAGMA_CORE: 'magma_core',
   VOID_ESSENCE: 'void_essence',
+  CURSED_DOLL: 'cursed_doll',
 } as const;

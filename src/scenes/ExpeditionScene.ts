@@ -955,6 +955,8 @@ export class ExpeditionScene extends Phaser.Scene {
     if (this.debugMode) {
       this.giveItem('stamina_potion', 5);
       this.giveItem('mining_bomb', 5);
+      this.giveItem('teleport_scroll', 1);
+      this.giveItem('cursed_doll', 3);
     }
 
     this.updateActionButtons();
@@ -1311,8 +1313,29 @@ export class ExpeditionScene extends Phaser.Scene {
     const bombCount = this.inventory.count('mining_bomb');
     const hasScroll = this.inventory.count('teleport_scroll') > 0;
 
-    this.potionCountText.setText(potionCount > 0 ? `${potionCount}` : '');
-    this.bombCountText.setText(bombCount > 0 ? `${bombCount}` : '');
+    const dimmed = this.isModalActive ? 0.3 : 1;
+
+    const potionVisible = potionCount > 0;
+    this.potionBg.setVisible(potionVisible);
+    this.potionImg.setVisible(potionVisible);
+    this.potionCountText.setVisible(potionVisible);
+    if (potionVisible) {
+      this.potionCountText.setText(`${potionCount}`);
+      this.potionBg.setAlpha(dimmed * 0.75);
+      this.potionImg.setAlpha(dimmed);
+      this.potionCountText.setAlpha(dimmed);
+    }
+
+    const bombVisible = bombCount > 0;
+    this.bombBg.setVisible(bombVisible);
+    this.bombImg.setVisible(bombVisible);
+    this.bombCountText.setVisible(bombVisible);
+    if (bombVisible) {
+      this.bombCountText.setText(`${bombCount}`);
+      this.bombBg.setAlpha(dimmed * 0.75);
+      this.bombImg.setAlpha(dimmed);
+      this.bombCountText.setAlpha(dimmed);
+    }
 
     if (hasScroll) {
       this.escapeSprite.setTexture('item_teleport_scroll');
@@ -1326,15 +1349,8 @@ export class ExpeditionScene extends Phaser.Scene {
       this.escapeLabel.setColor('#cc6666');
     }
 
-    const dimmed = this.isModalActive ? 0.3 : 1;
-    this.potionBg.setAlpha(dimmed * 0.75);
-    this.bombBg.setAlpha(dimmed * 0.75);
     this.escapeBg.setAlpha(dimmed * 0.75);
-    this.potionImg.setAlpha(dimmed);
-    this.bombImg.setAlpha(dimmed);
     this.escapeSprite.setAlpha(dimmed);
-    this.potionCountText.setAlpha(dimmed);
-    this.bombCountText.setAlpha(dimmed);
     this.escapeLabel.setAlpha(dimmed);
   }
 
@@ -3221,6 +3237,13 @@ export class ExpeditionScene extends Phaser.Scene {
 
   private handleExhaustion(): void {
     if (this.exhausted) return;
+
+    if (this.inventory.count('teleport_scroll') > 0) {
+      this.inventory.removeItem('teleport_scroll', 1);
+      this.safeExtract();
+      return;
+    }
+
     this.exhausted = true;
     this.cameras.main.shake(300, 0.01);
     audio.playExhaustion();
@@ -3686,6 +3709,15 @@ export class ExpeditionScene extends Phaser.Scene {
 
   private trashItem(itemId: string): void {
     if (this.inventory.count(itemId) <= 0) return;
+
+    if (itemId === 'cursed_doll') {
+      this.inventory.removeItem(itemId, 1);
+      this.stamina.setCurrent(1);
+      audio.playError();
+      this.inventoryPanel.refresh();
+      return;
+    }
+
     this.inventory.removeItem(itemId, 1);
     audio.playError();
     this.inventoryPanel.refresh();
