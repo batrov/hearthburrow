@@ -8,6 +8,7 @@ import { FarmPanel } from '../ui/FarmPanel';
 import { BuildingInfoPanel } from '../ui/BuildingInfoPanel';
 import { RestorePanel } from '../ui/RestorePanel';
 import { GatePanel } from '../ui/GatePanel';
+import { DeveloperPanel } from '../ui/DeveloperPanel';
 import { canRestore, restoreBuilding, isRestored } from '../systems/BuildingSystem';
 import { getBuilding } from '../systems/DataRegistry';
 import { audio } from '../systems/AudioSystem';
@@ -225,6 +226,7 @@ export class HomelandScene extends Phaser.Scene {
   private buildingInfoPanel!: BuildingInfoPanel;
   private restorePanel!: RestorePanel;
   private gatePanel!: GatePanel;
+  private developerPanel!: DeveloperPanel;
   private inventoryPanel!: InventoryPanel;
   private craftingPanel!: CraftingPanel;
   private tradePanel!: TradePanel;
@@ -284,6 +286,12 @@ export class HomelandScene extends Phaser.Scene {
     this.gatePanel = new GatePanel(this);
     this.gatePanel.onEmbark = (config) => this.startExpedition(config);
     this.gatePanel.onCloseCb = () => {};
+    this.developerPanel = new DeveloperPanel(this);
+    this.developerPanel.onChange = (config) => {
+      this.gatePanel.debugMode = config.debugMode;
+      this.gatePanel.gateSeed = config.gateSeed;
+      this.gatePanel.settingsDirty = true;
+    };
     this.inventoryPanel = new InventoryPanel(this, gameState.inventory, null, (id) => this.trashItem(id), 'Storage');
     this.craftingPanel = new CraftingPanel(this);
     this.tradePanel = new TradePanel(this);
@@ -297,6 +305,7 @@ export class HomelandScene extends Phaser.Scene {
     this.cameras.main.ignore(this.tradePanel.container);
     this.cameras.main.ignore(this.researchPanel.container);
     this.cameras.main.ignore(this.farmPanel.container);
+    this.cameras.main.ignore(this.developerPanel.container);
 
     this.carrotCountText = createText(this, VW() - 12, 12, '', {
       fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#ff8833', fontStyle: 'bold',
@@ -338,6 +347,7 @@ export class HomelandScene extends Phaser.Scene {
     this.tradePanel?.onViewportResize();
     this.researchPanel?.onViewportResize();
     this.farmPanel?.onViewportResize();
+    this.developerPanel?.onViewportResize();
   }
 
   private updateCarrotCounter(): void {
@@ -547,6 +557,7 @@ export class HomelandScene extends Phaser.Scene {
       ESC: kb.addKey(Phaser.Input.Keyboard.KeyCodes.ESC),
       TAB: kb.addKey(Phaser.Input.Keyboard.KeyCodes.TAB),
       X: kb.addKey(Phaser.Input.Keyboard.KeyCodes.X),
+      F2: kb.addKey(Phaser.Input.Keyboard.KeyCodes.F2),
       Z: kb.addKey(Phaser.Input.Keyboard.KeyCodes.Z),
     };
   }
@@ -556,7 +567,7 @@ export class HomelandScene extends Phaser.Scene {
       || this.buildingInfoPanel.isVisible() || this.restorePanel.isVisible() || this.gatePanel.isVisible()
       || this.craftingPanel.isVisible() || this.inventoryPanel.isVisible()
       || this.tradePanel.isVisible() || this.researchPanel.isVisible()
-      || this.farmPanel.isVisible();
+      || this.farmPanel.isVisible() || this.developerPanel.isVisible();
   }
 
   private isPointerOverUI(pointer: Phaser.Input.Pointer): boolean {
@@ -601,6 +612,15 @@ export class HomelandScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.keys.TAB)) {
       if (this.isModalActive) return;
       this.inventoryPanel.toggle();
+      return;
+    }
+
+    if (Phaser.Input.Keyboard.JustDown(this.keys.F2)) {
+      if (this.developerPanel.isVisible()) {
+        this.developerPanel.hide();
+      } else {
+        this.developerPanel.show(this.gatePanel.debugMode, this.gatePanel.gateSeed);
+      }
       return;
     }
 
@@ -695,6 +715,13 @@ export class HomelandScene extends Phaser.Scene {
       else if (left) this.gatePanel.handleLeft();
       else if (right) this.gatePanel.handleRight();
       else if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) this.gatePanel.handleSpace();
+      return;
+    }
+
+    if (this.developerPanel.isVisible()) {
+      if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) {
+        this.developerPanel.hide();
+      }
       return;
     }
 

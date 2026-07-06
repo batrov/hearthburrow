@@ -6,12 +6,8 @@ import { gameState } from '../systems/GameState';
 import { EquipmentPicker, PickerOption } from './EquipmentPicker';
 import { ConsumablePicker } from './ConsumablePicker';
 import { FloorPicker } from './FloorPicker';
-import { SeedEntryPopup } from './SeedEntryPopup';
-import { ConfirmPopup } from './ConfirmPopup';
 import { VW, VH, CX } from '../systems/Viewport';
-import { SCENES } from '../constants/scenes';
 import { textStyle, fs, createText } from '../systems/Font';
-import { createAdaptiveText } from './AdaptiveText';
 import { getInputMode } from '../systems/InputMode';
 
 const NAMES: Record<number, string> = {
@@ -39,7 +35,7 @@ export class GatePanel extends BasePanel {
   onCloseCb!: () => void;
 
   gateTab = 0;
-  maxTab = 12;
+  maxTab = 9;
 
   private pickaxeOptions: { id: string; tier: number }[] = [];
   private selectedPickaxeIdx = -1;
@@ -51,11 +47,12 @@ export class GatePanel extends BasePanel {
   private lanternOptions: { id: string; name: string; runs: number }[] = [];
   private selectedLanternIdx = -1;
   private consumableLoadout: Record<string, number> = {};
-  private debugMode = false;
+  debugMode = false;
   private selectedElevatorFloor = 0;
   private elevatorFloorOptions: number[] = [];
-  private gateSeed = '';
-  private resetConfirm = false;
+  gateSeed = '';
+
+  settingsDirty = false;
 
   private panelBlocker!: Phaser.GameObjects.Rectangle;
   private title!: Phaser.GameObjects.Text;
@@ -76,8 +73,8 @@ export class GatePanel extends BasePanel {
     zone: Phaser.GameObjects.Rectangle;
   }[] = [];
 
-  private settingsTexts: Phaser.GameObjects.Text[] = [];
-  private settingsZones: Phaser.GameObjects.Rectangle[] = [];
+  private floorText!: Phaser.GameObjects.Text;
+  private floorZone!: Phaser.GameObjects.Rectangle;
   private descBg!: Phaser.GameObjects.NineSlice;
   private descLines: Phaser.GameObjects.Text[] = [];
   private footerText!: Phaser.GameObjects.Text;
@@ -100,8 +97,6 @@ export class GatePanel extends BasePanel {
   private equipPicker: EquipmentPicker;
   private consumablePicker: ConsumablePicker;
   private floorPicker: FloorPicker;
-  private seedPopup: SeedEntryPopup;
-  private confirmPopup: ConfirmPopup;
   private clickHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
 
   constructor(scene: Phaser.Scene) {
@@ -109,8 +104,6 @@ export class GatePanel extends BasePanel {
     this.equipPicker = new EquipmentPicker(scene);
     this.consumablePicker = new ConsumablePicker(scene);
     this.floorPicker = new FloorPicker(scene);
-    this.seedPopup = new SeedEntryPopup(scene);
-    this.confirmPopup = new ConfirmPopup(scene);
     this.buildUI();
   }
 
@@ -195,24 +188,17 @@ export class GatePanel extends BasePanel {
       fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
     }).setOrigin(0.5));
 
-    for (let i = 0; i < 4; i++) {
-      const t = createText(this.scene, CX(), 362 + i * 22, '', {
-        fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b8a898',
-      }).setOrigin(0.5);
-      this.container.add(t);
-      this.settingsTexts.push(t);
-      const zone = this.scene.add.rectangle(CX(), 350 + i * 22, 260, 44, 0xffffff, 0)
-        .setScrollFactor(0);
-      zone.setVisible(false);
-      this.container.add(zone);
-      this.settingsZones.push(zone);
-    }
+    this.floorText = createText(this.scene, CX(), 362, '', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b8a898',
+    }).setOrigin(0.5);
+    this.container.add(this.floorText);
+    const floorZone = this.scene.add.rectangle(CX(), 362, 260, 44, 0xffffff, 0)
+      .setScrollFactor(0);
+    floorZone.setVisible(false);
+    this.container.add(floorZone);
+    this.floorZone = floorZone;
 
-    this.container.add(createText(this.scene, CX(), 344, 'SETTINGS', {
-      fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
-    }).setOrigin(0.5));
-
-    this.embarkBtn = new UiButton(this.scene, CX(), 462, 'EMBARK', 140, 44, () => this.embark(), {
+    this.embarkBtn = new UiButton(this.scene, CX(), 420, 'EMBARK', 140, 44, () => this.embark(), {
       color: '#ffcc44', fontSize: fs(14),
     });
     this.embarkBtn.setDepth(210).setVisible(false);
@@ -257,24 +243,24 @@ export class GatePanel extends BasePanel {
     for (const ct of CONSUMABLE_TYPES) {
       this.consumableLoadout[ct.id] = 0;
     }
+    if (gameState.inventory.count('teleport_scroll') > 0) {
+      this.consumableLoadout['teleport_scroll'] = 1;
+    }
 
+    this.settingsDirty = false;
     this.elevatorFloorOptions = gameState.getAvailableElevatorFloors();
     this.selectedElevatorFloor = this.elevatorFloorOptions[this.elevatorFloorOptions.length - 1] ?? 0;
-    this.gateSeed = gameState.currentRunSeed || Math.random().toString(36).substring(2, 10);
-    this.debugMode = false;
-    this.resetConfirm = false;
     this.gateTab = 0;
 
     this.render();
     this.embarkBtn.setVisible(true);
     this.equipSlots.forEach(s => s.zone.setVisible(true));
     this.consSlots.forEach(s => s.zone.setVisible(true));
-    this.settingsZones.forEach(z => z.setVisible(true));
+    this.floorZone.setVisible(true);
 
     this.clickHandler = (p: Phaser.Input.Pointer) => {
       if (this.equipPicker.isVisible() || this.consumablePicker.isVisible() ||
-          this.floorPicker.isVisible() || this.seedPopup.isVisible() ||
-          this.confirmPopup.isVisible()) {
+          this.floorPicker.isVisible()) {
         return;
       }
       if (this.embarkBtn.handleClick(p)) return;
@@ -298,15 +284,10 @@ export class GatePanel extends BasePanel {
           }
         }
       }
-      for (let i = 0; i < 4; i++) {
-        const z = this.settingsZones[i];
-        if (z.visible) {
-          const b = z.getBounds();
-          if (b.contains(p.x, p.y)) {
-            this.onSettingsClick(i);
-            return;
-          }
-        }
+      const fb = this.floorZone.getBounds();
+      if (this.floorZone.visible && fb.contains(p.x, p.y)) {
+        this.onFloorClick();
+        return;
       }
     };
     this.scene.input.on('pointerdown', this.clickHandler);
@@ -315,11 +296,10 @@ export class GatePanel extends BasePanel {
   }
 
   hide(): void {
-    this.resetConfirm = false;
     this.embarkBtn.setVisible(false);
     this.equipSlots.forEach(s => s.zone.setVisible(false));
     this.consSlots.forEach(s => s.zone.setVisible(false));
-    this.settingsZones.forEach(z => z.setVisible(false));
+    this.floorZone.setVisible(false);
     if (this.clickHandler) {
       this.scene.input.off('pointerdown', this.clickHandler);
       this.clickHandler = null;
@@ -333,7 +313,7 @@ export class GatePanel extends BasePanel {
     this.renderStats();
     this.renderEquipmentSlots();
     this.renderConsumableSlots();
-    this.renderSettings();
+    this.renderFloorRow();
     this.renderDescription();
     this.renderFooter();
   }
@@ -462,39 +442,24 @@ export class GatePanel extends BasePanel {
     }
   }
 
-  private renderSettings(): void {
+  private renderFloorRow(): void {
     const elevStr = this.selectedElevatorFloor === 0
       ? '0'
       : `Depth ${this.selectedElevatorFloor}`;
-    const seedDisplay = this.gateSeed || '(none)';
-    const debugStr = this.debugMode ? 'ON' : 'OFF';
-    const resetStr = this.resetConfirm
-      ? (getInputMode() !== 'keyboard' ? 'Reset? Tap' : 'Reset? [SPACE]')
-    : 'Reset Game';
-
-    const lines = [
-      `Start Floor: ${elevStr}`,
-      `Seed: ${seedDisplay}`,
-      `Debug: ${debugStr}`,
-      resetStr,
-    ];
-
-    for (let i = 0; i < 4; i++) {
-      const isSelected = this.gateTab === 8 + i;
-      this.settingsTexts[i].setText(lines[i]);
-      this.settingsTexts[i].setColor(isSelected ? '#ffddaa' : '#b8a898');
-    }
+    const isSelected = this.gateTab === 8;
+    this.floorText.setText(`Start Floor: ${elevStr}`);
+    this.floorText.setColor(isSelected ? '#ffddaa' : '#b8a898');
   }
 
   private renderDescription(): void {
     NineSliceBg.updateSize(this.descBg, 340, 34);
-    this.descBg.setPosition(CX(), 511);
+    this.descBg.setPosition(CX(), 496);
 
     const lines = this.getDescriptionLines();
     for (let i = 0; i < 2; i++) {
       this.descLines[i].setText(lines[i] ?? '');
       this.descLines[i].setColor(i === 0 ? '#e8d5b7' : '#999999');
-      this.descLines[i].setPosition(CX(), 502 + i * 16);
+      this.descLines[i].setPosition(CX(), 488 + i * 16);
     }
   }
 
@@ -509,10 +474,7 @@ export class GatePanel extends BasePanel {
       case 6: return this.descConsumable(1);
       case 7: return this.descConsumable(2);
       case 8: return ['Start Floor', this.selectedElevatorFloor === 0 ? 'Homeland' : `Floor ${this.selectedElevatorFloor}`];
-      case 9: return ['Run Seed', this.gateSeed || '(empty — random)'];
-      case 10: return ['Debug Mode', this.debugMode ? 'ON' : 'OFF'];
-      case 11: return ['Reset Game', 'Wipes all progress permanently'];
-      case 12: return ['Ready to descend', getInputMode() !== 'keyboard' ? 'Tap to embark' : '[SPACE] to embark'];
+      case 9: return ['Ready to descend', getInputMode() !== 'keyboard' ? 'Tap to embark' : '[SPACE] to embark'];
       default: return ['', ''];
     }
   }
@@ -564,7 +526,7 @@ export class GatePanel extends BasePanel {
   private renderFooter(): void {
     this.footerText.setText(getInputMode() !== 'keyboard'
       ? 'Tap to navigate & select'
-      : '[W/S] nav  [SPACE] pick  [\u2190\u2192] cycle  [ESC] cancel');
+      : '[W/S] nav  [SPACE] pick  [\u2190\u2192] floor  [ESC] cancel');
   }
 
   private onEquipClick(idx: number): void {
@@ -581,23 +543,11 @@ export class GatePanel extends BasePanel {
     this.openConsumablePicker(idx);
   }
 
-  private onSettingsClick(idx: number): void {
+  private onFloorClick(): void {
     if (!this.isVisible()) return;
-    this.gateTab = 8 + idx;
+    this.gateTab = 8;
     this.render();
-    switch (idx) {
-      case 0: this.openFloorPicker(); break;
-      case 1: this.openSeedPopup(); break;
-      case 2: this.debugMode = !this.debugMode; this.render(); break;
-      case 3:
-        if (this.resetConfirm) {
-          this.openResetConfirm();
-        } else {
-          this.resetConfirm = true;
-          this.render();
-        }
-        break;
-    }
+    this.openFloorPicker();
   }
 
   private openEquipPicker(slotIdx: number): void {
@@ -715,7 +665,8 @@ export class GatePanel extends BasePanel {
   private openConsumablePicker(idx: number): void {
     const ct = CONSUMABLE_TYPES[idx];
     const currentQty = this.consumableLoadout[ct.id] ?? 0;
-    const maxQty = gameState.inventory.count(ct.id);
+    const stash = gameState.inventory.count(ct.id);
+    const maxQty = ct.id === 'teleport_scroll' ? Math.min(stash, 1) : stash;
 
     this.consumablePicker.show(ct.id, currentQty, maxQty, (id, qty) => {
       this.consumableLoadout[id] = qty;
@@ -730,34 +681,10 @@ export class GatePanel extends BasePanel {
     });
   }
 
-  private openSeedPopup(): void {
-    this.seedPopup.show(this.gateSeed, (seed) => {
-      this.gateSeed = seed;
-      this.render();
-    });
-  }
-
-  private openResetConfirm(): void {
-    this.confirmPopup.show(
-      'Reset all progress?',
-      'This cannot be undone. All items, buildings, and research will be lost.',
-      () => {
-        gameState.resetProgress();
-        this.hide();
-        this.scene.cameras.main.fadeOut(400, 0, 0, 0);
-        this.scene.cameras.main.once('camerafadeoutcomplete', () => {
-          this.scene.scene.start(SCENES.HOMELAND);
-        });
-      },
-    );
-  }
-
   isPickerOpen(): boolean {
     return this.equipPicker.isVisible()
       || this.consumablePicker.isVisible()
-      || this.floorPicker.isVisible()
-      || this.seedPopup.isVisible()
-      || this.confirmPopup.isVisible();
+      || this.floorPicker.isVisible();
   }
 
   handleUp(): void {
@@ -777,9 +704,6 @@ export class GatePanel extends BasePanel {
       const idx = this.elevatorFloorOptions.indexOf(this.selectedElevatorFloor);
       if (idx > 0) this.selectedElevatorFloor = this.elevatorFloorOptions[idx - 1];
       this.render();
-    } else if (this.gateTab === 10) {
-      this.debugMode = !this.debugMode;
-      this.render();
     }
   }
 
@@ -788,18 +712,10 @@ export class GatePanel extends BasePanel {
       const idx = this.elevatorFloorOptions.indexOf(this.selectedElevatorFloor);
       if (idx < this.elevatorFloorOptions.length - 1) this.selectedElevatorFloor = this.elevatorFloorOptions[idx + 1];
       this.render();
-    } else if (this.gateTab === 10) {
-      this.debugMode = !this.debugMode;
-      this.render();
     }
   }
 
   handleESC(): boolean {
-    if (this.resetConfirm) {
-      this.resetConfirm = false;
-      this.render();
-      return true;
-    }
     return false;
   }
 
@@ -812,24 +728,11 @@ export class GatePanel extends BasePanel {
     } else if (t === 8) {
       this.openFloorPicker();
     } else if (t === 9) {
-      this.openSeedPopup();
-    } else if (t === 10) {
-      this.debugMode = !this.debugMode;
-      this.render();
-    } else if (t === 11) {
-      if (this.resetConfirm) {
-        this.openResetConfirm();
-      } else {
-        this.resetConfirm = true;
-        this.render();
-      }
-    } else if (t === 12) {
       this.embark();
     }
   }
 
   private embark(): void {
-    this.resetConfirm = false;
     const selected = this.pickaxeOptions[this.selectedPickaxeIdx] ?? this.pickaxeOptions[0];
     const consumables: Record<string, number> = {};
     for (const ct of CONSUMABLE_TYPES) {
@@ -867,7 +770,7 @@ export class GatePanel extends BasePanel {
     super.onViewportResize();
     this.panelBlocker.setPosition(CX(), VH() / 2).setSize(VW(), VH());
     this.footerText.setPosition(CX(), VH() - 30);
-    this.embarkBtn.setPosition(CX(), 462);
+    this.embarkBtn.setPosition(CX(), 420);
     NineSliceBg.updateSize(this.overlayPanel, VW(), VH());
 
     const equipYX = this.equipYX();
@@ -886,8 +789,6 @@ export class GatePanel extends BasePanel {
     this.equipPicker.destroy();
     this.consumablePicker.destroy();
     this.floorPicker.destroy();
-    this.seedPopup.destroy();
-    this.confirmPopup.destroy();
     super.destroy();
   }
 }
