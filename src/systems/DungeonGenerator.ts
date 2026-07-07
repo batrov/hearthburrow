@@ -44,6 +44,7 @@ export interface DungeonFloor {
   isSecretRoom?: boolean;
   isDarknessLifted?: boolean;
   hermitGreeted?: boolean;
+  interactedDecorations: Set<number>;
 }
 
 interface RoomRect {
@@ -261,6 +262,7 @@ export class DungeonGenerator {
       initialMineableCount,
       mineableCount,
       puzzle,
+      interactedDecorations: new Set(),
     };
   }
 
@@ -729,6 +731,7 @@ export class DungeonGenerator {
       initialMineableCount: 0,
       mineableCount: 0,
       isSecretRoom: true,
+      interactedDecorations: new Set(),
     };
   }
 

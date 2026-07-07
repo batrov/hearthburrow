@@ -648,6 +648,13 @@ Resolved Bugs:
 - **Cursed Doll item** — new `cursed_doll` material (rare, maxStack 9) with placeholder sprite; trashing it during an expedition sets stamina to 1 via `StaminaSystem.setCurrent()`
 - **Debug mode** — grants teleport scroll + 3 cursed dolls alongside potions and bombs
 
+## ✅ Secret Room Polish (July 2026)
+- **Decoration bop animation** — secret decorations bob ±3px on a sine wave (per-deco random phase), matching the enemy/NPC bob pattern; highlight glow Y follows the bob
+- **Decoration finale** — after all 26 decorations are interacted with (`floor.interactedDecorations.size >= 26`), the hermit auto-triggers a 4-stage finale dialogue sequence
+- **Multi-stage hermit dialogue** — first greeting split into `{ text, title }[]` stages (7 stages, stage 3 triggers darkness-lift + decor placement); narrative lines show no name, actual dialogue shows "The Hermit" title; repeat dialogue shows the title
+- **Dynamic dialogue panel height** — modal height computed via throwaway `Text` measurement: `pad + (title ? titleH+gap : 0) + textH + gap + hintH + pad`, clamped to 120px minimum; elements positioned relative to `modalTop`
+- **Chest item glow depth fix** — glow was at depth 0.04 (higher) while sprite was at 0.03 (lower), causing glow to render on top; swapped so sprite (0.04) renders above glow (0.03)
+
 ## ✅ Secret Room & Hermit NPC (July 2026)
 - **7-wall trigger** — breaking 7 walls spawns a `secret_stair` tile at depth ≥10; counter resets per floor, bombs count
 - **Dark 20×26 room** — full-floor sprite with darkness overlay + minimap fog; floor tinted `0x111111` before light is lifted

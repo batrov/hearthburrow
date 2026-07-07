@@ -164,7 +164,7 @@ export class IntroScene extends Phaser.Scene {
       this.logoImage.setTexture(slide.logoKey);
       let scale = 0.5;
       if (slide.logoKey === 'portrait') { scale = 0.6; this.logoImage.setY(h * 0.28); }
-      else if (slide.logoKey === 'intro1') { scale = 0.22; this.logoImage.setY(h * 0.28 - 20); }
+      else if (slide.logoKey === 'intro1') { scale = 0.9; this.logoImage.setY(h * 0.28 - 20); }
       this.logoImage.setScale(scale);
       this.logoImage.setVisible(true);
     } else if (this.logoImage) {

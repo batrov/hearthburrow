@@ -243,6 +243,8 @@ export class ExpeditionScene extends Phaser.Scene {
   private enemyImageMap: Map<string, Phaser.GameObjects.Image> = new Map();
   private enemyBobPhase: Map<string, number> = new Map();
   private enemyBaseY: Map<string, number> = new Map();
+  private decoBaseY: Map<string, number> = new Map();
+  private decoBobPhase: Map<string, number> = new Map();
   private rocksBrokenThisRun: number = 0;
   private itemFlyQueue: Array<{ sprite: Phaser.GameObjects.Image; resource: string }> = [];
   private itemFlyBusy: boolean = false;
@@ -428,6 +430,8 @@ export class ExpeditionScene extends Phaser.Scene {
     this.wallImageMap.clear();
     this.enemyImageMap.clear();
     this.decoSprites.clear();
+    this.decoBaseY.clear();
+    this.decoBobPhase.clear();
     this.floorBgSprite = null;
     if (this.previewTile) { this.previewTile.destroy(); this.previewTile = null; }
     this.facingHighlight.clear();
@@ -606,8 +610,11 @@ export class ExpeditionScene extends Phaser.Scene {
             const decoKey = 'secret_deco_' + tile.resource;
             if (this.textures.exists(decoKey)) {
               const img = makeImg(decoKey);
-              this.decoSprites.set(`${x},${y}`, img);
+              const mapKey = `${x},${y}`;
+              this.decoSprites.set(mapKey, img);
               if (!floor.isDarknessLifted) img.setTint(0x000000);
+              if (!this.decoBaseY.has(mapKey)) this.decoBaseY.set(mapKey, img.y);
+              if (!this.decoBobPhase.has(mapKey)) this.decoBobPhase.set(mapKey, Math.random() * Math.PI * 2);
             }
           }
           break;
@@ -716,7 +723,7 @@ export class ExpeditionScene extends Phaser.Scene {
       previewX += previewCfg.offsetX ?? 0;
       previewY += previewCfg.offsetY ?? 0;
       this.facingOutlineBaseY = previewY;
-      const isEnemy = tile.type === 'enemy' || tile.type === 'event_boss' || tile.type === 'boss_body';
+      const isEnemy = tile.type === 'enemy' || tile.type === 'event_boss' || tile.type === 'boss_body' || tile.type === 'decoration';
       if (isEnemy) this.facedEnemyKey = `${tx},${ty}`;
 
       const dirs: [number, number][] = [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
@@ -2006,10 +2013,17 @@ export class ExpeditionScene extends Phaser.Scene {
         img.y = baseY + Math.sin(t + phase) * 3;
       }
     }
+    for (const [key, img] of this.decoSprites) {
+      const baseY = this.decoBaseY.get(key);
+      const phase = this.decoBobPhase.get(key);
+      if (baseY !== undefined && phase !== undefined && img.active) {
+        img.y = baseY + Math.sin(t + phase) * 3;
+      }
+    }
     if (this.facedEnemyKey) {
-      const eImg = this.enemyImageMap.get(this.facedEnemyKey);
-      const baseY = this.enemyBaseY.get(this.facedEnemyKey);
-      const phase = this.enemyBobPhase.get(this.facedEnemyKey);
+      const eImg = this.enemyImageMap.get(this.facedEnemyKey) ?? this.decoSprites.get(this.facedEnemyKey);
+      const baseY = this.enemyBaseY.get(this.facedEnemyKey) ?? this.decoBaseY.get(this.facedEnemyKey);
+      const phase = this.enemyBobPhase.get(this.facedEnemyKey) ?? this.decoBobPhase.get(this.facedEnemyKey);
       if (eImg && eImg.active && baseY !== undefined && phase !== undefined) {
         const bobOff = Math.sin(t + phase) * 3;
         for (const outImg of this.facingOutlineImages) {
@@ -2178,7 +2192,7 @@ export class ExpeditionScene extends Phaser.Scene {
       const exists = this.textures.exists(texKey);
 
       const sprite = this.add.image(origin.x, origin.y, exists ? texKey : '__DEFAULT')
-        .setDepth(interactiveDepth(tx, ty, 0.03))
+        .setDepth(interactiveDepth(tx, ty, 0.04))
         .setScale(0);
       this.hudCam.ignore(sprite);
 
@@ -2188,7 +2202,7 @@ export class ExpeditionScene extends Phaser.Scene {
         const targetAlpha = t === 1 ? 0.6 : t === 2 ? 0.3 : 0.1;
         for (const [dx, dy] of glowDirs) {
           const img = this.add.image(origin.x + dx * t, origin.y + dy * t, exists ? texKey : '__DEFAULT')
-            .setDepth(interactiveDepth(tx, ty, 0.04))
+            .setDepth(interactiveDepth(tx, ty, 0.03))
             .setTint(0xffffff).setTintMode(Phaser.TintModes.FILL)
             .setAlpha(0);
           this.hudCam.ignore(img);
@@ -2334,19 +2348,58 @@ export class ExpeditionScene extends Phaser.Scene {
     this.interactTarget = null;
     this.hideActionBubble();
 
-    const stages = [
-      'A cloaked figure steps from the shadows and raises a hand.\nThe darkness around you quivers.',
-
-      '"The seals recognize you. You who broke seven walls\nand reached this depth were always meant to find me."',
-
-      '"The shadows I have held at bay... I now release them\ninto your keeping."\n\nA warm light pulses from his palm and washes over the room.',
-
-      'The hermit lowers his hood and grins at you.\n"There. Much better, right? You know, I built this whole\nroom just for you."',
-
-      '"Twenty tiles wide, twenty-six tall. Seven walls to break.\nAll the way down on depth ten. Getting it yet?"',
-
-      '"It\'s your birthday, you goof! July 10th, 2026.\n10 / 07 / 2026.\n\nYou\'re my light from the darkness — and I mean that\nliterally, you just lit the place up. Happy birthday!"',
-    ];
+    const stages: { text: string; title: string }[] = [
+  {
+    text: 'A lone figure emerges from the shadows, his cloak trailing behind him.\n\n' +
+      'He raises a weathered hand, and the darkness itself begins to tremble.',
+    title: '',
+  },
+  {
+    text: '"The ancient seals have accepted you.\n' +
+      'Only one who shattered the Seven Walls\n' +
+      'could ever reach this forgotten place.\n\n' +
+      'I have been waiting for you."',
+    title: 'The Hermit',
+  },
+  {
+    text: '"For countless years I have carried this light,\n' +
+      'keeping the darkness at bay.\n\n' +
+      'Now... I entrust it to you."',
+    title: 'The Hermit',
+  },
+  {
+    text: 'A warm glow spills from his hand,\n' +
+      'driving every shadow from the chamber.',
+    title: '',
+  },
+  {
+    text: 'The old hermit lets out a chuckle.\n\n' +
+      'He pulls back his hood and smiles.\n' +
+      '"Okay... that\'s enough of the dramatic entrance.\n' +
+      'I\'ve been dying to do that."\n\n' +
+      '"Truth is... I built this whole place just for you."',
+    title: 'The Hermit',
+  },
+  {
+    text: '"Twenty tiles across.\n' +
+      'Twenty-six tiles high.\n' +
+      'Seven walls to break.\n' +
+      'Hidden at Depth 10.\n\n' +
+      'Come on... you have to see it by now."',
+    title: 'The Hermit',
+  },
+  {
+    text: '"Today\'s July 10th, 2026.\n' +
+      '10 • 07 • 2026.\n\n' +
+      'Every clue, every tunnel, every wall...\n' +
+      'they all led here.\n\n' +
+      'Because this adventure was my birthday gift to you.\n\n' +
+      'You\'ve always been my light in the darkness...\n' +
+      'and, well... now you\'ve literally lit up the room.\n\n' +
+      'Happy Birthday, My Lightkeeper..."',
+    title: 'The Hermit',
+  },
+];
 
     const showStage = (index: number) => {
       if (index >= stages.length) {
@@ -2355,8 +2408,8 @@ export class ExpeditionScene extends Phaser.Scene {
         return;
       }
 
-      this.showHermitDialogue(stages[index], () => {
-        if (index === 2) {
+      this.showHermitDialogue(stages[index].text, () => {
+        if (index === 3) {
           floor.isDarknessLifted = true;
           this.placeDecorations();
           this.drawFloor();
@@ -2367,7 +2420,7 @@ export class ExpeditionScene extends Phaser.Scene {
           audio.playPuzzleComplete();
         }
         this.time.delayedCall(400, () => showStage(index + 1));
-      });
+      }, stages[index].title);
     };
 
     showStage(0);
@@ -2389,6 +2442,52 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.showHermitDialogue(text, () => {
       this.eventActive = false;
+      floor.interactedDecorations.add(variant);
+      if (floor.interactedDecorations.size >= 26) {
+        this.eventActive = true;
+        this.analog.reset();
+        this.interactTarget = null;
+        this.hideActionBubble();
+        const stages: { text: string; title: string }[] = [
+  {
+    text: 'The hermit\'s voice gently fills the silent chamber.\n\n' +
+      '"Every trinket... every keepsake...\nYou found them all."',
+    title: 'The Hermit',
+  },
+  {
+    text: '"Each one carried a piece of my heart,\n' +
+      'hidden in the darkness,\n' +
+      'waiting for someone kind enough to bring them home."',
+    title: 'The Hermit',
+  },
+  {
+    text: 'A warm breeze drifts through the chamber.\n' +
+      'The weight of the cave seems to lift,\n' +
+      'and the darkness no longer feels so cold.',
+    title: '',
+  },
+  {
+    text: '"My journey ends here.\n' +
+      'Yours is only beginning.\n\n' +
+      'Go and make memories that belong in the sunlight,\n' +
+      'with the people who will cherish them.\n\n' +
+      'That was the greatest treasure I hoped to leave behind.\n\n' +
+      '...Happy birthday.\n' +
+      'This time, I truly mean it."',
+    title: 'The Hermit',
+  },
+];
+        const showStage = (index: number) => {
+          if (index >= stages.length) {
+            this.eventActive = false;
+            return;
+          }
+          this.showHermitDialogue(stages[index].text, () => {
+            this.time.delayedCall(400, () => showStage(index + 1));
+          }, stages[index].title);
+        };
+        showStage(0);
+      }
     }, name);
   }
 
@@ -2433,7 +2532,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const line = [
       'The hermit smiles warmly.',
       '',
-      '"Happy birthday, friend! May your days be filled with',
+      '"Happy birthday, My Lightkeeper! May your days be filled with',
       'light, your pockets with treasure, and your heart with',
       'joy. The dungeon will always remember you."',
     ].join('\n');
@@ -2441,7 +2540,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.eventActive = true;
     this.showHermitDialogue(line, () => {
       this.eventActive = false;
-    });
+    }, 'The Hermit');
   }
 
   private getGambleSegments(depth: number): RouletteSegment[] {
@@ -2735,22 +2834,55 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private showHermitDialogue(text: string, onClose: () => void, title: string = 'The Hermit'): void {
-    const modal = NineSliceBg.modal(this, CX(), CY(), 340, 160);
+    const modalW = 340;
+    const contentW = 310;
+    const hasTitle = title.length > 0;
+    const titleH = 20;
+    const gapAfterTitle = hasTitle ? 10 : 0;
+    const pad = 22;
+    const hintH = 16;
+    const gapBeforeHint = 14;
+
+    const meas = createText(this, 0, 0, text, {
+      fontSize: fs(12), fontFamily: 'Inter', resolution: 4,
+      wordWrap: { width: contentW },
+    });
+    const textH = meas.height;
+    meas.destroy();
+
+    const modalH = Math.max(
+      120,
+      pad + (hasTitle ? titleH + gapAfterTitle : 0) + textH + gapBeforeHint + hintH + pad,
+    );
+
+    const modalTop = CY() - modalH / 2;
+    const leftX = CX() - modalW / 2 + 10;
+
+    const modal = NineSliceBg.modal(this, CX(), CY(), modalW, modalH);
     modal.setDepth(DEPTH.POPUP).setScrollFactor(0).setAlpha(0.85);
     this.cameras.main.ignore(modal);
 
-    const overlayText = createText(this, CX() - 155, CY() - 52, title, {
+    const overlayText = createText(this, leftX, modalTop + pad, title, {
       fontSize: fs(13), fontFamily: 'Inter', resolution: 4, color: '#cc88ff', fontStyle: 'bold',
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(DEPTH.POPUP + 1);
     this.cameras.main.ignore(overlayText);
+    if (!hasTitle) overlayText.setVisible(false);
 
-    const speechText = createText(this, CX() - 155, CY() - 12, '', {
+    let bodyY = modalTop + pad;
+    if (hasTitle) bodyY += titleH + gapAfterTitle;
+    bodyY += textH / 2;
+
+    const speechText = createText(this, leftX, bodyY - 2, '', {
       fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#d8c8e8', align: 'left',
-      wordWrap: { width: 310 },
+      wordWrap: { width: contentW },
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(DEPTH.POPUP + 1);
     this.cameras.main.ignore(speechText);
 
-    const closeHint = createText(this, CX(), CY() + 56, '[SPACE] skip', {
+    let hintY = modalTop + pad;
+    if (hasTitle) hintY += titleH + gapAfterTitle;
+    hintY += textH + gapBeforeHint + hintH / 2;
+
+    const closeHint = createText(this, CX(), hintY, '[SPACE] skip', {
       fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#6a5a4a',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.POPUP + 1);
     this.cameras.main.ignore(closeHint);
