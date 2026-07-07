@@ -665,6 +665,6 @@ Resolved Bugs:
 - **New IntroScene** — plays after BootScene, before HomelandScene: 4 slides with procedural gradient backgrounds (amber → blue → purple → warm sunrise)
 - **Narration text** — poetic GDD-derived lore with recursive typewriter effect (30ms normal, 300ms on `.!?`, 200ms on `\n`, 100ms on `—,`)
 - **Skip button** — `UiButton` (NineSliceBg) in top-right corner, always visible with press/hover/release animations
-- **Title logo** — `title.png` displayed on slides 1 and 4
+- **Title logo** — `title.png` on slide 1, `portrait.png` (0.6× scale, ~154px) on slide 4
 - **Interactions** — click/SPACE/ENTER to advance; click while typing skips to full text (doesn't advance slide); [Skip] jumps directly to HomelandScene
 - **Fade transitions** — 500ms fade-in per slide, 300ms fade between slides, 400ms fade to Homeland

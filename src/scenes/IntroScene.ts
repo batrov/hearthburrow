@@ -7,7 +7,7 @@ interface SlideDef {
   topColor: number;
   bottomColor: number;
   text: string;
-  showLogo: boolean;
+  logoKey: string | null;
 }
 
 const SLIDES: SlideDef[] = [
@@ -21,7 +21,7 @@ Its miners walked the living depths,
 returning with radiant crystals,
 ancient metals,
 and treasures the surface had long forgotten.`,
-    showLogo: true,
+    logoKey: 'title_img',
   },
   {
     topColor: 0x0a1520,
@@ -34,7 +34,7 @@ The deepest passages vanished.
 Those still below were never seen again.
 
 The village slowly faded into silence.`,
-    showLogo: false,
+    logoKey: null,
   },
   {
     topColor: 0x150a15,
@@ -45,7 +45,7 @@ Yet whispers speak of untouched caverns,
 veins of forgotten ore,
 powerful relics,
 and spirits still waiting in the dark.`,
-    showLogo: false,
+    logoKey: null,
   },
   {
     topColor: 0x1a0a0a,
@@ -57,7 +57,7 @@ Brave the depths.
 Recover what was lost.
 
 Bring the light back to Hearthburrow.`,
-    showLogo: true,
+    logoKey: 'portrait',
   },
 ];
 
@@ -111,8 +111,8 @@ export class IntroScene extends Phaser.Scene {
       repeat: -1,
     });
 
-    this.logoImage = this.add.image(cx, h * 0.28, 'title_img')
-      .setOrigin(0.5).setScale(0.5).setDepth(9).setScrollFactor(0).setVisible(false);
+    this.logoImage = this.add.image(cx, h * 0.28, '__DEFAULT')
+      .setOrigin(0.5).setDepth(9).setScrollFactor(0).setVisible(false);
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (this.transitioning) return;
@@ -160,13 +160,15 @@ export class IntroScene extends Phaser.Scene {
     bg.fillRect(0, 0, w, h);
     this.slideObjects.push(bg);
 
-    if (slide.showLogo && this.logoImage) {
+    if (slide.logoKey && this.logoImage && this.textures.exists(slide.logoKey)) {
+      this.logoImage.setTexture(slide.logoKey);
+      this.logoImage.setScale(slide.logoKey === 'portrait' ? 0.6 : 0.5);
       this.logoImage.setVisible(true);
     } else if (this.logoImage) {
       this.logoImage.setVisible(false);
     }
 
-    const textY = slide.showLogo ? h * 0.58 : h * 0.45;
+    const textY = slide.logoKey ? (slide.logoKey === 'portrait' ? h * 0.64 : h * 0.58) : h * 0.45;
     this.textObject = createText(this, cx, textY, '', {
       fontSize: fs(16),
       fontFamily: 'Inter', resolution: 4,
