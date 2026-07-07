@@ -669,6 +669,13 @@ Resolved Bugs:
 - **GatePanel portrait long-hold** — pressing and holding the player portrait sprite for 500ms opens the Developer Menu (F2 panel); a short tap does nothing
 - **Timer-based detection** — `pointerdown` starts a 500ms delayed call, `pointerup` cancels it; clean lifecycle with proper handler cleanup in `hide()`
 
+## ✅ GatePanel Clickable UIButtons (July 2026)
+- **Slots converted to UiButtons** — 5 equipment slots, 3 consumable slots, and depth row replaced invisible `Rectangle` zones with `UiButton` instances; hand cursor, hover tint (`0xccccff`), and press animation (scale 0.95 + tint) provide clear visual feedback
+- **Hover tracking** — `pointermove` handler calls `handleHover()` on all slot buttons + depth button + embark button; hover state cleaned up in `hide()`
+- **Alpha 1 / clear tint** — slot button backgrounds use default button appearance (no custom tint, full alpha), matching the EMBARK button style
+- **`pressTween` removed** — UiButton's built-in press animation replaces the manual `pressTween` tween method; button callbacks simplified
+- **Scene-level click handler** — zone bounds checks replaced with `btn.handleClick(p)` for consistent input routing
+
 ## ✅ Storytelling Intro Scene (July 2026)
 - **New IntroScene** — plays after BootScene, before HomelandScene: 4 slides with procedural gradient backgrounds (amber → blue → purple → warm sunrise)
 - **Narration text** — poetic GDD-derived lore with recursive typewriter effect (30ms normal, 300ms on `.!?`, 200ms on `\n`, 100ms on `—,`)

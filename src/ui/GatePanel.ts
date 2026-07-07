@@ -61,22 +61,18 @@ export class GatePanel extends BasePanel {
   private statTexts: Phaser.GameObjects.Text[] = [];
 
   private equipSlots: {
-    bg: Phaser.GameObjects.NineSlice;
+    btn: UiButton;
     icon: Phaser.GameObjects.Image;
     badge: Phaser.GameObjects.Text;
-    zone: Phaser.GameObjects.Rectangle;
   }[] = [];
 
   private consSlots: {
-    bg: Phaser.GameObjects.NineSlice;
+    btn: UiButton;
     icon: Phaser.GameObjects.Image;
     badge: Phaser.GameObjects.Text;
-    zone: Phaser.GameObjects.Rectangle;
   }[] = [];
 
-  private depthText!: Phaser.GameObjects.Text;
-  private depthBg!: Phaser.GameObjects.NineSlice;
-  private depthZone!: Phaser.GameObjects.Rectangle;
+  private depthBtn!: UiButton;
   private descBg!: Phaser.GameObjects.NineSlice;
   private descLines: Phaser.GameObjects.Text[] = [];
   private footerText!: Phaser.GameObjects.Text;
@@ -100,6 +96,7 @@ export class GatePanel extends BasePanel {
   private consumablePicker: ConsumablePicker;
   private depthPicker: DepthPicker;
   private clickHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
+  private hoverHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
   private pressTimer: Phaser.Time.TimerEvent | null = null;
   private pointerUpHandler: (() => void) | null = null;
 
@@ -141,9 +138,9 @@ export class GatePanel extends BasePanel {
     const equipYX = this.equipYX();
     for (let i = 0; i < 5; i++) {
       const slotSize = i === 0 ? 104 : 52;
-      const bg = NineSliceBg.slot(this.scene, equipYX[i].x, equipYX[i].y, slotSize, slotSize);
-      bg.setDepth(200);
-      this.container.add(bg);
+      const btn = new UiButton(this.scene, equipYX[i].x, equipYX[i].y, '', slotSize, slotSize, () => this.onEquipClick(i), { small: true });
+      btn.setDepth(200).setVisible(false);
+      for (const c of btn.getChildren()) this.container.add(c);
       const iconScale = i === 0 ? 1.6 : 0.8;
       const icon = this.scene.add.image(equipYX[i].x, equipYX[i].y, 'item_pickaxe_1').setScale(iconScale);
       icon.setVisible(false);
@@ -153,11 +150,7 @@ export class GatePanel extends BasePanel {
       }).setOrigin(0.5);
       badge.setVisible(false);
       this.container.add(badge);
-      const zone = this.scene.add.rectangle(equipYX[i].x, equipYX[i].y, slotSize, slotSize, 0xffffff, 0)
-        .setScrollFactor(0);
-      zone.setVisible(false);
-      this.container.add(zone);
-      this.equipSlots.push({ bg, icon, badge, zone });
+      this.equipSlots.push({ btn, icon, badge });
     }
 
     this.container.add(createText(this.scene, CX(), 138, 'EQUIPMENT', {
@@ -170,9 +163,9 @@ export class GatePanel extends BasePanel {
       { x: CX() + 76, y: 302 },
     ];
     for (let i = 0; i < 3; i++) {
-      const bg = NineSliceBg.slot(this.scene, consYX[i].x, consYX[i].y, 64, 42);
-      bg.setDepth(200);
-      this.container.add(bg);
+      const btn = new UiButton(this.scene, consYX[i].x, consYX[i].y, '', 64, 44, () => this.onConsumableClick(i), { small: true });
+      btn.setDepth(200).setVisible(false);
+      for (const c of btn.getChildren()) this.container.add(c);
       const icon = this.scene.add.image(consYX[i].x, consYX[i].y, 'item_stamina_potion').setScale(0.8);
       icon.setVisible(false);
       this.container.add(icon);
@@ -181,29 +174,16 @@ export class GatePanel extends BasePanel {
       }).setOrigin(0.5);
       badge.setVisible(false);
       this.container.add(badge);
-      const zone = this.scene.add.rectangle(consYX[i].x, consYX[i].y, 64, 44, 0xffffff, 0)
-        .setScrollFactor(0);
-      zone.setVisible(false);
-      this.container.add(zone);
-      this.consSlots.push({ bg, icon, badge, zone });
+      this.consSlots.push({ btn, icon, badge });
     }
 
     this.container.add(createText(this.scene, CX(), 270, 'CONSUMABLES', {
       fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
     }).setOrigin(0.5));
 
-    this.depthBg = NineSliceBg.slot(this.scene, CX(), 362, 260, 44);
-    this.depthBg.setDepth(200);
-    this.container.add(this.depthBg);
-    this.depthText = createText(this.scene, CX(), 362, '', {
-      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b8a898',
-    }).setOrigin(0.5);
-    this.container.add(this.depthText);
-    const depthZone = this.scene.add.rectangle(CX(), 362, 260, 44, 0xffffff, 0)
-      .setScrollFactor(0);
-    depthZone.setVisible(false);
-    this.container.add(depthZone);
-    this.depthZone = depthZone;
+    this.depthBtn = new UiButton(this.scene, CX(), 362, 'Start Depth: 0', 260, 44, () => this.onDepthClick(), { small: true });
+    this.depthBtn.setDepth(200).setVisible(false);
+    for (const c of this.depthBtn.getChildren()) this.container.add(c);
 
     this.embarkBtn = new UiButton(this.scene, CX(), 420, 'EMBARK', 140, 44, () => this.embark(), {
       color: '#ffcc44', fontSize: fs(14),
@@ -261,9 +241,9 @@ export class GatePanel extends BasePanel {
 
     this.render();
     this.embarkBtn.setVisible(true);
-    this.equipSlots.forEach(s => s.zone.setVisible(true));
-    this.consSlots.forEach(s => s.zone.setVisible(true));
-    this.depthZone.setVisible(true);
+    this.equipSlots.forEach(s => s.btn.setVisible(true));
+    this.consSlots.forEach(s => s.btn.setVisible(true));
+    this.depthBtn.setVisible(true);
 
     const portraitBounds = new Phaser.Geom.Rectangle(
       this.portraitSprite.x - this.portraitSprite.displayWidth / 2,
@@ -282,49 +262,39 @@ export class GatePanel extends BasePanel {
           this.depthPicker.isVisible()) {
         return;
       }
+      if (this.embarkBtn.handleClick(p)) return;
+      for (let i = 0; i < 5; i++) {
+        if (this.equipSlots[i].btn.handleClick(p)) return;
+      }
+      for (let i = 0; i < 3; i++) {
+        if (this.consSlots[i].btn.handleClick(p)) return;
+      }
+      if (this.depthBtn.handleClick(p)) return;
       if (portraitBounds.contains(p.x, p.y)) {
         this.pressTimer = this.scene.time.delayedCall(500, () => {
           this.onDeveloperMenu?.();
         });
         return;
       }
-      if (this.embarkBtn.handleClick(p)) return;
-      for (let i = 0; i < 5; i++) {
-        const z = this.equipSlots[i].zone;
-        if (z.visible) {
-          const b = z.getBounds();
-          if (b.contains(p.x, p.y)) {
-            this.onEquipClick(i);
-            return;
-          }
-        }
-      }
-      for (let i = 0; i < 3; i++) {
-        const z = this.consSlots[i].zone;
-        if (z.visible) {
-          const b = z.getBounds();
-          if (b.contains(p.x, p.y)) {
-            this.onConsumableClick(i);
-            return;
-          }
-        }
-      }
-      const fb = this.depthZone.getBounds();
-      if (this.depthZone.visible && fb.contains(p.x, p.y)) {
-        this.onDepthClick();
-        return;
-      }
     };
     this.scene.input.on('pointerdown', this.clickHandler);
+
+    this.hoverHandler = (p: Phaser.Input.Pointer) => {
+      this.equipSlots.forEach(s => s.btn.handleHover(p));
+      this.consSlots.forEach(s => s.btn.handleHover(p));
+      this.depthBtn.handleHover(p);
+      this.embarkBtn.handleHover(p);
+    };
+    this.scene.input.on('pointermove', this.hoverHandler);
 
     this.fadeIn();
   }
 
   hide(): void {
     this.embarkBtn.setVisible(false);
-    this.equipSlots.forEach(s => s.zone.setVisible(false));
-    this.consSlots.forEach(s => s.zone.setVisible(false));
-    this.depthZone.setVisible(false);
+    this.equipSlots.forEach(s => s.btn.setVisible(false));
+    this.consSlots.forEach(s => s.btn.setVisible(false));
+    this.depthBtn.setVisible(false);
     if (this.pressTimer) { this.pressTimer.remove(); this.pressTimer = null; }
     if (this.pointerUpHandler) {
       this.scene.input.off('pointerup', this.pointerUpHandler);
@@ -333,6 +303,10 @@ export class GatePanel extends BasePanel {
     if (this.clickHandler) {
       this.scene.input.off('pointerdown', this.clickHandler);
       this.clickHandler = null;
+    }
+    if (this.hoverHandler) {
+      this.scene.input.off('pointermove', this.hoverHandler);
+      this.hoverHandler = null;
     }
     this.onCloseCb();
     super.hide();
@@ -430,15 +404,15 @@ export class GatePanel extends BasePanel {
         slot.badge.setVisible(!!badgeText);
         slot.badge.setColor(isSelected ? '#ffddaa' : '#999999');
 
-        slot.bg.setTint(isSelected ? 0x8a7aaa : 0x3a3a4a);
-        slot.bg.setAlpha(isSelected ? 0.8 : 0.5);
+        slot.btn.bg.clearTint();
+        slot.btn.bg.setAlpha(1);
       } else {
         const placeholderKey = ['item_pickaxe_1', 'item_ring_critical', 'item_ring_critical', 'item_boots_stamina_bronze', 'item_lantern_bronze'][i];
         slot.icon.setTexture(placeholderKey).setAlpha(0.15);
         slot.icon.setVisible(true);
         slot.badge.setVisible(false);
-        slot.bg.setTint(0x3a3a4a);
-        slot.bg.setAlpha(0.3);
+        slot.btn.bg.clearTint();
+        slot.btn.bg.setAlpha(1);
       }
     }
   }
@@ -467,8 +441,8 @@ export class GatePanel extends BasePanel {
       slot.badge.setVisible(true);
       slot.badge.setColor(isSelected ? '#ffddaa' : (qty > 0 ? '#88cc88' : '#666666'));
 
-      slot.bg.setTint(isSelected ? 0x8a7aaa : 0x3a3a4a);
-      slot.bg.setAlpha(isSelected ? 0.8 : 0.5);
+      slot.btn.bg.clearTint();
+      slot.btn.bg.setAlpha(1);
     }
   }
 
@@ -477,10 +451,10 @@ export class GatePanel extends BasePanel {
       ? '0'
       : `Depth ${this.selectedElevatorDepth}`;
     const isSelected = this.gateTab === 8;
-    this.depthBg.setTint(isSelected ? 0x8a7aaa : 0x3a3a4a);
-    this.depthBg.setAlpha(isSelected ? 0.8 : 0.5);
-    this.depthText.setText(`Start Depth: ${elevStr}`);
-    this.depthText.setColor(isSelected ? '#ffddaa' : '#b8a898');
+    this.depthBtn.bg.clearTint();
+    this.depthBtn.bg.setAlpha(1);
+    this.depthBtn.setText(`Start Depth: ${elevStr}`);
+    this.depthBtn.label.setColor(isSelected ? '#ffddaa' : '#b8a898');
   }
 
   private renderDescription(): void {
@@ -561,45 +535,25 @@ export class GatePanel extends BasePanel {
       : '[W/S] nav  [SPACE] pick  [\u2190\u2192] floor  [ESC] cancel');
   }
 
-  private pressTween(target: Phaser.GameObjects.NineSlice, action: () => void): void {
-    this.scene.tweens.add({
-      targets: target,
-      scaleX: 0.95, scaleY: 0.95, duration: 60, ease: 'Quad.easeOut',
-      onComplete: () => {
-        action();
-        this.scene.tweens.add({
-          targets: target,
-          scaleX: 1, scaleY: 1, duration: 100, ease: 'Quad.easeOut',
-        });
-      },
-    });
-  }
-
   private onEquipClick(idx: number): void {
     if (!this.isVisible()) return;
-    this.pressTween(this.equipSlots[idx].bg, () => {
-      this.gateTab = idx;
-      this.render();
-      this.openEquipPicker(idx);
-    });
+    this.gateTab = idx;
+    this.render();
+    this.openEquipPicker(idx);
   }
 
   private onConsumableClick(idx: number): void {
     if (!this.isVisible()) return;
-    this.pressTween(this.consSlots[idx].bg, () => {
-      this.gateTab = 5 + idx;
-      this.render();
-      this.openConsumablePicker(idx);
-    });
+    this.gateTab = 5 + idx;
+    this.render();
+    this.openConsumablePicker(idx);
   }
 
   private onDepthClick(): void {
     if (!this.isVisible()) return;
-    this.pressTween(this.depthBg, () => {
-      this.gateTab = 8;
-      this.render();
-      this.openDepthPicker();
-    });
+    this.gateTab = 8;
+    this.render();
+    this.openDepthPicker();
   }
 
   private openEquipPicker(slotIdx: number): void {
@@ -828,15 +782,12 @@ export class GatePanel extends BasePanel {
     const equipYX = this.equipYX();
     for (let i = 0; i < 5; i++) {
       const slot = this.equipSlots[i];
-      slot.bg.setPosition(equipYX[i].x, equipYX[i].y);
+      slot.btn.setPosition(equipYX[i].x, equipYX[i].y);
       slot.icon.setPosition(equipYX[i].x, equipYX[i].y);
       slot.badge.setPosition(equipYX[i].x, equipYX[i].y + 26);
-      slot.zone.setPosition(equipYX[i].x, equipYX[i].y);
     }
 
-    this.depthBg.setPosition(CX(), 362);
-    this.depthText.setPosition(CX(), 362);
-    this.depthZone.setPosition(CX(), 362);
+    this.depthBtn.setPosition(CX(), 362);
 
     if (this._visible) this.render();
   }
