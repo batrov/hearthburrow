@@ -96,9 +96,9 @@ export function generateAll(scene: Phaser.Scene): void {
       const { cx, cy } = centered(24, 24);
       drawDiamond(g, cx, cy, 0x000000, 0.15);
       g.fillStyle(cfg.base, 0.9);
-      g.fillCircle(cx, cy, 8);
+      g.fillCircle(cx, cy, 10);
       g.fillStyle(cfg.inner, 1);
-      g.fillCircle(cx, cy, 4);
+      g.fillCircle(cx, cy, 5);
     });
   }
 
@@ -368,9 +368,9 @@ export function generateAll(scene: Phaser.Scene): void {
     const { cx, cy } = centered(24, 24);
     drawDiamond(g, cx, cy, 0x000000, 0.15);
     g.fillStyle(0x8a3a3a, 0.9);
-    g.fillCircle(cx, cy, 8);
+    g.fillCircle(cx, cy, 10);
     g.fillStyle(0xaa5a5a, 1);
-    g.fillCircle(cx, cy, 4);
+    g.fillCircle(cx, cy, 5);
   });
 
   // --- Item sprites (24x24 UI icons) ---
