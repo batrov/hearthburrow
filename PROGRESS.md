@@ -681,6 +681,14 @@ Resolved Bugs:
 - **`>= 10` → `=== 10`** — both secret stair spawn checks (manual wall break and bomb area damage) now require exact depth 10 instead of 10+, preventing the hidden passage from appearing deeper than intended
 - **Resolved Bug** — hidden passage could trigger at any depth ≥10; now restricted to depth 10 only, matching the hermit's riddle ("Hidden at Depth 10")
 
+## ✅ Photobook Revamp: Grid + NPC Sprites + Detail Panel (July 2026)
+- **4×5 grid of UiButtons** — 20 NPC slots (all variants 0–19), each with a clickable `UiButton` (64×64) + NPC sprite Image (scale 1.0) + name label (fs(12), linear filter for smooth text)
+- **Discovered vs undiscovered** — rescued NPCs show full-color sprite + name; unrescued show sprite tinted black at alpha 0.4 with "???" label
+- **Bottom detail panel** — clicking any cell shows name, archetype, rescue depth, talk count, and personality description (word-wrapped at 310px); unresolved NPCs show "Not yet discovered"
+- **Keyboard navigation** — W/S for rows, A/D for columns, forwarded from TavernScene's update loop
+- **Removed old text-list** — replaced the fragile text-based list (14 visible entries, up/down arrows, per-frame `draw()`) with a static event-driven grid
+- **Removed hint text** — bottom-of-panel keyboard hints removed for cleaner appearance
+
 ## ✅ Storytelling Intro Scene (July 2026)
 - **New IntroScene** — plays after BootScene, before HomelandScene: 4 slides with procedural gradient backgrounds (amber → blue → purple → warm sunrise)
 - **Narration text** — poetic GDD-derived lore with recursive typewriter effect (30ms normal, 300ms on `.!?`, 200ms on `\n`, 100ms on `—,`)
