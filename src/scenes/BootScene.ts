@@ -145,6 +145,7 @@ export class BootScene extends Phaser.Scene {
     for (let i = 0; i < 20; i++) {
       this.load.image(`npc_${i}`, `npcs/npc_${i}.png`);
     }
+    this.load.image('npc_hermit', 'npcs/npc_hermit.png');
 
     const itemSprites = [
       'pickaxe_1', 'pickaxe_2', 'pickaxe_3', 'pickaxe_4',

@@ -237,6 +237,8 @@ export class ExpeditionScene extends Phaser.Scene {
   private previewTile: Phaser.GameObjects.Image | null = null;
   private facingOutlineImages: Phaser.GameObjects.Image[] = [];
   private facedEnemyKey: string | null = null;
+  private facedDecoKey: string | null = null;
+  private originalDecoDepths: Map<string, number> = new Map();
   private facingOutlineBaseY: number = 0;
   private oreImageMap: Map<string, Phaser.GameObjects.Image> = new Map();
   private wallImageMap: Map<string, Phaser.GameObjects.Image> = new Map();
@@ -434,6 +436,8 @@ export class ExpeditionScene extends Phaser.Scene {
     this.decoSprites.clear();
     this.decoBaseY.clear();
     this.decoBobPhase.clear();
+    this.facedDecoKey = null;
+    this.originalDecoDepths.clear();
     this.floorBgSprite = null;
     if (this.previewTile) { this.previewTile.destroy(); this.previewTile = null; }
     this.facingHighlight.clear();
@@ -451,7 +455,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.hudCam.ignore(floorImg);
       this.floorSpriteObjects.push(floorImg);
       this.floorBgSprite = floorImg;
-      if (!floor.isDarknessLifted) floorImg.setTint(0x111111);
+      if (!floor.isDarknessLifted) floorImg.setTint(0x020202);
     } else {
       const biome = getBiomeKey(floor.depth);
 
@@ -604,7 +608,10 @@ export class ExpeditionScene extends Phaser.Scene {
         case 'secret_npc':
           if (!tile.broken) {
             const npcKey = 'npc_' + tile.resource;
-            if (this.textures.exists(npcKey)) makeImg(npcKey);
+            if (this.textures.exists(npcKey)) {
+              const img = makeImg(npcKey);
+              if (!floor.isDarknessLifted) img.setTint(0x666666);
+            }
           }
           break;
         case 'decoration':
@@ -666,6 +673,15 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private updateFacingHighlight(): void {
+    if (this.facedDecoKey) {
+      const prev = this.decoSprites.get(this.facedDecoKey);
+      if (prev?.active) {
+        const orig = this.originalDecoDepths.get(this.facedDecoKey);
+        if (orig !== undefined) prev.setDepth(orig);
+      }
+    }
+    this.facedDecoKey = null;
+
     this.facingHighlight.clear();
     this.selectedObject.clear();
     if (this.previewTile) { this.previewTile.destroy(); this.previewTile = null; }
@@ -728,6 +744,18 @@ export class ExpeditionScene extends Phaser.Scene {
       const isEnemy = tile.type === 'enemy' || tile.type === 'event_boss' || tile.type === 'boss_body' || tile.type === 'decoration';
       if (isEnemy) this.facedEnemyKey = `${tx},${ty}`;
 
+      if (tile.type === 'decoration') {
+        const mapKey = `${tx},${ty}`;
+        const sprite = this.decoSprites.get(mapKey);
+        if (sprite?.active) {
+          if (!this.originalDecoDepths.has(mapKey)) {
+            this.originalDecoDepths.set(mapKey, sprite.depth);
+          }
+          sprite.setDepth(facingDep + 0.1);
+          this.facedDecoKey = mapKey;
+        }
+      }
+
       const dirs: [number, number][] = [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
       const s = previewCfg.scale ?? 1;
       for (let t = 1; t <= 3; t++) {
@@ -751,6 +779,15 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private clearFacingHighlight(): void {
+    if (this.facedDecoKey) {
+      const prev = this.decoSprites.get(this.facedDecoKey);
+      if (prev?.active) {
+        const orig = this.originalDecoDepths.get(this.facedDecoKey);
+        if (orig !== undefined) prev.setDepth(orig);
+      }
+    }
+    this.facedDecoKey = null;
+
     this.facingHighlight.clear();
     this.selectedObject.clear();
     this.facingOutlineImages.forEach(img => img.destroy());
@@ -2417,6 +2454,7 @@ export class ExpeditionScene extends Phaser.Scene {
           floor.isDarknessLifted = true;
           this.placeDecorations();
           this.drawFloor();
+          this.updateDecorationTints();
           this.drawMinimap();
           this.updateDarkness();
           this.revealSurroundings();
@@ -2446,8 +2484,10 @@ export class ExpeditionScene extends Phaser.Scene {
 
     this.showHermitDialogue(text, () => {
       this.eventActive = false;
+      const isNew = !floor.interactedDecorations.has(variant);
       floor.interactedDecorations.add(variant);
-      if (floor.interactedDecorations.size >= 26) {
+      this.updateDecorationTints();
+      if (isNew && floor.interactedDecorations.size >= 26) {
         this.eventActive = true;
         this.analog.reset();
         this.interactTarget = null;
@@ -2455,7 +2495,7 @@ export class ExpeditionScene extends Phaser.Scene {
         const stages: { text: string; title: string }[] = [
   {
     text: 'The hermit\'s voice gently fills the silent chamber.\n\n' +
-      '"Every trinket... every keepsake...\nYou found them all."',
+      '"Every trinket... every keepsake...\nYou\'ve found all 26 of them."',
     title: 'The Hermit',
   },
   {
@@ -2476,7 +2516,7 @@ export class ExpeditionScene extends Phaser.Scene {
       'Go and make memories that belong in the sunlight,\n' +
       'with the people who will cherish them.\n\n' +
       'That was the greatest treasure I hoped to leave behind.\n\n' +
-      '...Happy birthday.\n' +
+      '...Happy 26th birthday.\n' +
       'This time, I truly mean it."',
     title: 'The Hermit',
   },
@@ -2525,10 +2565,22 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private updateDecorationTints(): void {
-    const lifted = this.currentFloor?.isDarknessLifted ?? false;
-    for (const [, img] of this.decoSprites) {
-      if (lifted) img.clearTint();
-      else img.setTint(0x000000);
+    const floor = this.currentFloor;
+    if (!floor) return;
+    if (!floor.isDarknessLifted) {
+      for (const [, img] of this.decoSprites) img.setTint(0x000000);
+      return;
+    }
+    for (const [key, img] of this.decoSprites) {
+      const [gx, gy] = key.split(',').map(Number);
+      const tile = floor.tiles[gy]?.[gx];
+      if (!tile) continue;
+      const variant = parseInt(tile.resource, 10);
+      if (floor.interactedDecorations.has(variant)) {
+        img.clearTint();
+      } else {
+        img.setTint(0x000000);
+      }
     }
   }
 
@@ -2671,8 +2723,9 @@ export class ExpeditionScene extends Phaser.Scene {
                 const floor = this.currentFloor;
                 if (floor && this.interactTarget) {
                   floor.tiles[this.interactTarget.y][this.interactTarget.x].broken = true;
-                  this.drawFloor();
-                  this.drawMinimap();
+          this.drawFloor();
+          this.updateDecorationTints();
+          this.drawMinimap();
                 }
               },
             },

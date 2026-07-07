@@ -40,5 +40,6 @@
   "decoration_fence":      { "offsetY": -2,  "originY": 1 },
   "decoration_lantern_post": { "offsetY": 0, "originY": 1 },
   "decoration_well":       { "offsetY": 0, "originY": 1 },
-  "decoration_signpost":   { "offsetY": -28, "originY": 1 }
+  "decoration_signpost":   { "offsetY": -28, "originY": 1 },
+  "secret_deco_*": {"scale": 1}
 }

@@ -739,22 +739,6 @@ export function generateAll(scene: Phaser.Scene): void {
     });
   }
 
-  // --- Secret hermit NPC (amethyst purple, larger) ---
-  make(scene, g, 'npc_hermit', 40, 40, () => {
-    const { cx, cy } = centered(40, 40);
-    g.fillStyle(0x000000, 0.3);
-    g.fillCircle(cx, cy + 6, 12);
-    g.fillStyle(0x6a3a9a, 1);
-    g.fillCircle(cx, cy - 2, 11);
-    g.fillStyle(0x8a5aba, 1);
-    g.fillRoundedRect(cx - 6, cy - 10, 12, 8, 2);
-    g.fillStyle(0xaa88dd, 0.8);
-    g.fillCircle(cx, cy - 2, 4);
-    // Glow aura
-    g.lineStyle(2, 0xcc88ff, 0.3);
-    g.strokeCircle(cx, cy - 2, 14);
-  });
-
   // --- Secret room decorations (26 variants, color-cycled isometric shapes) ---
   const decoShapes = [
     (cx: number, cy: number) => { g.fillCircle(cx, cy, 18); g.fillStyle(0xffffff, 0.15); g.fillCircle(cx - 4, cy - 4, 8); },

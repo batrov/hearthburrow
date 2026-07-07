@@ -708,7 +708,7 @@ export class DungeonGenerator {
     }
 
     const entryX = Math.floor(cols / 2);
-    const entryY = rows - 2;
+    const entryY = 15;
 
     const exitX = cols - 4;
     const exitY = rows - 2;

@@ -363,6 +363,14 @@ Resolved Bugs:
 - **All inline text removed** — equipment/consumable names moved to dedicated bottom description panel
 - **Phaser 4 Container Input fix** — interactive children of Container do not reliably fire pointerdown events; all click handling uses scene-level `pointerdown` with manual hit-testing and a transparent Rectangle blocker inside the container to prevent click-through
 
+## ✅ Secret Room Hermit & Decorations (July 2026)
+- **Hermit NPC PNG** — replaced procedural hermit with PNG file (`npc_hermit.png`), matching the other 20 NPC PNG format at 64×64
+- **Player spawn** — entry position changed from `(10, 24)` to `(10, 16)`, 3 tiles south of the hermit
+- **Decoration depth on highlight** — faced decoration now boosts to `facingDep + 0.1`, rendering above all other decor; restores on clear
+- **Un-interacted decoration tint** — decorations not yet examined show black (`0x000000`); clear to full brightness on interaction
+- **Hermit tint** — hermit sprite is black before darkness lifts, normal afterward
+- **Completion dialogue once-only** — hermit's "all found" dialogue fires only on the 26th unique decoration interaction, never on repeat examines
+
 ## ✅ Camera Zoom 1.5× (June 2026)
 - **Dual-camera compositing** — `ExpeditionScene` now creates a second HUD camera (`this.hudCam`) at 1.0× zoom that renders all HUD elements (minimap, stamina, pickaxe, inventory button, potion/bomb, escape, action button, stair prompt, exhaustion/extraction overlays, obtain popups, recipe popups) while the main camera renders the game world at 1.5× zoom with player follow and bounds
 - **Camera.ignore() approach** — ~50 per-object `cameras.main.ignore()` and `hudCam.ignore()` calls ensure each object renders in exactly one camera (world → main cam, HUD → HUD cam), avoiding Phaser 4's broken `cameraFilter` bit manipulation
