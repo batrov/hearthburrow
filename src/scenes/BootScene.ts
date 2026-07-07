@@ -42,6 +42,7 @@ export class BootScene extends Phaser.Scene {
     // Queue title first so it loads early
     this.load.setPath('');
     this.load.image('title_img', 'icons/title.png');
+    this.load.image('intro1', 'icons/intro1.png');
 
     // Show title image as soon as it finishes loading
     this.load.once('filecomplete-image-title_img', () => {

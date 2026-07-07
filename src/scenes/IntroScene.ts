@@ -21,7 +21,7 @@ Its miners walked the living depths,
 returning with radiant crystals,
 ancient metals,
 and treasures the surface had long forgotten.`,
-    logoKey: 'title_img',
+    logoKey: 'intro1',
   },
   {
     topColor: 0x0a1520,
@@ -162,7 +162,10 @@ export class IntroScene extends Phaser.Scene {
 
     if (slide.logoKey && this.logoImage && this.textures.exists(slide.logoKey)) {
       this.logoImage.setTexture(slide.logoKey);
-      this.logoImage.setScale(slide.logoKey === 'portrait' ? 0.6 : 0.5);
+      let scale = 0.5;
+      if (slide.logoKey === 'portrait') { scale = 0.6; this.logoImage.setY(h * 0.28); }
+      else if (slide.logoKey === 'intro1') { scale = 0.22; this.logoImage.setY(h * 0.28 - 20); }
+      this.logoImage.setScale(scale);
       this.logoImage.setVisible(true);
     } else if (this.logoImage) {
       this.logoImage.setVisible(false);
