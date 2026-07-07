@@ -183,16 +183,7 @@ export class BootScene extends Phaser.Scene {
       this.progressText.setText(`${pct}%`);
     });
 
-    this.load.once('complete', () => {
-      this.progressText.setText('[ click anywhere to proceed ]');
-      this.tweens.add({
-        targets: this.progressText,
-        alpha: { from: 1, to: 0.3 },
-        duration: 800,
-        yoyo: true,
-        repeat: -1,
-      });
-    });
+    this.load.once('complete', () => {});
   }
 
   create(): void {
@@ -229,7 +220,7 @@ export class BootScene extends Phaser.Scene {
       this.tweens.killTweensOf(this.progressText);
       this.cameras.main.fadeOut(400, 0, 0, 0);
       this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start(SCENES.HOMELAND);
+        this.scene.start(SCENES.INTRO);
       });
     };
 
@@ -238,6 +229,15 @@ export class BootScene extends Phaser.Scene {
       this.input.keyboard?.on('keydown-SPACE', proceed);
       this.input.keyboard?.on('keydown-ENTER', proceed);
     };
+
+    this.progressText.setText('[ click anywhere to proceed ]');
+    this.tweens.add({
+      targets: this.progressText,
+      alpha: { from: 1, to: 0.3 },
+      duration: 800,
+      yoyo: true,
+      repeat: -1,
+    });
 
     switch (getStorageStatus()) {
       case 'blocked':
@@ -270,11 +270,6 @@ export class BootScene extends Phaser.Scene {
         armProceed();
     }
 
-    this.time.delayedCall(3000, () => {
-      if (this.scene.isActive(SCENES.BOOT)) {
-        this.progressText.setText('[ click anywhere to proceed ]');
-      }
-    });
   }
 
   /**

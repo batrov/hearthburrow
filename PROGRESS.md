@@ -660,3 +660,11 @@ Resolved Bugs:
 ## ✅ Long-Press Portrait Opens Developer Menu (July 2026)
 - **GatePanel portrait long-hold** — pressing and holding the player portrait sprite for 500ms opens the Developer Menu (F2 panel); a short tap does nothing
 - **Timer-based detection** — `pointerdown` starts a 500ms delayed call, `pointerup` cancels it; clean lifecycle with proper handler cleanup in `hide()`
+
+## ✅ Storytelling Intro Scene (July 2026)
+- **New IntroScene** — plays after BootScene, before HomelandScene: 4 slides with procedural gradient backgrounds (amber → blue → purple → warm sunrise)
+- **Narration text** — poetic GDD-derived lore with recursive typewriter effect (30ms normal, 300ms on `.!?`, 200ms on `\n`, 100ms on `—,`)
+- **Skip button** — `UiButton` (NineSliceBg) in top-right corner, always visible with press/hover/release animations
+- **Title logo** — `title.png` displayed on slides 1 and 4
+- **Interactions** — click/SPACE/ENTER to advance; click while typing skips to full text (doesn't advance slide); [Skip] jumps directly to HomelandScene
+- **Fade transitions** — 500ms fade-in per slide, 300ms fade between slides, 400ms fade to Homeland
