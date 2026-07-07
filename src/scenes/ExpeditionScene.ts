@@ -3242,7 +3242,7 @@ export class ExpeditionScene extends Phaser.Scene {
         tile.broken = true;
 
         this.wallsBrokenThisFloor++;
-        if (this.wallsBrokenThisFloor >= 7 && this.expeditionState.depth >= 10 && !this.secretSpawned) {
+        if (this.wallsBrokenThisFloor >= 7 && this.expeditionState.depth === 10 && !this.secretSpawned) {
           tile.type = 'secret_stair';
           tile.broken = false;
           this.secretSpawned = true;
@@ -4086,7 +4086,7 @@ export class ExpeditionScene extends Phaser.Scene {
           tile.broken = true;
 
           this.wallsBrokenThisFloor++;
-          if (this.wallsBrokenThisFloor >= 7 && this.expeditionState.depth >= 10 && !this.secretSpawned) {
+          if (this.wallsBrokenThisFloor >= 7 && this.expeditionState.depth === 10 && !this.secretSpawned) {
             tile.type = 'secret_stair';
             tile.broken = false;
             this.secretSpawned = true;

@@ -676,6 +676,10 @@ Resolved Bugs:
 - **`pressTween` removed** — UiButton's built-in press animation replaces the manual `pressTween` tween method; button callbacks simplified
 - **Scene-level click handler** — zone bounds checks replaced with `btn.handleClick(p)` for consistent input routing
 
+## ✅ Depth-gate fix: secret stair only at depth 10 (July 2026)
+- **`>= 10` → `=== 10`** — both secret stair spawn checks (manual wall break and bomb area damage) now require exact depth 10 instead of 10+, preventing the hidden passage from appearing deeper than intended
+- **Resolved Bug** — hidden passage could trigger at any depth ≥10; now restricted to depth 10 only, matching the hermit's riddle ("Hidden at Depth 10")
+
 ## ✅ Storytelling Intro Scene (July 2026)
 - **New IntroScene** — plays after BootScene, before HomelandScene: 4 slides with procedural gradient backgrounds (amber → blue → purple → warm sunrise)
 - **Narration text** — poetic GDD-derived lore with recursive typewriter effect (30ms normal, 300ms on `.!?`, 200ms on `\n`, 100ms on `—,`)
