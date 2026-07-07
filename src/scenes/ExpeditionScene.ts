@@ -198,6 +198,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private stepsTaken: number = 0;
   private stairTargetX: number = -1;
   private stairTargetY: number = -1;
+  private bgm: Phaser.Sound.BaseSound | null = null;
   private stairAction: 'ascend' | 'descend' | 'enter_secret_room' | null = null;
   private stairPrompt: Phaser.GameObjects.Container | null = null;
   private _stairProceedBtn?: Phaser.GameObjects.Text;
@@ -412,6 +413,7 @@ export class ExpeditionScene extends Phaser.Scene {
     viewportManager.onResize(this._onViewportResize);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       if (this._onViewportResize) viewportManager.offResize(this._onViewportResize);
+      if (this.bgm) this.bgm.stop();
     });
   }
 
@@ -2405,6 +2407,8 @@ export class ExpeditionScene extends Phaser.Scene {
       if (index >= stages.length) {
         floor.hermitGreeted = true;
         this.eventActive = false;
+        this.bgm = this.sound.add('music_secret_room', { loop: true, volume: 0.3 });
+        this.bgm.play();
         return;
       }
 

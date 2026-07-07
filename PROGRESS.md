@@ -654,6 +654,7 @@ Resolved Bugs:
 - **Multi-stage hermit dialogue** — first greeting split into `{ text, title }[]` stages (7 stages, stage 3 triggers darkness-lift + decor placement); narrative lines show no name, actual dialogue shows "The Hermit" title; repeat dialogue shows the title
 - **Dynamic dialogue panel height** — modal height computed via throwaway `Text` measurement: `pad + (title ? titleH+gap : 0) + textH + gap + hintH + pad`, clamped to 120px minimum; elements positioned relative to `modalTop`
 - **Chest item glow depth fix** — glow was at depth 0.04 (higher) while sprite was at 0.03 (lower), causing glow to render on top; swapped so sprite (0.04) renders above glow (0.03)
+- **Secret room BGM** — `secret_room.wav` plays on loop after the final hermit dialogue stage is dismissed; loaded in BootScene, started in `triggerHermitDialogue` close handler, stopped on scene SHUTDOWN
 
 ## ✅ Secret Room & Hermit NPC (July 2026)
 - **7-wall trigger** — breaking 7 walls spawns a `secret_stair` tile at depth ≥10; counter resets per floor, bombs count
