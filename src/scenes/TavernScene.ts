@@ -16,6 +16,7 @@ import { viewportManager } from '../systems/ViewportManager';
 import { textStyle, fs, createText } from '../systems/Font';
 import { createAdaptiveText } from '../ui/AdaptiveText';
 import { NineSliceBg } from '../ui/NineSliceBg';
+import { UiButton } from '../ui/UiButton';
 
 const TAVERN_COLS = 12;
 const TAVERN_ROWS = 10;
@@ -87,8 +88,8 @@ export class TavernScene extends Phaser.Scene {
   private carrotCountText!: Phaser.GameObjects.Text;
   private titleText!: Phaser.GameObjects.Text;
   private countText!: Phaser.GameObjects.Text;
-  private exitBtn!: Phaser.GameObjects.Text;
-  private photobookBtn!: Phaser.GameObjects.Text;
+  private exitBtn!: UiButton;
+  private photobookBtn!: UiButton;
   private npcSpriteRefs: Phaser.GameObjects.Image[] = [];
   private npcBaseFlip: boolean[] = [];
   private npcLabelTexts: Phaser.GameObjects.Text[] = [];
@@ -156,8 +157,8 @@ export class TavernScene extends Phaser.Scene {
   private relayout(): void {
     this.titleText.setPosition(CX(), 12);
     this.countText.setPosition(CX(), VH() - 32);
-    this.exitBtn.setPosition(VW() - 12, VH() - 12);
-    this.photobookBtn.setPosition(12, VH() - 12);
+    this.exitBtn.setPosition(VW() - 52, VH() - 27);
+    this.photobookBtn.setPosition(77, VH() - 27);
     this.carrotCountText.setPosition(VW() - 12, 12);
 
     const { x, y } = actionButtonCenter();
@@ -359,17 +360,23 @@ export class TavernScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(50).setScrollFactor(0);
     this.cameras.main.ignore(this.countText);
 
-    this.exitBtn = createText(this, VW() - 12, VH() - 12, '[EXIT]', {
-      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#ff8844',
-    }).setOrigin(1, 1).setDepth(50).setInteractive({ useHandCursor: true }).setScrollFactor(0)
-      .on('pointerdown', () => this.leave());
-    this.cameras.main.ignore(this.exitBtn);
+    this.exitBtn = new UiButton(this, VW() - 52, VH() - 27, '[EXIT]', 80, 30, () => this.leave(), {
+      small: true, color: '#ff8844', fontSize: fs(14),
+    });
+    this.exitBtn.setDepth(50);
+    this.exitBtn.hitZone.on('pointerdown', (p: Phaser.Input.Pointer) => { this.exitBtn.handleClick(p); });
+    for (const child of this.exitBtn.getChildren()) {
+      this.cameras.main.ignore(child);
+    }
 
-    this.photobookBtn = createText(this, 12, VH() - 12, '[PHOTOBOOK]', {
-      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#7a6a5a',
-    }).setOrigin(0, 1).setDepth(50).setInteractive({ useHandCursor: true }).setScrollFactor(0)
-      .on('pointerdown', () => this.photobook.toggle());
-    this.cameras.main.ignore(this.photobookBtn);
+    this.photobookBtn = new UiButton(this, 77, VH() - 27, '[PHOTOBOOK]', 130, 30, () => this.photobook.toggle(), {
+      small: true, color: '#7a6a5a', fontSize: fs(14),
+    });
+    this.photobookBtn.setDepth(50);
+    this.photobookBtn.hitZone.on('pointerdown', (p: Phaser.Input.Pointer) => { this.photobookBtn.handleClick(p); });
+    for (const child of this.photobookBtn.getChildren()) {
+      this.cameras.main.ignore(child);
+    }
 
     this.carrotCountText = createText(this, VW() - 12, 12, '', {
       fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#ff8833', fontStyle: 'bold',
@@ -562,13 +569,18 @@ export class TavernScene extends Phaser.Scene {
     if (this.greetingActive) return;
 
     if (this.photobook.isVisible()) {
-      this.photobook.draw();
       const keys = this.keys;
       if (Phaser.Input.Keyboard.JustDown(keys.W) || Phaser.Input.Keyboard.JustDown(keys.UP)) {
         this.photobook.handleInput('W');
       }
       if (Phaser.Input.Keyboard.JustDown(keys.S) || Phaser.Input.Keyboard.JustDown(keys.DOWN)) {
         this.photobook.handleInput('S');
+      }
+      if (Phaser.Input.Keyboard.JustDown(keys.A) || Phaser.Input.Keyboard.JustDown(keys.LEFT)) {
+        this.photobook.handleInput('A');
+      }
+      if (Phaser.Input.Keyboard.JustDown(keys.D) || Phaser.Input.Keyboard.JustDown(keys.RIGHT)) {
+        this.photobook.handleInput('D');
       }
       return;
     }

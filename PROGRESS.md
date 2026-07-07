@@ -351,6 +351,7 @@ Resolved Bugs:
 - **Dialog click-to-dismiss** — clicking anywhere closes NPC greeting (same as SPACE/ESC), deferred register to avoid same-click auto-close
 - **NPC click fix** — expanded hit area (70×60) covers full tile, explicit Phaser.Geom.Rectangle hit area ensures reliable interactivity
 - **Photobook entry selection** — clicking on any NPC entry line sets focus; uses localY calculation (22px line height) with scroll offset to determine the clicked entry
+- **[EXIT] / [PHOTOBOOK] → UiButton** — converted from plain `createText` + `setInteractive` to `UiButton` instances with NineSlice backgrounds, hover/press feedback, and proper camera routing
 
 ## ✅ Expedition Loadout Revamp (June 2026)
 - **Icon-driven layout** — GatePanel rewritten with stats column (left), 5 equipment slots, 3 consumable slots, settings (text), bottom embark button, and a 2-line description panel below embark

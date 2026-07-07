@@ -72,6 +72,7 @@ export class GatePanel extends BasePanel {
     badge: Phaser.GameObjects.Text;
   }[] = [];
 
+  private depthLabel!: Phaser.GameObjects.Text;
   private depthBtn!: UiButton;
   private descBg!: Phaser.GameObjects.NineSlice;
   private descLines: Phaser.GameObjects.Text[] = [];
@@ -181,7 +182,11 @@ export class GatePanel extends BasePanel {
       fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#6a5a8a',
     }).setOrigin(0.5));
 
-    this.depthBtn = new UiButton(this.scene, CX(), 362, 'Start Depth: 0', 260, 44, () => this.onDepthClick(), { small: true });
+    this.depthLabel = createText(this.scene, CX() - 5, 362, 'Start Depth:', {
+      fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#b8a898',
+    }).setOrigin(1, 0.5);
+    this.container.add(this.depthLabel);
+    this.depthBtn = new UiButton(this.scene, CX() + 50, 362, '0', 80, 44, () => this.onDepthClick(), { small: true });
     this.depthBtn.setDepth(200).setVisible(false);
     for (const c of this.depthBtn.getChildren()) this.container.add(c);
 
@@ -243,6 +248,7 @@ export class GatePanel extends BasePanel {
     this.embarkBtn.setVisible(true);
     this.equipSlots.forEach(s => s.btn.setVisible(true));
     this.consSlots.forEach(s => s.btn.setVisible(true));
+    this.depthLabel.setVisible(true);
     this.depthBtn.setVisible(true);
 
     const portraitBounds = new Phaser.Geom.Rectangle(
@@ -294,6 +300,7 @@ export class GatePanel extends BasePanel {
     this.embarkBtn.setVisible(false);
     this.equipSlots.forEach(s => s.btn.setVisible(false));
     this.consSlots.forEach(s => s.btn.setVisible(false));
+    this.depthLabel.setVisible(false);
     this.depthBtn.setVisible(false);
     if (this.pressTimer) { this.pressTimer.remove(); this.pressTimer = null; }
     if (this.pointerUpHandler) {
@@ -447,14 +454,13 @@ export class GatePanel extends BasePanel {
   }
 
   private renderDepthRow(): void {
-    const elevStr = this.selectedElevatorDepth === 0
-      ? '0'
-      : `Depth ${this.selectedElevatorDepth}`;
+    const elevStr = String(this.selectedElevatorDepth);
     const isSelected = this.gateTab === 8;
+    this.depthLabel.setColor(isSelected ? '#ffddaa' : '#b8a898');
+    this.depthBtn.setText(elevStr);
+    this.depthBtn.label.setColor(isSelected ? '#ffddaa' : '#b8a898');
     this.depthBtn.bg.clearTint();
     this.depthBtn.bg.setAlpha(1);
-    this.depthBtn.setText(`Start Depth: ${elevStr}`);
-    this.depthBtn.label.setColor(isSelected ? '#ffddaa' : '#b8a898');
   }
 
   private renderDescription(): void {
@@ -787,7 +793,8 @@ export class GatePanel extends BasePanel {
       slot.badge.setPosition(equipYX[i].x, equipYX[i].y + 26);
     }
 
-    this.depthBtn.setPosition(CX(), 362);
+    this.depthLabel.setPosition(CX() - 5, 362);
+    this.depthBtn.setPosition(CX() + 50, 362);
 
     if (this._visible) this.render();
   }
