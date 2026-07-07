@@ -156,7 +156,7 @@ export class TavernScene extends Phaser.Scene {
    */
   private relayout(): void {
     this.titleText.setPosition(CX(), 12);
-    this.countText.setPosition(CX(), VH() - 32);
+    this.countText.setPosition(CX(), VH() - 62);
     this.exitBtn.setPosition(VW() - 52, VH() - 27);
     this.photobookBtn.setPosition(77, VH() - 27);
     this.carrotCountText.setPosition(VW() - 12, 12);
@@ -355,8 +355,8 @@ export class TavernScene extends Phaser.Scene {
     this.cameras.main.ignore(this.titleText);
 
     const rescued = gameState.rescuedVillagers;
-    this.countText = createText(this, CX(), VH() - 32, `${rescued.length} / 20 villagers resting here  [P] Photobook`, {
-      fontSize: fs(9), fontFamily: 'Inter', resolution: 4, color: '#7a6a5a',
+    this.countText = createText(this, CX(), VH() - 62, `${rescued.length} / 20 villagers resting here`, {
+      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#d3aa82', stroke: '#000000', strokeThickness: 2
     }).setOrigin(0.5).setDepth(50).setScrollFactor(0);
     this.cameras.main.ignore(this.countText);
 

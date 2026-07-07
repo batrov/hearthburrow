@@ -26,7 +26,6 @@ interface PhotobookEntry {
 
 export class NPCPhotobookPanel extends BasePanel {
   private titleText: Phaser.GameObjects.Text;
-  private hintText: Phaser.GameObjects.Text;
   private gridButtons: UiButton[] = [];
   private npcSprites: Phaser.GameObjects.Image[] = [];
   private npcLabels: Phaser.GameObjects.Text[] = [];
@@ -64,7 +63,7 @@ export class NPCPhotobookPanel extends BasePanel {
       this.npcSprites.push(sprite);
 
       const label = createText(scene, cx, cy + CELL / 2 - 2, '', {
-        fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#b8a898',
+        fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#b8a898', stroke: '#000000', strokeThickness: 2
       }).setOrigin(0.5, 1);
       if (label.frame?.source) label.frame.source.setFilter(1);
       this.container.add(label);
@@ -78,15 +77,11 @@ export class NPCPhotobookPanel extends BasePanel {
     for (let i = 0; i < 5; i++) {
       const t = createText(scene, CX(), 440 + i * 22, '', {
         fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color: '#c8b898', align: 'center',
+        wordWrap: { width: 310, useAdvancedWrap: false },
       }).setOrigin(0.5, 0);
       this.container.add(t);
       this.detailLines.push(t);
     }
-
-    this.hintText = createText(scene, CX(), VH() - 38, '', {
-      fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#5a4a6a',
-    }).setOrigin(0.5);
-    this.container.add(this.hintText);
 
     this.addCloseButton(VW() - 40, 22);
   }
@@ -225,9 +220,5 @@ export class NPCPhotobookPanel extends BasePanel {
       this.detailLines[3].setColor('#555555');
       this.detailLines[4].setText('');
     }
-
-    this.hintText.setText(getInputMode() !== 'keyboard'
-      ? 'Tap to select  [X] close'
-      : '[W/S/A/D] navigate  [SPACE] select  [ESC/TAB] close');
   }
 }
