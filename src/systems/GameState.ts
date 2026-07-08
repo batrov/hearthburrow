@@ -341,6 +341,8 @@ export class GameState {
   itemRuns: Record<string, number>;
   farmPlanted: number;
   farmHarvest: number;
+  farmPlotProgress: number[];
+  farmPlotYield: number[];
   researchLevels: Record<string, number>;
   monsterKills: { slime: number; rat: number; bat: number };
   villagersRescued: number;
@@ -374,6 +376,8 @@ export class GameState {
     this.itemRuns = {};
     this.farmPlanted = 0;
     this.farmHarvest = 0;
+    this.farmPlotProgress = [0, 0, 0, 0, 0, 0];
+    this.farmPlotYield = [0, 0, 0, 0, 0, 0];
     this.researchLevels = {};
     this.monsterKills = { slime: 0, rat: 0, bat: 0 };
     this.villagersRescued = 0;
@@ -670,6 +674,8 @@ export class GameState {
     this.itemRuns = {};
     this.farmPlanted = 0;
     this.farmHarvest = 0;
+    this.farmPlotProgress = [0, 0, 0, 0, 0, 0];
+    this.farmPlotYield = [0, 0, 0, 0, 0, 0];
     this.researchLevels = {};
     this.monsterKills = { slime: 0, rat: 0, bat: 0 };
     this.villagersRescued = 0;
@@ -704,6 +710,8 @@ export class GameState {
       itemRuns: { ...this.itemRuns },
       farmPlanted: this.farmPlanted,
       farmHarvest: this.farmHarvest,
+      farmPlotProgress: [...this.farmPlotProgress],
+      farmPlotYield: [...this.farmPlotYield],
       discovered: this.crafting.getDiscoveredIds(),
       researchLevels: { ...this.researchLevels },
       monsterKills: { ...this.monsterKills },
@@ -755,6 +763,8 @@ export class GameState {
       this.itemRuns = data.itemRuns ?? {};
       this.farmPlanted = data.farmPlanted ?? 0;
       this.farmHarvest = data.farmHarvest ?? 0;
+      this.farmPlotProgress = data.farmPlotProgress ?? [0, 0, 0, 0, 0, 0];
+      this.farmPlotYield = data.farmPlotYield ?? [0, 0, 0, 0, 0, 0];
       this.monsterKills = data.monsterKills ?? { slime: 0, rat: 0, bat: 0 };
       this.villagersRescued = data.villagersRescued ?? 0;
       this.rescuedVillagers = data.rescuedVillagers ?? [];

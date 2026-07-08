@@ -12,9 +12,14 @@ export class FarmPanel extends BasePanel {
   private readonly MAX_FARM_PLOTS = 6;
   private bg: Phaser.GameObjects.Graphics;
   private text: Phaser.GameObjects.Text;
+  private bottomText: Phaser.GameObjects.Text;
   private plantBtn!: UiButton;
   private harvestBtn!: UiButton;
   private onCarrotChange: (() => void) | null;
+  private plotBgGraphics: Phaser.GameObjects.Graphics[] = [];
+  private plotCarrotSprites: Phaser.GameObjects.Image[] = [];
+  private plotProgressTexts: Phaser.GameObjects.Text[] = [];
+  private plotYieldTexts: Phaser.GameObjects.Text[] = [];
 
   constructor(scene: Phaser.Scene, onCarrotChange: (() => void) | null = null) {
     super(scene);
@@ -28,6 +33,12 @@ export class FarmPanel extends BasePanel {
       align: 'center', lineSpacing: 4,
     }).setOrigin(0.5, 0);
     this.container.add(this.text);
+
+    this.bottomText = createText(scene, CX(), 220, '', {
+      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#c8b898',
+      align: 'center', lineSpacing: 4,
+    }).setOrigin(0.5, 0);
+    this.container.add(this.bottomText);
 
     const plantBtn = new UiButton(scene, CX() - 80, VH() - 80, 'PLANT', 80, 28,
       () => this.plant(),
@@ -90,6 +101,8 @@ export class FarmPanel extends BasePanel {
     audio.playItemPickup();
     gameState.farmHarvest = 0;
     gameState.farmPlanted = 0;
+    gameState.farmPlotProgress = [0, 0, 0, 0, 0, 0];
+    gameState.farmPlotYield = [0, 0, 0, 0, 0, 0];
     gameState.save();
     this.onCarrotChange?.();
     this.render();
@@ -103,19 +116,69 @@ export class FarmPanel extends BasePanel {
     this.bg.lineStyle(1, 0x3a3a4a, 0.5);
     this.bg.strokeRect(pad, pad, VW() - pad * 2, VH() - pad * 2);
 
+    this.plotBgGraphics.forEach(g => g.destroy());
+    this.plotBgGraphics = [];
+    this.plotCarrotSprites.forEach(s => s.destroy());
+    this.plotCarrotSprites = [];
+    this.plotProgressTexts.forEach(t => t.destroy());
+    this.plotProgressTexts = [];
+    this.plotYieldTexts.forEach(t => t.destroy());
+    this.plotYieldTexts = [];
+
     const carrots = gameState.inventory.count('carrot');
     const used = gameState.farmPlanted;
-    const empty = this.MAX_FARM_PLOTS - used;
-    const plotBar = '█'.repeat(used) + '░'.repeat(empty);
 
-    this.text.setText(
-      `--- Farm ---\n\n` +
-      `Plots: ${plotBar}  ${used}/${this.MAX_FARM_PLOTS}\n` +
-      `Harvest ready: ${gameState.farmHarvest}\n\n` +
-      `Each plot yields 1 carrot\n` +
-      `per 100 steps taken\n\n` +
-      `You have ${carrots} Carrots\n\n` +
-      getInputMode() !== 'keyboard' ? 'Plant  |  Harvest  |  Close' : '[Z] Plant one  |  [X] Harvest all  |  [ESC/TAP] close'
+    this.text.setText('--- Farm ---');
+
+    this.bottomText.setText(
+      `Plots: ${used}/${this.MAX_FARM_PLOTS}\n` +
+      `Harvest ready: ${gameState.farmHarvest}\n` +
+      `Each plot yields 1 carrot per 100 steps\n` +
+      `You have ${carrots} Carrots`
     );
+
+    const cols = 3;
+    const slotSize = 48;
+    const gap = 8;
+    const totalW = cols * slotSize + (cols - 1) * gap;
+    const startX = CX() - totalW / 2 + slotSize / 2;
+    const startY = 90;
+
+    for (let i = 0; i < this.MAX_FARM_PLOTS; i++) {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = startX + col * (slotSize + gap);
+      const y = startY + row * (slotSize + gap);
+
+      const bg = this.scene.add.graphics();
+      bg.fillStyle(i < used ? 0x4a3a2a : 0x2a1a0a, 1);
+      bg.fillRoundedRect(x - slotSize / 2, y - slotSize / 2, slotSize, slotSize, 6);
+      bg.lineStyle(1, 0x5a4a3a, 0.8);
+      bg.strokeRoundedRect(x - slotSize / 2, y - slotSize / 2, slotSize, slotSize, 6);
+      this.container.add(bg);
+      this.plotBgGraphics.push(bg);
+
+      if (i < used) {
+        const sprite = this.scene.add.image(x, y, 'item_carrot').setScale(0.7);
+        this.container.add(sprite);
+        this.plotCarrotSprites.push(sprite);
+        const pct = createText(this.scene, x + slotSize / 2 - 2, y + slotSize / 2 - 2, `${gameState.farmPlotProgress[i]}%`, {
+          fontSize: fs(7), color: '#ffffff', stroke: '#000000', strokeThickness: 2,
+        }).setOrigin(1, 1);
+        this.container.add(pct);
+        this.plotProgressTexts.push(pct);
+        const yieldTxt = createText(this.scene, x - slotSize / 2 + 2, y + slotSize / 2 - 2, gameState.farmPlotYield[i] > 0 ? `+${gameState.farmPlotYield[i]}` : '', {
+          fontSize: fs(8), color: '#88ff88', stroke: '#000000', strokeThickness: 2,
+        }).setOrigin(0, 1);
+        this.container.add(yieldTxt);
+        this.plotYieldTexts.push(yieldTxt);
+      }
+    }
+  }
+
+  protected relayout(): void {
+    super.relayout();
+    this.bottomText.setPosition(CX(), 220);
+    if (this._visible) this.render();
   }
 }

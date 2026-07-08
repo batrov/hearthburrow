@@ -1235,7 +1235,7 @@ export class HomelandScene extends Phaser.Scene {
   }
 
   private trashItem(itemId: string): void {
-    if (gameState.inventory.count(itemId) <= 0) return;
+    if (itemId === 'carrot' || gameState.inventory.count(itemId) <= 0) return;
     gameState.inventory.removeItem(itemId, 1);
     audio.playError();
     this.inventoryPanel.refresh();

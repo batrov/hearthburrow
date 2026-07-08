@@ -142,7 +142,7 @@ export class InventoryPanel extends BasePanel {
       this.dirty = true;
     } else if (key === 'Z') {
       const item = this.items[this.selectionIndex];
-      if (item) {
+      if (item && item.id !== 'carrot') {
         this.onTrash?.(item.id);
       }
     } else if (key === 'SPACE') {
@@ -282,7 +282,7 @@ export class InventoryPanel extends BasePanel {
     const canUse = selectedItem && this.onUse && isConsumable(selectedItem.id);
     this.useBtn.setVisible(!!canUse);
 
-    const canTrash = selectedItem && this.onTrash;
+    const canTrash = selectedItem && this.onTrash && selectedItem.id !== 'carrot';
     this.trashBtn.setVisible(!!canTrash);
   }
 

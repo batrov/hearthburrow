@@ -3668,7 +3668,13 @@ export class ExpeditionScene extends Phaser.Scene {
     }
     let farmYield = 0;
     if (gameState.restoredBuildings.has('farm') && gameState.farmPlanted > 0) {
-      farmYield = Math.floor(this.stepsTaken * gameState.farmPlanted / 100);
+      for (let i = 0; i < gameState.farmPlanted; i++) {
+        gameState.farmPlotProgress[i] += this.stepsTaken;
+        const plotYield = Math.floor(gameState.farmPlotProgress[i] / 100);
+        farmYield += plotYield;
+        gameState.farmPlotYield[i] += plotYield;
+        gameState.farmPlotProgress[i] %= 100;
+      }
       gameState.farmHarvest += farmYield;
     }
     gameState.save();
@@ -4240,6 +4246,12 @@ export class ExpeditionScene extends Phaser.Scene {
           const idx = this.activeObtainPopups.indexOf(container);
           if (idx >= 0) this.activeObtainPopups.splice(idx, 1);
           container.destroy();
+          this.activeObtainPopups.forEach((c, i) => {
+            const targetY = anchorY - i * 36;
+            this.tweens.add({
+              targets: c, y: targetY, duration: 150, ease: 'Quad.easeOut',
+            });
+          });
         },
       });
     });
