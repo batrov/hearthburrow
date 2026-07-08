@@ -2,10 +2,8 @@ import Phaser from 'phaser';
 import { gameState, itemDisplayName, itemIconKey } from '../systems/GameState';
 import { audio } from '../systems/AudioSystem';
 import { BasePanel } from './BasePanel';
-import { VW, VH, CX } from '../systems/Viewport';
-import { textStyle, fs, createText } from '../systems/Font';
-import { getInputMode } from '../systems/InputMode';
-import { NineSliceBg } from './NineSliceBg';
+import { VW, CX } from '../systems/Viewport';
+import { fs, createText } from '../systems/Font';
 import { UiButton } from './UiButton';
 
 interface TradeItem {
@@ -31,9 +29,13 @@ export class TradePanel extends BasePanel {
   private itemRows: Phaser.GameObjects.Container;
   private selectionIndex: number = 0;
   private clickZones: Phaser.GameObjects.Zone[] = [];
+  private rowButtons: UiButton[] = [];
+  private onCarrotChange: (() => void) | null;
+  private clickHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
 
-  constructor(scene: Phaser.Scene) {
+  constructor(scene: Phaser.Scene, onCarrotChange: (() => void) | null = null) {
     super(scene);
+    this.onCarrotChange = onCarrotChange;
 
     this.createOverlay();
 
@@ -53,6 +55,49 @@ export class TradePanel extends BasePanel {
     this.selectionIndex = 0;
     this.render();
     this.fadeIn();
+
+    this.clickHandler = (p: Phaser.Input.Pointer) => {
+      if (!this._visible) return;
+      for (const btn of this.rowButtons) {
+        if (btn.handleClick(p)) return;
+      }
+    };
+    this.scene.input.on('pointerdown', this.clickHandler);
+  }
+
+  hide(): void {
+    if (this.clickHandler) {
+      this.scene.input.off('pointerdown', this.clickHandler);
+      this.clickHandler = null;
+    }
+    this.fadeOut();
+  }
+
+  private doTrade(item: TradeItem): void {
+    if (item.type === 'buy') {
+      const hasGold = gameState.inventory.count(item.priceId) >= item.priceQty;
+      if (hasGold) {
+        gameState.inventory.removeItem(item.priceId, item.priceQty);
+        gameState.inventory.addItem(item.id, 1);
+        audio.playItemPickup();
+        gameState.save();
+        this.onCarrotChange?.();
+      } else {
+        audio.playError();
+      }
+    } else {
+      const hasItem = gameState.inventory.count(item.id) >= 1;
+      if (hasItem) {
+        gameState.inventory.removeItem(item.id, 1);
+        gameState.inventory.addItem(item.priceId, item.priceQty);
+        audio.playItemPickup();
+        gameState.save();
+        this.onCarrotChange?.();
+      } else {
+        audio.playError();
+      }
+    }
+    this.render();
   }
 
   navigateUp(): void {
@@ -72,34 +117,14 @@ export class TradePanel extends BasePanel {
   confirm(): void {
     const item = TRADE_ITEMS[this.selectionIndex];
     if (!item) return;
-
-    if (item.type === 'buy') {
-      const hasGold = gameState.inventory.count(item.priceId) >= item.priceQty;
-      if (hasGold) {
-        gameState.inventory.removeItem(item.priceId, item.priceQty);
-        gameState.inventory.addItem(item.id, 1);
-        audio.playItemPickup();
-        gameState.save();
-      } else {
-        audio.playError();
-      }
-    } else {
-      const hasItem = gameState.inventory.count(item.id) >= 1;
-      if (hasItem) {
-        gameState.inventory.removeItem(item.id, 1);
-        gameState.inventory.addItem(item.priceId, item.priceQty);
-        audio.playItemPickup();
-        gameState.save();
-      } else {
-        audio.playError();
-      }
-    }
-    this.render();
+    this.doTrade(item);
   }
 
   private render(): void {
     this.clickZones.forEach(z => z.destroy());
     this.clickZones = [];
+    this.rowButtons.forEach(b => b.destroy());
+    this.rowButtons = [];
 
     const carrot = gameState.inventory.count('carrot');
     const lines: string[] = [
@@ -107,50 +132,77 @@ export class TradePanel extends BasePanel {
       '',
       `Carrots: ${carrot}`,
       '',
-      '',
     ];
-
     this.text.setText(lines.join('\n'));
 
     this.itemRows.removeAll(true);
-    const baseY = 44 + 5 * 18;
-    for (let i = 0; i < TRADE_ITEMS.length; i++) {
-      const item = TRADE_ITEMS[i];
-      const cursor = i === this.selectionIndex ? '▸' : ' ';
-      const tag = item.type === 'buy' ? 'BUY ' : 'SELL';
-      const label = `${tag} ${item.label.padEnd(14)}`;
-      const price = `${item.priceQty} ${itemDisplayName(item.priceId)}`;
-      const have = gameState.inventory.count(item.id);
-      const haveText = item.type === 'buy' ? '' : `  (have ${have})`;
-      const y = baseY + i * 20;
+    const ROW_H = 28;
+    const baseY = 44 + 4 * 18;
+    let y = baseY;
 
-      const row = this.scene.add.container(0, 0);
-      const iconKey = itemIconKey(item.id);
-      if (this.scene.textures.exists(iconKey)) {
-        row.add(this.scene.add.image(30, y, iconKey).setScale(0.6));
+    const renderSection = (type: 'buy' | 'sell', color: string): void => {
+      const sectionItems = TRADE_ITEMS.filter(t => t.type === type);
+      if (sectionItems.length === 0) return;
+
+      this.itemRows.add(createText(this.scene, CX(), y, `── ${type === 'buy' ? 'Buy' : 'Sell'} ──`, {
+        fontSize: fs(11), fontFamily: 'Inter', resolution: 4, color, fontStyle: 'bold',
+      }).setOrigin(0.5, 0.5));
+      y += ROW_H;
+
+      for (const item of sectionItems) {
+        const i = TRADE_ITEMS.indexOf(item);
+        const cursor = i === this.selectionIndex ? '▸' : ' ';
+        const label = `${cursor} ${item.label}`;
+
+        const row = this.scene.add.container(0, 0);
+        const iconKey = itemIconKey(item.id);
+        if (this.scene.textures.exists(iconKey)) {
+          row.add(this.scene.add.image(20, y, iconKey).setScale(0.7));
+        }
+        row.add(createText(this.scene, 36, y, label, {
+          fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
+        }).setOrigin(0, 0.5));
+
+        const have = gameState.inventory.count(item.id);
+        row.add(createText(this.scene, VW() - 120, y, `(have ${have})`, {
+          fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#8a8a9a',
+        }).setOrigin(1, 0.5));
+        this.itemRows.add(row);
+
+        const btnX = VW() - 72;
+        const btn = new UiButton(this.scene, btnX, y, `${item.priceQty}🥕`, 56, 22,
+          () => this.doTrade(item),
+          { color, fontSize: fs(10) }
+        );
+        btn.setDepth(210);
+        for (const c of btn.getChildren()) this.container.add(c);
+        this.rowButtons.push(btn);
+
+        const zone = this.scene.add.zone(CX(), y, VW() - 32, ROW_H)
+          .setDepth(210)
+          .setScrollFactor(0)
+          .setInteractive();
+        zone.on('pointerdown', () => {
+          this.selectionIndex = i;
+          this.render();
+        });
+        this.container.add(zone);
+        this.clickZones.push(zone);
+
+        y += ROW_H;
       }
-      row.add(createText(this.scene, 46, y, `${cursor} ${label}`, {
-        fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
-      }).setOrigin(0, 0.5));
-      row.add(createText(this.scene, CX() + 20, y, `${item.priceQty}${haveText}`, {
-        fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
-      }).setOrigin(0, 0.5));
-      this.itemRows.add(row);
+    };
 
-      const zone = this.scene.add.zone(CX(), y, VW() - 32, 40)
-        .setDepth(210)
-        .setScrollFactor(0)
-        .setInteractive();
-      zone.on('pointerdown', () => {
-        this.selectionIndex = i;
-        this.render();
-        this.confirm();
-      });
-      this.container.add(zone);
-      this.clickZones.push(zone);
-    }
+    renderSection('buy', '#44cc66');
+    y += 8;
+    renderSection('sell', '#ccaa44');
 
-    lines.push('', '', getInputMode() !== 'keyboard' ? '  Tap to navigate & trade' : '  [W/S] navigate  [SPACE] trade  [ESC] close');
     this.text.setText(lines.join('\n'));
+  }
+
+  protected relayout(): void {
+    super.relayout();
+    this.text.setPosition(CX(), 44);
+    if (this._visible) this.render();
   }
 }

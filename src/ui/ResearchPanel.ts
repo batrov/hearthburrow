@@ -143,6 +143,16 @@ export class ResearchPanel extends BasePanel {
     return this.state === 'prompt';
   }
 
+  private noMatPopup: Phaser.GameObjects.Text | null = null;
+
+  private showNoMaterials(): void {
+    if (this.noMatPopup) this.noMatPopup.destroy();
+    this.noMatPopup = createText(this.scene, CX(), VH() / 2 + 80, 'Not enough materials!', {
+      fontSize: fs(13), color: '#ff6666',
+    }).setOrigin(0.5).setDepth(250);
+    this.scene.time.delayedCall(1500, () => { this.noMatPopup?.destroy(); this.noMatPopup = null; });
+  }
+
   show(): void {
     this.focusRow = 0;
     this.focusCol = 0;
@@ -194,7 +204,7 @@ export class ResearchPanel extends BasePanel {
     if (level >= 1) { audio.playError(); return; }
     if (node.prereqId && gameState.getResearchLevel(node.prereqId) < 1) { audio.playError(); return; }
     for (const [id, qty] of Object.entries(node.cost)) {
-      if (gameState.inventory.count(id) < qty) { audio.playError(); return; }
+      if (gameState.inventory.count(id) < qty) { audio.playError(); this.showNoMaterials(); return; }
     }
 
     this.state = 'prompt';

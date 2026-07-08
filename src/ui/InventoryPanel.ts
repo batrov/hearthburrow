@@ -57,6 +57,7 @@ export class InventoryPanel extends BasePanel {
   private trashBtn!: UiButton;
   private dirty: boolean = true;
   private clickHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
+  private inputCooldown: boolean = false;
 
   // List area top (below title+warn text) is a fixed chrome height; the bottom
   // boundary is derived from the button row above so rows never overlap the
@@ -161,8 +162,12 @@ export class InventoryPanel extends BasePanel {
     this.fadeIn();
     this.dirty = true;
 
+    this.inputCooldown = true;
+    this.scene.time.delayedCall(150, () => { this.inputCooldown = false; });
+
     this.clickHandler = (p: Phaser.Input.Pointer) => {
       if (!this._visible) return;
+      if (this.inputCooldown) return;
       if (this.useBtn.handleClick(p)) return;
       if (this.trashBtn.handleClick(p)) return;
     };
@@ -252,7 +257,6 @@ export class InventoryPanel extends BasePanel {
       zone.on('pointerdown', () => {
         this.selectionIndex = i;
         this.dirty = true;
-        this.handleInput('SPACE');
       });
       this.container.add(zone);
       this.clickZones.push(zone);

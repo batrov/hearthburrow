@@ -2812,6 +2812,7 @@ export class ExpeditionScene extends Phaser.Scene {
       gameState.inventory.removeItem('carrot', cost);
       gameState.save();
       this.giveItem(itemId, 1);
+      this.updateCarrotCounter();
     }
   }
 
@@ -2821,6 +2822,7 @@ export class ExpeditionScene extends Phaser.Scene {
       gameState.inventory.addItem('carrot', price);
       gameState.save();
       audio.playItemPickup();
+      this.updateCarrotCounter();
     }
   }
 

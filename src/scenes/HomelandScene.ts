@@ -297,9 +297,9 @@ export class HomelandScene extends Phaser.Scene {
     };
     this.inventoryPanel = new InventoryPanel(this, gameState.inventory, null, (id) => this.trashItem(id), 'Storage');
     this.craftingPanel = new CraftingPanel(this);
-    this.tradePanel = new TradePanel(this);
+    this.tradePanel = new TradePanel(this, () => this.updateCarrotCounter());
     this.researchPanel = new ResearchPanel(this);
-    this.farmPanel = new FarmPanel(this);
+    this.farmPanel = new FarmPanel(this, () => this.updateCarrotCounter());
     this.cameras.main.ignore(this.buildingInfoPanel.container);
     this.cameras.main.ignore(this.restorePanel.container);
     this.cameras.main.ignore(this.gatePanel.container);
@@ -1158,6 +1158,7 @@ export class HomelandScene extends Phaser.Scene {
         if (success) {
           this.drawHubBuildings();
           audio.playBuildComplete();
+          this.updateCarrotCounter();
 
           const name = building?.name ?? buildingId.replace(/_/g, ' ');
           const popup = createText(this, CX(), CY(), `${name} Restored!`, {

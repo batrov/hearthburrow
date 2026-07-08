@@ -144,6 +144,16 @@ export class DeveloperPanel extends BasePanel {
           'This cannot be undone. All items, buildings, and research will be lost.',
           () => {
             gameState.resetProgress();
+            if (this.debugMode) {
+              const allBuildingIds = ['trading_post', 'crafting_station', 'farm', 'housing', 'storage', 'laboratory'];
+              for (const id of allBuildingIds) {
+                gameState.restoredBuildings.add(id);
+              }
+              gameState.maxStaminaBonus += 20;
+              gameState.inventorySlotBonus += 8;
+              gameState.inventory.expandSlots(8);
+              gameState.save();
+            }
             this.hide();
             this.scene.cameras.main.fadeOut(400, 0, 0, 0);
             this.scene.cameras.main.once('camerafadeoutcomplete', () => {

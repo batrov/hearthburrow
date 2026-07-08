@@ -14,9 +14,11 @@ export class FarmPanel extends BasePanel {
   private text: Phaser.GameObjects.Text;
   private plantBtn!: UiButton;
   private harvestBtn!: UiButton;
+  private onCarrotChange: (() => void) | null;
 
-  constructor(scene: Phaser.Scene) {
+  constructor(scene: Phaser.Scene, onCarrotChange: (() => void) | null = null) {
     super(scene);
+    this.onCarrotChange = onCarrotChange;
 
     this.bg = scene.add.graphics();
     this.container.add(this.bg);
@@ -74,6 +76,7 @@ export class FarmPanel extends BasePanel {
     gameState.inventory.removeItem('carrot', 1);
     gameState.farmPlanted++;
     gameState.save();
+    this.onCarrotChange?.();
     this.render();
   }
 
@@ -88,6 +91,7 @@ export class FarmPanel extends BasePanel {
     gameState.farmHarvest = 0;
     gameState.farmPlanted = 0;
     gameState.save();
+    this.onCarrotChange?.();
     this.render();
   }
 

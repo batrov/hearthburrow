@@ -1,1 +1,12 @@
-Dynamic lighting
+P0
+- fix carrot count UI update everytime it is consumed. Now it's not updated after consumed (building, paid NPC in dungeons)
+- trading post UX revamp, add buy / sell button (use UiButton) in the right part of the item.
+- expedition scene: clicking on item name in the inventory should NOT use it, it will only be used when clicking the USE button
+- homeland scene: clicking on inventory button triggers trash sfx due to overlapping button position, solution: should add input delay on panel open
+- laboratory panel: on insufficient materials, should show text as insufficients
+
+P1
+- on super crit (hit yellow box + player critical bonus), differentiate the damage text by adding additional ! (e.g. 4!!) and font color light purple with black outline
+
+P2 
+- Dynamic lighting
