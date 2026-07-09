@@ -704,3 +704,17 @@ Resolved Bugs:
 - **Title logo** — `title.png` on slide 1, `portrait.png` (0.6× scale, ~154px) on slide 4
 - **Interactions** — click/SPACE/ENTER to advance; click while typing skips to full text (doesn't advance slide); [Skip] jumps directly to HomelandScene
 - **Fade transitions** — 500ms fade-in per slide, 300ms fade between slides, 400ms fade to Homeland
+
+## Recipe Polish (July 2026)
+- **Boots unlock by NPC threshold** — bronze/silver/gold stamina and luck boots, plus regenerative boots, all unlock by rescuing specific numbers of villagers (3/5/8/10/12/16/18) instead of floor depth or tier prerequisites
+- **Lantern tier requirement removed** — silver/gold lanterns no longer need the previous tier in inventory; each unlocks individually at their floor depth
+- **Recipe unlock hint in trapped villager dialog** — when the next rescue triggers a boots recipe, the NPC dialog shows `"✚ Stamina Boots (Bronze)"` inline
+- **Recipe discovery popup matches item pickup style** — `showRecipeDiscovery` now renders as a bottom-left stacking popup with item sprite + blue `"New Recipe: X"` text, same style as `queueObtainPopup`
+
+## UI Polish (July 2026)
+- **Farm plot yield display** — each planted plot shows accumulated yield `+X` in green at bottom-left, tracked via `farmPlotYield[]` array
+- **Super crit damage popup** — hitting both the yellow skill zone AND RNG crit proc (4× damage) now shows `4!!` in light purple `#cc88ff` with enhanced particles, `"SUPER CRIT! +N"` feedback, and boss-victory SFX
+- **Obtain popup stacking fix** — popups now reposition via tween when one is removed, preventing overlap with newly created popups
+
+## Resolved Bugs (July 2026)
+- **Obtain popups overlap after removal** — remaining popups now tween to corrected Y positions when a popup expires, preventing new popups from overlapping stale ones

@@ -3141,11 +3141,8 @@ export class ExpeditionScene extends Phaser.Scene {
   private showRecipeDiscovery(id: string): void {
     const info = RECIPE_INFO[id];
     const name = info ? itemDisplayName(id) : id;
-    const unlockHint = info?.unlock;
     gameState.runRecipesDiscovered.push(name);
-    const cx = this.cameras.main.width / 2;
-    const text = unlockHint ? `New Recipe: ${name}\n\u2014 ${unlockHint}` : `New Recipe: ${name}!`;
-    this.createPopup(text, cx, 130, '#44ccff', { duration: 2000, moveY: -40, scaleFrom: 1.1, scaleTo: 0.9 });
+    this.queueObtainPopup(id, 1, 'New Recipe');
   }
 
   private rebuildFloor(): void {
@@ -4249,7 +4246,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.queueObtainPopup(id, qty);
   }
 
-  private queueObtainPopup(id: string, qty: number): void {
+  private queueObtainPopup(id: string, qty: number, prefix?: string): void {
     if (this.activeObtainPopups.length >= 3) return;
 
     const anchorX = 18;
@@ -4275,8 +4272,8 @@ export class ExpeditionScene extends Phaser.Scene {
       container.add(badge);
     }
 
-    const label = createText(this, 38, 10, itemDisplayName(id), {
-      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7',
+    const label = createText(this, 38, 10, prefix ? `${prefix}: ${itemDisplayName(id)}` : itemDisplayName(id), {
+      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: prefix ? '#44ccff' : '#e8d5b7',
     });
     container.add(label);
 
