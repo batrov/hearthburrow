@@ -65,6 +65,8 @@ export class CombatPanel extends BasePanel {
   private invertTimer?: Phaser.Time.TimerEvent;
   private panelBg: Phaser.GameObjects.NineSlice;
   private modalBg: Phaser.GameObjects.NineSlice;
+  lastHitWasCrit: boolean = false;
+  lastHitWasSuperCrit: boolean = false;
 
   private readonly BAR_WIDTH = 300;
   private readonly BAR_HEIGHT = 16;
@@ -356,6 +358,8 @@ export class CombatPanel extends BasePanel {
   }
 
   handleStrike(): 'hit' | 'miss' | 'kill' {
+    this.lastHitWasCrit = false;
+    this.lastHitWasSuperCrit = false;
     if (!this._visible || this.result) return 'miss';
 
     const markerX = this.marker.x;
@@ -392,6 +396,8 @@ export class CombatPanel extends BasePanel {
       const isCrit = Math.random() < ((this.currentEnemy?.ringCritChance ?? 0) + (this.currentEnemy?.researchCritChance ?? 0));
       if (isCrit) damage *= 2;
       const isSuperCrit = effectiveInCrit && isCrit;
+      this.lastHitWasCrit = isCrit || effectiveInCrit;
+      this.lastHitWasSuperCrit = isSuperCrit;
       if (this.currentEnemy?.bossDamageMult) damage = Math.floor(damage * this.currentEnemy.bossDamageMult);
       this.spawnDamagePopup(damage, isCrit || effectiveInCrit, isSuperCrit, this.marker.x, this.BAR_Y);
 

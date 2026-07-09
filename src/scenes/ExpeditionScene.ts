@@ -1190,6 +1190,10 @@ export class ExpeditionScene extends Phaser.Scene {
             x: { value: '+=' + 5 },
             duration: 25, yoyo: true, repeat: 3, ease: 'Sine.easeInOut',
           });
+        } else if (this.combatPanel.lastHitWasSuperCrit) {
+          this.stamina.refill(10);
+        } else if (this.combatPanel.lastHitWasCrit) {
+          this.stamina.refill(5);
         }
       }
       return;
@@ -1721,6 +1725,10 @@ export class ExpeditionScene extends Phaser.Scene {
               repeat: 3,
               ease: 'Sine.easeInOut',
             });
+          } else if (this.combatPanel.lastHitWasSuperCrit) {
+            this.stamina.refill(10);
+          } else if (this.combatPanel.lastHitWasCrit) {
+            this.stamina.refill(5);
           }
         }
       }

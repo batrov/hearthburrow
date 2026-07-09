@@ -451,7 +451,7 @@ export class ResearchPanel extends BasePanel {
       const canAfford = Object.entries(node.cost).every(([id, qty]) => gameState.inventory.count(id) >= qty);
       this.descCost.setText(`Cost: ${costStr}`);
       this.descCost.setColor(canAfford ? '#888899' : '#dd6666');
-      this.descStatus.setText('AVAILABLE');
+      this.descStatus.setText(canAfford ? 'AVAILABLE' : 'INSUFFICIENT');
       this.descStatus.setColor(canAfford ? '#88dd88' : '#dd6666');
     }
   }
