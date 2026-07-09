@@ -8,7 +8,7 @@ import { VW, VH, CX } from '../systems/Viewport';
 import { textStyle, fs, createText } from '../systems/Font';
 import { createAdaptiveText } from './AdaptiveText';
 
-const RECIPE_INFO: Record<string, { desc: string; unlock?: string }> = {
+export const RECIPE_INFO: Record<string, { desc: string; unlock?: string }> = {
   pickaxe_2: { desc: 'Bronze Pickaxe — 5 runs, mines bronze ore' },
   pickaxe_3: { desc: 'Silver Pickaxe — 5 runs, mines silver ore', unlock: 'Mine silver ore' },
   pickaxe_4: { desc: 'Gold Pickaxe — 5 runs, mines gold ore', unlock: 'Mine gold ore' },
@@ -19,13 +19,13 @@ const RECIPE_INFO: Record<string, { desc: string; unlock?: string }> = {
   ring_damage: { desc: '+1 base damage in combat', unlock: 'Defeat 3 rats' },
   ring_precision: { desc: 'Wider hit zone in combat', unlock: 'Defeat 3 bats' },
   ring_hunter: { desc: 'Combines crit + damage bonuses', unlock: 'Defeat 3 of each monster' },
-  boots_stamina_bronze: { desc: '+10 max stamina for 5 expeditions', unlock: 'Reach floor 3 (dark)' },
-  boots_stamina_silver: { desc: '+20 max stamina for 5 expeditions', unlock: 'Craft bronze version first' },
-  boots_stamina_gold: { desc: '+30 max stamina for 5 expeditions', unlock: 'Craft silver version first' },
-  boots_luck_bronze: { desc: '10% double-drop chance for 5 expeditions', unlock: 'Reach floor 3 (dark)' },
-  boots_luck_silver: { desc: '25% double-drop chance for 5 expeditions', unlock: 'Craft bronze version first' },
-  boots_luck_gold: { desc: '40% double-drop chance for 5 expeditions', unlock: 'Craft silver version first' },
-  boots_regen: { desc: '+1 stamina per 5 rocks broken for 5 expeditions', unlock: 'Reach floor 8 (dark)' },
+  boots_stamina_bronze: { desc: '+10 max stamina for 5 expeditions', unlock: 'Rescue 3 villagers' },
+  boots_stamina_silver: { desc: '+20 max stamina for 5 expeditions', unlock: 'Rescue 8 villagers' },
+  boots_stamina_gold: { desc: '+30 max stamina for 5 expeditions', unlock: 'Rescue 16 villagers' },
+  boots_luck_bronze: { desc: '10% double-drop chance for 5 expeditions', unlock: 'Rescue 5 villagers' },
+  boots_luck_silver: { desc: '25% double-drop chance for 5 expeditions', unlock: 'Rescue 10 villagers' },
+  boots_luck_gold: { desc: '40% double-drop chance for 5 expeditions', unlock: 'Rescue 18 villagers' },
+  boots_regen: { desc: '+1 stamina per 5 rocks broken for 5 expeditions', unlock: 'Rescue 12 villagers' },
   lantern_bronze: { desc: '+60px light radius for 5 expeditions', unlock: 'Reach floor 3 (dark)' },
   lantern_silver: { desc: '+60px light radius for 5 expeditions', unlock: 'Craft bronze version first' },
   lantern_gold: { desc: '+60px light radius for 5 expeditions', unlock: 'Craft silver version first' },

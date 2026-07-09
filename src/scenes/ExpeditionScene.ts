@@ -28,6 +28,7 @@ import { viewportManager } from '../systems/ViewportManager';
 import { textStyle, fs, createText } from '../systems/Font';
 import { NineSliceBg } from '../ui/NineSliceBg';
 import { UiButton } from '../ui/UiButton';
+import { RECIPE_INFO } from '../ui/CraftingPanel';
 import { getInputMode } from '../systems/InputMode';
 
 const BIOMES = ['FOREST', 'CAVE', 'ICE', 'LAVA', 'RUINS'];
@@ -2683,7 +2684,7 @@ export class ExpeditionScene extends Phaser.Scene {
                   addItem(getItem, rewardQty);
                   if (!knowsScroll) {
                     gameState.crafting.discover('teleport_scroll');
-                    this.showRecipeDiscovery('Teleport Scroll');
+                    this.showRecipeDiscovery('teleport_scroll');
                   }
                 }
               },
@@ -2699,22 +2700,24 @@ export class ExpeditionScene extends Phaser.Scene {
         const name = personality?.name ?? `Villager ${variant + 1}`;
         const line = personality?.rescueLine ?? 'Please, help me!';
             const alreadyDiscovered = gameState.crafting.isDiscovered('stamina_potion');
+            const bootUnlock = this.getNextBootUnlock();
             return {
               title: `Trapped: ${name}`,
-              description: `"${line}"`,
+              description: `"${line}"${bootUnlock ? `\n\n${bootUnlock}` : ''}`,
               choices: [
                 {
                   label: alreadyDiscovered ? 'Rescue' : 'Rescue (learn Stamina Potion recipe)',
                   action: () => {
                     if (!alreadyDiscovered) {
                       gameState.crafting.discover('stamina_potion');
-                      this.showRecipeDiscovery('Stamina Potion');
+                      this.showRecipeDiscovery('stamina_potion');
                     }
                     const depth = this.expeditionState.depth;
                     gameState.rescuedVillagers.push({ variant, rescuedAtDepth: depth, name, talkCount: 0 });
                     gameState.villagerRescueFloors.add(depth);
                     gameState.villagersRescued++;
                     gameState.runVillagersRescued.push({ variant, name });
+                this.checkBootsDiscovery();
                 gameState.save();
                 const lvls = gameState.addXp(5);
                 if (lvls > 0) this.handleLevelUp(lvls);
@@ -3004,20 +3007,20 @@ export class ExpeditionScene extends Phaser.Scene {
 
     if (this.expeditionState.depth >= 2 && !gameState.crafting.isDiscovered('mining_bomb')) {
       gameState.crafting.discover('mining_bomb');
-      this.showRecipeDiscovery('Mining Bomb');
+      this.showRecipeDiscovery('mining_bomb');
     }
 
     if (this.expeditionState.depth === 3 && !gameState.crafting.isDiscovered('lantern_bronze')) {
       gameState.crafting.discover('lantern_bronze');
-      this.showRecipeDiscovery('Bronze Lantern');
+      this.showRecipeDiscovery('lantern_bronze');
     }
     if (this.expeditionState.depth === 8 && !gameState.crafting.isDiscovered('lantern_silver')) {
       gameState.crafting.discover('lantern_silver');
-      this.showRecipeDiscovery('Silver Lantern');
+      this.showRecipeDiscovery('lantern_silver');
     }
     if (this.expeditionState.depth === 13 && !gameState.crafting.isDiscovered('lantern_gold')) {
       gameState.crafting.discover('lantern_gold');
-      this.showRecipeDiscovery('Gold Lantern');
+      this.showRecipeDiscovery('lantern_gold');
     }
 
     if (gameState.getResearchLevel('second_wind') >= 1) this.stamina.refill(5);
@@ -3067,12 +3070,12 @@ export class ExpeditionScene extends Phaser.Scene {
   private checkRecipeDiscovery(resource: string): void {
     if (resource === 'silver_ore' && !gameState.crafting.isDiscovered('pickaxe_3')) {
       gameState.crafting.discover('pickaxe_3');
-      this.showRecipeDiscovery('Silver Pickaxe');
+      this.showRecipeDiscovery('pickaxe_3');
     }
 
     if (resource === 'gold_ore' && !gameState.crafting.isDiscovered('pickaxe_4')) {
       gameState.crafting.discover('pickaxe_4');
-      this.showRecipeDiscovery('Gold Pickaxe');
+      this.showRecipeDiscovery('pickaxe_4');
     }
   }
 
@@ -3080,26 +3083,69 @@ export class ExpeditionScene extends Phaser.Scene {
     const k = gameState.monsterKills;
     if (k.slime >= 3 && !gameState.crafting.isDiscovered('ring_critical')) {
       gameState.crafting.discover('ring_critical');
-      this.showRecipeDiscovery('Critical Ring');
+      this.showRecipeDiscovery('ring_critical');
     }
     if (k.rat >= 3 && !gameState.crafting.isDiscovered('ring_damage')) {
       gameState.crafting.discover('ring_damage');
-      this.showRecipeDiscovery('Damage Ring');
+      this.showRecipeDiscovery('ring_damage');
     }
     if (k.bat >= 3 && !gameState.crafting.isDiscovered('ring_precision')) {
       gameState.crafting.discover('ring_precision');
-      this.showRecipeDiscovery('Precision Ring');
+      this.showRecipeDiscovery('ring_precision');
     }
     if (k.slime >= 3 && k.rat >= 3 && k.bat >= 3 && !gameState.crafting.isDiscovered('ring_hunter')) {
       gameState.crafting.discover('ring_hunter');
-      this.showRecipeDiscovery('Hunter Ring');
+      this.showRecipeDiscovery('ring_hunter');
     }
   }
 
-  private showRecipeDiscovery(name: string): void {
+  private checkBootsDiscovery(): void {
+    const rescued = gameState.rescuedVillagers.length;
+    const thresholds = [
+      { at: 3, id: 'boots_stamina_bronze', show: 'Stamina Boots (Bronze)' },
+      { at: 5, id: 'boots_luck_bronze', show: 'Luck Boots (Bronze)' },
+      { at: 8, id: 'boots_stamina_silver', show: 'Stamina Boots (Silver)' },
+      { at: 10, id: 'boots_luck_silver', show: 'Luck Boots (Silver)' },
+      { at: 12, id: 'boots_regen', show: 'Regenerative Boots' },
+      { at: 16, id: 'boots_stamina_gold', show: 'Stamina Boots (Gold)' },
+      { at: 18, id: 'boots_luck_gold', show: 'Luck Boots (Gold)' },
+    ];
+    for (const t of thresholds) {
+      if (rescued >= t.at && !gameState.crafting.isDiscovered(t.id)) {
+        gameState.crafting.discover(t.id);
+        this.showRecipeDiscovery(t.id);
+      }
+    }
+  }
+
+  private getNextBootUnlock(): string | null {
+    const count = gameState.rescuedVillagers.length;
+    const next = count + 1;
+    const thresholds = [
+      { at: 3, id: 'boots_stamina_bronze', show: 'Stamina Boots (Bronze)' },
+      { at: 5, id: 'boots_luck_bronze', show: 'Luck Boots (Bronze)' },
+      { at: 8, id: 'boots_stamina_silver', show: 'Stamina Boots (Silver)' },
+      { at: 10, id: 'boots_luck_silver', show: 'Luck Boots (Silver)' },
+      { at: 12, id: 'boots_regen', show: 'Regenerative Boots' },
+      { at: 16, id: 'boots_stamina_gold', show: 'Stamina Boots (Gold)' },
+      { at: 18, id: 'boots_luck_gold', show: 'Luck Boots (Gold)' },
+    ];
+    for (const t of thresholds) {
+      if (!gameState.crafting.isDiscovered(t.id)) {
+        return next >= t.at ? `✚ ${t.show}` : null;
+      }
+    }
+    return null;
+  }
+
+  private showRecipeDiscovery(id: string): void {
+    const info = RECIPE_INFO[id];
+    const name = info ? itemDisplayName(id) : id;
+    const unlockHint = info?.unlock;
     gameState.runRecipesDiscovered.push(name);
     const cx = this.cameras.main.width / 2;
-    this.createPopup(`New Recipe: ${name}!`, cx, 130, '#44ccff', { duration: 2000, moveY: -40, scaleFrom: 1.1, scaleTo: 0.9 });
+    const text = unlockHint ? `New Recipe: ${name}\n\u2014 ${unlockHint}` : `New Recipe: ${name}!`;
+    this.createPopup(text, cx, 130, '#44ccff', { duration: 2000, moveY: -40, scaleFrom: 1.1, scaleTo: 0.9 });
   }
 
   private rebuildFloor(): void {
@@ -3685,7 +3731,7 @@ export class ExpeditionScene extends Phaser.Scene {
       gameState.exhaustionCount++;
       if (gameState.exhaustionCount >= 3 && !gameState.crafting.isDiscovered('teleport_scroll')) {
         gameState.crafting.discover('teleport_scroll');
-        this.showRecipeDiscovery('Teleport Scroll');
+        this.showRecipeDiscovery('teleport_scroll');
       }
     }
 
@@ -4000,7 +4046,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
           if (!gameState.crafting.isDiscovered('stamina_potion')) {
             gameState.crafting.discover('stamina_potion');
-            this.showRecipeDiscovery('Stamina Potion');
+            this.showRecipeDiscovery('stamina_potion');
           }
         } else {
           tile.broken = true;

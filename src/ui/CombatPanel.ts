@@ -391,19 +391,21 @@ export class CombatPanel extends BasePanel {
       if (effectiveInCrit) damage *= 2;
       const isCrit = Math.random() < ((this.currentEnemy?.ringCritChance ?? 0) + (this.currentEnemy?.researchCritChance ?? 0));
       if (isCrit) damage *= 2;
+      const isSuperCrit = effectiveInCrit && isCrit;
       if (this.currentEnemy?.bossDamageMult) damage = Math.floor(damage * this.currentEnemy.bossDamageMult);
-      this.spawnDamagePopup(damage, isCrit || effectiveInCrit, this.marker.x, this.BAR_Y);
+      this.spawnDamagePopup(damage, isCrit || effectiveInCrit, isSuperCrit, this.marker.x, this.BAR_Y);
 
       this.enemyHP -= damage;
       if (this.enemyHP < 0) {
         this.enemyHP = 0;
       }
       this.drawHP();
-      this.showFeedback(isCrit ? 'CRIT! +' + damage : 'HIT!', '#44cc66');
-      if (isCrit || effectiveInCrit) audio.playCombatCrit();
+      this.showFeedback(isSuperCrit ? 'SUPER CRIT! +' + damage : isCrit ? 'CRIT! +' + damage : 'HIT!', '#44cc66');
+      if (isSuperCrit) audio.playCombatSuperCrit();
+      else if (isCrit || effectiveInCrit) audio.playCombatCrit();
       else audio.playCombatHit();
 
-      this.spawnHitParticles(isCrit || effectiveInCrit);
+      this.spawnHitParticles(isCrit || effectiveInCrit, isSuperCrit);
 
       this.scene.tweens.add({
         targets: this.enemySprite,
@@ -619,29 +621,29 @@ export class CombatPanel extends BasePanel {
     }
   }
 
-  private spawnHitParticles(isCritical: boolean): void {
-    const color = isCritical ? 0xffdd44 : 0xffffff;
+  private spawnHitParticles(isCritical: boolean, isSuperCrit: boolean = false): void {
+    const color = isSuperCrit ? 0xcc88ff : isCritical ? 0xffdd44 : 0xffffff;
     const ex = this.enemySprite.x;
     const ey = this.enemySprite.y;
-    const count = isCritical ? 12 : 8;
+    const count = isSuperCrit ? 16 : isCritical ? 12 : 8;
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 / count) * i + Phaser.Math.FloatBetween(-0.2, 0.2);
-      const dist = Phaser.Math.Between(isCritical ? 25 : 20, isCritical ? 50 : 40);
-      const radius = Phaser.Math.FloatBetween(2, 4);
+      const dist = Phaser.Math.Between(isSuperCrit ? 35 : isCritical ? 25 : 20, isSuperCrit ? 65 : isCritical ? 50 : 40);
+      const radius = Phaser.Math.FloatBetween(isSuperCrit ? 3 : 2, isSuperCrit ? 5 : 4);
       const particle = this.scene.add.circle(ex, ey, radius, color, 0.8)
-        .setStrokeStyle(1, 0xffffff, isCritical ? 0.6 : 0.3).setDepth(250).setScrollFactor(0);
+        .setStrokeStyle(1, 0xffffff, isSuperCrit ? 0.8 : isCritical ? 0.6 : 0.3).setDepth(250).setScrollFactor(0);
       this.container.add(particle);
       this.scene.tweens.add({
         targets: particle,
         x: ex + Math.cos(angle) * dist,
         y: ey + Math.sin(angle) * dist,
         alpha: 0, scale: 0,
-        duration: isCritical ? 350 : 250,
+        duration: isSuperCrit ? 450 : isCritical ? 350 : 250,
         ease: 'Quad.easeOut',
         onComplete: () => particle.destroy(),
       });
     }
-    const flash = this.scene.add.circle(ex, ey, 20, 0xffffff, 0.3).setDepth(250).setScrollFactor(0);
+    const flash = this.scene.add.circle(ex, ey, isSuperCrit ? 30 : 20, 0xffffff, 0.3).setDepth(250).setScrollFactor(0);
     this.container.add(flash);
     this.scene.tweens.add({
       targets: flash,
@@ -651,12 +653,12 @@ export class CombatPanel extends BasePanel {
     });
   }
 
-  private spawnDamagePopup(damage: number, isCritical: boolean, x: number, y: number): void {
-    const popup = createText(this.scene, x, y, isCritical ? `${damage}!` : `${damage}` , {
-      fontSize: isCritical ? '22px' : '16px',
+  private spawnDamagePopup(damage: number, isCritical: boolean, isSuperCrit: boolean, x: number, y: number): void {
+    const popup = createText(this.scene, x, y, isSuperCrit ? `${damage}!!` : isCritical ? `${damage}!` : `${damage}` , {
+      fontSize: isSuperCrit ? '24px' : isCritical ? '22px' : '16px',
       fontFamily: 'Inter', resolution: 4,
-      color: isCritical ? '#ffdd44' : '#ffffff',
-      fontStyle: isCritical ? 'bold' : 'normal',
+      color: isSuperCrit ? '#cc88ff' : isCritical ? '#ffdd44' : '#ffffff',
+      fontStyle: isSuperCrit ? 'bold' : isCritical ? 'bold' : 'normal',
       stroke: '#000000',
       strokeThickness: 3,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(250);

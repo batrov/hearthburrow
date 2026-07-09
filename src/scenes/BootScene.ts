@@ -167,7 +167,7 @@ export class BootScene extends Phaser.Scene {
 
     this.load.setPath('');
     this.load.audio('music_tavern', 'music/tavern.mp3');
-    this.load.audio('music_secret_room', 'music/secret_room.wav');
+    this.load.audio('music_secret_room', 'music/secret_room.mp3');
     this.load.setPath('assets/sprites');
 
     // UI 9-slice textures

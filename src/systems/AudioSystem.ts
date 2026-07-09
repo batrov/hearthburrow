@@ -263,6 +263,65 @@ export class AudioSystem {
     zing.stop(t + 0.23);
   }
 
+  /** Triple-smack super crit — like playCombatCrit but with a third harder hit and higher zing. */
+  playCombatSuperCrit(): void {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+
+    const makeSmack = (startTime: number, freqStart: number, freqEnd: number, gainPeak: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(freqStart, startTime);
+      osc.frequency.exponentialRampToValueAtTime(freqEnd, startTime + 0.05);
+      gain.gain.setValueAtTime(gainPeak, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.07);
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+      osc.start(startTime);
+      osc.stop(startTime + 0.08);
+
+      const clickSize = Math.floor(ctx.sampleRate * 0.008);
+      const clickBuf = ctx.createBuffer(1, clickSize, ctx.sampleRate);
+      const clickData = clickBuf.getChannelData(0);
+      for (let i = 0; i < clickSize; i++) {
+        clickData[i] = (Math.random() * 2 - 1) * (1 - i / clickSize);
+      }
+      const click = ctx.createBufferSource();
+      click.buffer = clickBuf;
+      const clickGain = ctx.createGain();
+      const clickHp = ctx.createBiquadFilter();
+      clickHp.type = 'highpass';
+      clickHp.frequency.value = 2000;
+      clickGain.gain.setValueAtTime(0.3, startTime);
+      click.connect(clickHp);
+      clickHp.connect(clickGain);
+      clickGain.connect(this.sfxGain!);
+      click.start(startTime);
+    };
+
+    // Hit 1 (punchy)
+    makeSmack(t, 320, 900, 0.28);
+    // Hit 2 (brighter)
+    makeSmack(t + 0.08, 520, 1600, 0.35);
+    // Hit 3 (hardest, highest)
+    makeSmack(t + 0.16, 720, 2400, 0.40);
+
+    // Zing tail — higher and longer than regular crit
+    const zing = ctx.createOscillator();
+    const zingGain = ctx.createGain();
+    zing.type = 'sine';
+    zing.frequency.setValueAtTime(3000, t + 0.16);
+    zing.frequency.exponentialRampToValueAtTime(4000, t + 0.30);
+    zingGain.gain.setValueAtTime(0.15, t + 0.16);
+    zingGain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+    zing.connect(zingGain);
+    zingGain.connect(this.sfxGain!);
+    zing.start(t + 0.16);
+    zing.stop(t + 0.36);
+  }
+
   /** Low buzz for missed strikes. */
   playCombatMiss(): void {
     const ctx = this.ensureContext();
