@@ -3110,7 +3110,6 @@ export class ExpeditionScene extends Phaser.Scene {
 
     let choiceButtons: UiButton[] = [];
     let selectedChoice = 0;
-    let _clickHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
     let _moveHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
 
     const showChoices = () => {
@@ -3128,16 +3127,6 @@ export class ExpeditionScene extends Phaser.Scene {
       }
       if (choiceButtons.length > 0) choiceButtons[0].setSelected(true);
 
-      _clickHandler = (p: Phaser.Input.Pointer) => {
-        for (let i = 0; i < choiceButtons.length; i++) {
-          if (choiceButtons[i].getBounds().contains(p.x, p.y)) {
-            executeChoice(i);
-            return;
-          }
-        }
-      };
-      this.input.on('pointerdown', _clickHandler);
-
       _moveHandler = (p: Phaser.Input.Pointer) => {
         for (const btn of choiceButtons) btn.handleHover(p);
       };
@@ -3146,7 +3135,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     const executeChoice = (index: number) => {
       if (typingTimer) { typingTimer.remove(); typingTimer = null; }
-      if (_clickHandler) { this.input.off('pointerdown', _clickHandler); _clickHandler = null; }
+      this.input.off('pointerdown', clickHandler);
       if (_moveHandler) { this.input.off('pointermove', _moveHandler); _moveHandler = null; }
       this.input.keyboard?.off('keydown-SPACE', spaceHandler);
       this.input.keyboard?.off('keydown-ESC', closeHandler);
@@ -3164,6 +3153,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.analog.reset();
 
       if (index === 0) {
+        audio.playItemPickup();
         if (!alreadyDiscovered) {
           gameState.crafting.discover('stamina_potion');
           this.showRecipeDiscovery('stamina_potion');
@@ -3190,7 +3180,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.hideActionBubble();
     };
 
-    const spaceHandler = () => {
+    const clickHandler = (p: Phaser.Input.Pointer) => {
       if (!typingComplete) {
         if (typingTimer) { typingTimer.remove(); typingTimer = null; }
         revealedChars = fullText.length;
@@ -3198,6 +3188,38 @@ export class ExpeditionScene extends Phaser.Scene {
         typingComplete = true;
         hintText.setText('[SPACE] choose  ·  [ESC] leave');
         showChoices();
+      } else {
+        for (let i = 0; i < choiceButtons.length; i++) {
+          if (choiceButtons[i].getBounds().contains(p.x, p.y)) {
+            executeChoice(i);
+            return;
+          }
+        }
+      }
+    };
+
+    this.time.delayedCall(0, () => {
+      this.input.on('pointerdown', clickHandler);
+      this.input.keyboard?.on('keydown-SPACE', spaceHandler);
+      this.input.keyboard?.on('keydown-ESC', closeHandler);
+      this.input.keyboard?.on('keydown-W', navHandler);
+      this.input.keyboard?.on('keydown-UP', navHandler);
+      this.input.keyboard?.on('keydown-S', navHandler);
+      this.input.keyboard?.on('keydown-DOWN', navHandler);
+    });
+
+    const skipTyping = () => {
+      if (typingTimer) { typingTimer.remove(); typingTimer = null; }
+      revealedChars = fullText.length;
+      speechText.setText(fullText);
+      typingComplete = true;
+      hintText.setText('[SPACE] choose  ·  [ESC] leave');
+      showChoices();
+    };
+
+    const spaceHandler = () => {
+      if (!typingComplete) {
+        skipTyping();
       } else {
         executeChoice(selectedChoice);
       }
@@ -3221,15 +3243,6 @@ export class ExpeditionScene extends Phaser.Scene {
         choiceButtons[selectedChoice].setSelected(true);
       }
     };
-
-    this.time.delayedCall(0, () => {
-      this.input.keyboard?.on('keydown-SPACE', spaceHandler);
-      this.input.keyboard?.on('keydown-ESC', closeHandler);
-      this.input.keyboard?.on('keydown-W', navHandler);
-      this.input.keyboard?.on('keydown-UP', navHandler);
-      this.input.keyboard?.on('keydown-S', navHandler);
-      this.input.keyboard?.on('keydown-DOWN', navHandler);
-    });
   }
 
   private handleDescend(): void {
