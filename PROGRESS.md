@@ -716,7 +716,15 @@ Resolved Bugs:
 - **Super crit damage popup** — hitting both the yellow skill zone AND RNG crit proc (4× damage) now shows `4!!` in light purple `#cc88ff` with enhanced particles, `"SUPER CRIT! +N"` feedback, and boss-victory SFX
 - **Obtain popup stacking fix** — popups now reposition via tween when one is removed, preventing overlap with newly created popups
 
+## ✅ Trapped Villager Dialog Revamp (July 2026)
+- **Typewriter rescue dialogue** — pressing SPACE on a trapped villager now shows a typewriter dialog panel (35ms/char) with NPC name in gold, rescue line + boot unlock text, instead of the generic EventPanel
+- **Choice buttons after typing** — after the rescue line finishes typing, two choice buttons (Rescue / Leave) appear below the text; W/S or ↑/↓ to navigate, SPACE to confirm, ESC to leave
+- **Blocker overlay** — transparent full-screen interactive rectangle prevents tap/click bleed-through to the game world during the dialog; marked with `setData('isUI', true)` so `isPointerOverUI()` catches it
+- **Action button hidden** — `updateActionButton()` called immediately on dialog open so the bottom-center action button hides behind the `isModalActive` guard (previously `updateActionButton()` was never reached since the `eventActive` block in `update()` returns early)
+- **Rescue/Leave logic preserved** — same exact rescue flow (stamina potion recipe, villager record, boots check, XP, floor redraw) as the previous EventPanel implementation
+
 ## Resolved Bugs (July 2026)
 - **Obtain popups overlap after removal** — remaining popups now tween to corrected Y positions when a popup expires, preventing new popups from overlapping stale ones
 - **Research panel shows INSUFFICIENT instead of AVAILABLE** — laboratory nodes that can't be afforded now display `INSUFFICIENT` in red instead of misleading `AVAILABLE`
 - **Boss highlight direction flipped wrong** — facing outline glow always rendered boss facing right (default), ignoring the actual sprite's `flipX` state. Fixed by reading the boss sprite's `flipX` and applying it to all 24 outline images in `updateFacingHighlight()`. Also removed random boss flip on init — bosses now always face toward the player at spawn via `(x < playerX) || (x === playerX && y > playerY)`.
+- **Action button visible during NPC dialog** — `updateActionButton()` was never called while a modal was active because the `eventActive` block in `update()` returns early before line 1921. Fixed by calling `updateActionButton()` directly in `showVillagerRescueDialogue()` after setting `eventActive = true`.

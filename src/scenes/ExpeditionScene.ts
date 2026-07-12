@@ -3021,6 +3021,217 @@ export class ExpeditionScene extends Phaser.Scene {
     });
   }
 
+  private showVillagerRescueDialogue(tx: number, ty: number): void {
+    const floor = this.currentFloor;
+    if (!floor) return;
+
+    const tile = floor.tiles[ty][tx];
+    const variant = gameState.rescuedVillagers.length;
+    const personality = NPC_PERSONALITIES[variant];
+    const name = personality?.name ?? `Villager ${variant + 1}`;
+    const line = personality?.rescueLine ?? 'Please, help me!';
+    const alreadyDiscovered = gameState.crafting.isDiscovered('stamina_potion');
+    const bootUnlock = this.getNextBootUnlock();
+
+    let fullText = `"${line}"`;
+    if (bootUnlock) fullText += `\n\n${bootUnlock}`;
+
+    this.analog.reset();
+    this.eventActive = true;
+    this.updateActionButton();
+
+    const blocker = this.add.rectangle(CX(), CY(), VW(), VH(), 0x000000, 0)
+      .setScrollFactor(0).setDepth(DEPTH.POPUP - 1).setData('isUI', true).setInteractive();
+    blocker.on('pointerdown', () => {});
+
+    const modalW = 340;
+    const contentW = 310;
+    const pad = 22;
+    const titleH = 20;
+    const hintH = 16;
+    const choiceBtnH = 38;
+    const choiceGap = 8;
+    const choiceAreaH = choiceBtnH * 2 + choiceGap;
+
+    const meas = createText(this, 0, 0, fullText, {
+      fontSize: fs(12), fontFamily: 'Inter', resolution: 4,
+      wordWrap: { width: contentW },
+    });
+    const textH = meas.height;
+    meas.destroy();
+
+    const modalH = Math.max(140,
+      pad + titleH + 10 + textH + 14 + hintH + 12 + choiceAreaH + pad);
+
+    const modalTop = CY() - modalH / 2;
+    const leftX = CX() - modalW / 2 + 10;
+
+    const modal = NineSliceBg.modal(this, CX(), CY(), modalW, modalH);
+    modal.setDepth(DEPTH.POPUP).setScrollFactor(0).setAlpha(0.85);
+    this.cameras.main.ignore(modal);
+
+    const nameText = createText(this, leftX, modalTop + pad, name, {
+      fontSize: fs(13), fontFamily: 'Inter', resolution: 4, color: '#ccaa66', fontStyle: 'bold',
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(DEPTH.POPUP + 1);
+    this.cameras.main.ignore(nameText);
+
+    const lineY = modalTop + pad + titleH + 10;
+    const speechText = createText(this, leftX, lineY, '', {
+      fontSize: fs(12), fontFamily: 'Inter', resolution: 4, color: '#e8d5b7', align: 'left',
+      wordWrap: { width: contentW },
+    }).setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.POPUP + 1);
+    this.cameras.main.ignore(speechText);
+
+    const hintY = lineY + textH + 14;
+    const hintText = createText(this, CX(), hintY, '[SPACE] skip', {
+      fontSize: fs(10), fontFamily: 'Inter', resolution: 4, color: '#6a5a4a',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.POPUP + 1);
+    this.cameras.main.ignore(hintText);
+
+    let typingComplete = false;
+    let typingTimer: Phaser.Time.TimerEvent | null = null;
+    let revealedChars = 0;
+
+    const typingSpeed = 35;
+    typingTimer = this.time.addEvent({
+      delay: typingSpeed,
+      callback: () => {
+        revealedChars++;
+        speechText.setText(fullText.substring(0, revealedChars));
+        if (revealedChars >= fullText.length) {
+          typingComplete = true;
+          if (typingTimer) { typingTimer.remove(); typingTimer = null; }
+          hintText.setText('[SPACE] choose  ·  [ESC] leave');
+          showChoices();
+        }
+      },
+      loop: true,
+    });
+
+    let choiceButtons: UiButton[] = [];
+    let selectedChoice = 0;
+    let _clickHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
+    let _moveHandler: ((p: Phaser.Input.Pointer) => void) | null = null;
+
+    const showChoices = () => {
+      const cy = hintY + hintH / 2 + 12;
+      for (let i = 0; i < 2; i++) {
+        const y = cy + i * (choiceBtnH + choiceGap);
+        const btn = new UiButton(this, CX(), y, i === 0 ? 'Rescue' : 'Leave', 300, choiceBtnH, () => {},
+          { fontSize: fs(13), color: '#c8b898' }
+        );
+        btn.setDepth(DEPTH.POPUP + 2);
+        for (const c of btn.getChildren()) {
+          this.cameras.main.ignore(c);
+        }
+        choiceButtons.push(btn);
+      }
+      if (choiceButtons.length > 0) choiceButtons[0].setSelected(true);
+
+      _clickHandler = (p: Phaser.Input.Pointer) => {
+        for (let i = 0; i < choiceButtons.length; i++) {
+          if (choiceButtons[i].getBounds().contains(p.x, p.y)) {
+            executeChoice(i);
+            return;
+          }
+        }
+      };
+      this.input.on('pointerdown', _clickHandler);
+
+      _moveHandler = (p: Phaser.Input.Pointer) => {
+        for (const btn of choiceButtons) btn.handleHover(p);
+      };
+      this.input.on('pointermove', _moveHandler);
+    };
+
+    const executeChoice = (index: number) => {
+      if (typingTimer) { typingTimer.remove(); typingTimer = null; }
+      if (_clickHandler) { this.input.off('pointerdown', _clickHandler); _clickHandler = null; }
+      if (_moveHandler) { this.input.off('pointermove', _moveHandler); _moveHandler = null; }
+      this.input.keyboard?.off('keydown-SPACE', spaceHandler);
+      this.input.keyboard?.off('keydown-ESC', closeHandler);
+      this.input.keyboard?.off('keydown-W', navHandler);
+      this.input.keyboard?.off('keydown-UP', navHandler);
+      this.input.keyboard?.off('keydown-S', navHandler);
+      this.input.keyboard?.off('keydown-DOWN', navHandler);
+      choiceButtons.forEach(b => b.destroy());
+      choiceButtons = [];
+      blocker.destroy();
+      modal.destroy();
+      nameText.destroy();
+      speechText.destroy();
+      hintText.destroy();
+      this.analog.reset();
+
+      if (index === 0) {
+        if (!alreadyDiscovered) {
+          gameState.crafting.discover('stamina_potion');
+          this.showRecipeDiscovery('stamina_potion');
+        }
+        const depth = this.expeditionState.depth;
+        gameState.rescuedVillagers.push({ variant, rescuedAtDepth: depth, name, talkCount: 0 });
+        gameState.villagerRescueFloors.add(depth);
+        gameState.villagersRescued++;
+        gameState.runVillagersRescued.push({ variant, name });
+        this.checkBootsDiscovery();
+        gameState.save();
+        const lvls = gameState.addXp(5);
+        if (lvls > 0) this.handleLevelUp(lvls);
+        this.updateLevelDisplay();
+        this.createPopup(`Rescued: ${name}!`, this.cameras.main.width / 2, 300, '#44cc66');
+        floor.tiles[ty][tx].broken = true;
+        this.drawFloor();
+        this.updateDecorationTints();
+        this.drawMinimap();
+      }
+
+      this.eventActive = false;
+      this.interactTarget = null;
+      this.hideActionBubble();
+    };
+
+    const spaceHandler = () => {
+      if (!typingComplete) {
+        if (typingTimer) { typingTimer.remove(); typingTimer = null; }
+        revealedChars = fullText.length;
+        speechText.setText(fullText);
+        typingComplete = true;
+        hintText.setText('[SPACE] choose  ·  [ESC] leave');
+        showChoices();
+      } else {
+        executeChoice(selectedChoice);
+      }
+    };
+
+    const closeHandler = () => {
+      executeChoice(1);
+    };
+
+    const navHandler = (event: KeyboardEvent) => {
+      if (!typingComplete || choiceButtons.length < 2) return;
+      const isUp = event.key === 'w' || event.key === 'W' || event.key === 'ArrowUp';
+      const isDown = event.key === 's' || event.key === 'S' || event.key === 'ArrowDown';
+      if (isUp) {
+        choiceButtons[selectedChoice].setSelected(false);
+        selectedChoice = (selectedChoice - 1 + choiceButtons.length) % choiceButtons.length;
+        choiceButtons[selectedChoice].setSelected(true);
+      } else if (isDown) {
+        choiceButtons[selectedChoice].setSelected(false);
+        selectedChoice = (selectedChoice + 1) % choiceButtons.length;
+        choiceButtons[selectedChoice].setSelected(true);
+      }
+    };
+
+    this.time.delayedCall(0, () => {
+      this.input.keyboard?.on('keydown-SPACE', spaceHandler);
+      this.input.keyboard?.on('keydown-ESC', closeHandler);
+      this.input.keyboard?.on('keydown-W', navHandler);
+      this.input.keyboard?.on('keydown-UP', navHandler);
+      this.input.keyboard?.on('keydown-S', navHandler);
+      this.input.keyboard?.on('keydown-DOWN', navHandler);
+    });
+  }
+
   private handleDescend(): void {
     this.expeditionState.descend();
     this.wallsBrokenThisFloor = 0;
