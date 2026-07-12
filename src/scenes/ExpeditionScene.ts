@@ -662,7 +662,7 @@ export class ExpeditionScene extends Phaser.Scene {
               img.setDepth(interactiveDepth(x, y, 0.003));
               const mapKey = `${x},${y}`;
               this.enemyImageMap.set(mapKey, img);
-              if (!this.enemyFlipMap.has(mapKey)) this.enemyFlipMap.set(mapKey, Math.random() > 0.5);
+              if (!this.enemyFlipMap.has(mapKey)) this.enemyFlipMap.set(mapKey, (x < this.playerX) || (x === this.playerX && y > this.playerY));
               img.setFlipX(this.enemyFlipMap.get(mapKey)!);
               if (!this.enemyBaseY.has(mapKey)) this.enemyBaseY.set(mapKey, img.y);
               if (!this.enemyBobPhase.has(mapKey)) this.enemyBobPhase.set(mapKey, Math.random() * Math.PI * 2);
@@ -757,6 +757,14 @@ export class ExpeditionScene extends Phaser.Scene {
         }
       }
 
+      let bossFlipX: boolean | undefined;
+      if (tile.type === 'event_boss') {
+        bossFlipX = this.enemyImageMap.get(`${tx},${ty}`)?.flipX;
+      } else if (tile.type === 'boss_body') {
+        const center = this.findBossCenter(tx, ty);
+        if (center) bossFlipX = this.enemyImageMap.get(`${center.x},${center.y}`)?.flipX;
+      }
+
       const dirs: [number, number][] = [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
       const s = previewCfg.scale ?? 1;
       for (let t = 1; t <= 3; t++) {
@@ -772,6 +780,7 @@ export class ExpeditionScene extends Phaser.Scene {
           if (previewCfg.originX !== undefined || previewCfg.originY !== undefined) {
             img.setOrigin(previewCfg.originX ?? 0.5, previewCfg.originY ?? 0.5);
           }
+          if (bossFlipX !== undefined) img.setFlipX(bossFlipX);
           this.hudCam.ignore(img);
           this.facingOutlineImages.push(img);
         }
@@ -2106,6 +2115,11 @@ export class ExpeditionScene extends Phaser.Scene {
 
     if (eventId === 'hidden_treasure' || eventId === 'treasure_vault') {
       this.triggerChestAnimation(tx, ty, tile, eventId);
+      return;
+    }
+
+    if (eventId === 'trapped_villager') {
+      this.showVillagerRescueDialogue(tx, ty);
       return;
     }
 

@@ -719,3 +719,4 @@ Resolved Bugs:
 ## Resolved Bugs (July 2026)
 - **Obtain popups overlap after removal** — remaining popups now tween to corrected Y positions when a popup expires, preventing new popups from overlapping stale ones
 - **Research panel shows INSUFFICIENT instead of AVAILABLE** — laboratory nodes that can't be afforded now display `INSUFFICIENT` in red instead of misleading `AVAILABLE`
+- **Boss highlight direction flipped wrong** — facing outline glow always rendered boss facing right (default), ignoring the actual sprite's `flipX` state. Fixed by reading the boss sprite's `flipX` and applying it to all 24 outline images in `updateFacingHighlight()`. Also removed random boss flip on init — bosses now always face toward the player at spawn via `(x < playerX) || (x === playerX && y > playerY)`.
