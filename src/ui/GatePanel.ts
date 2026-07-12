@@ -12,6 +12,7 @@ import { getInputMode } from '../systems/InputMode';
 
 const NAMES: Record<number, string> = {
   1: 'Common Pickaxe', 2: 'Bronze Pickaxe', 3: 'Silver Pickaxe', 4: 'Gold Pickaxe',
+  5: 'Verdant Pick', 6: 'Stoneheart Pick', 7: 'Permafrost Pick', 8: 'Magma-Pick', 9: 'Void Pick',
 };
 
 const CONSUMABLE_TYPES = [
@@ -498,7 +499,18 @@ export class GatePanel extends BasePanel {
     const runs = gameState.remainingPickaxeRuns(opt.tier);
     const runsStr = opt.tier === 1 ? '\u221e' : `${runs}/5`;
     const ores = opt.tier >= 4 ? 'Gold/Silver/Bronze' : opt.tier >= 3 ? 'Silver/Bronze' : opt.tier >= 2 ? 'Bronze' : 'Stone';
-    return [`${name} [Tier ${opt.tier}]`, `Dmg: ${opt.tier} | ${ores} | ${runsStr}`];
+    const effect = gameState.getPickaxeEffect(opt.id);
+    let effectStr = '';
+    if (effect) {
+      switch (effect.type) {
+        case 'stamina_refund': effectStr = `| ${Math.round((effect.value ?? 0) * 100)}% stamina refund`; break;
+        case 'double_drop': effectStr = `| ${Math.round((effect.value ?? 0) * 100)}% double drop`; break;
+        case 'stamina_cost_reduction': effectStr = '| -1 stamina cost'; break;
+        case 'bomb_proc': effectStr = `| ${Math.round((effect.value ?? 0) * 100)}% bomb proc`; break;
+        case 'auto_collect': effectStr = '| auto-collect'; break;
+      }
+    }
+    return [`${name} [Tier ${opt.tier}]`, `Dmg: ${opt.tier} | ${ores} | ${runsStr}${effectStr}`];
   }
 
   private descRing(idx: number, label: string): [string, string] {
@@ -573,11 +585,22 @@ export class GatePanel extends BasePanel {
           const runs = gameState.remainingPickaxeRuns(o.tier);
           const runsStr = o.tier === 1 ? '\u221e' : `${runs}/5`;
           const ores = o.tier >= 4 ? 'Gold/Silver/Bronze' : o.tier >= 3 ? 'Silver/Bronze' : o.tier >= 2 ? 'Bronze' : 'Stone';
+          const effect = gameState.getPickaxeEffect(o.id);
+          let bonus = '';
+          if (effect) {
+            switch (effect.type) {
+              case 'stamina_refund': bonus = `| ${Math.round((effect.value ?? 0) * 100)}% stamina refund`; break;
+              case 'double_drop': bonus = `| ${Math.round((effect.value ?? 0) * 100)}% double drop`; break;
+              case 'stamina_cost_reduction': bonus = '| -1 stamina cost'; break;
+              case 'bomb_proc': bonus = `| ${Math.round((effect.value ?? 0) * 100)}% bomb proc`; break;
+              case 'auto_collect': bonus = '| auto-collect'; break;
+            }
+          }
           return {
             id: o.id,
             name: NAMES[o.tier] ?? `Pickaxe T${o.tier}`,
             desc1: `Dmg: ${o.tier} | ${ores}`,
-            desc2: `Dur: ${runsStr}`,
+            desc2: `Dur: ${runsStr}${bonus}`,
             disabled: o.tier > 1 && gameState.inventory.count(o.id) <= 0 && gameState.currentPickaxeTier !== o.tier,
           } as PickerOption;
         });

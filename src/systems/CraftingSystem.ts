@@ -80,8 +80,14 @@ export class CraftingSystem {
         }
         gameState.equipPickaxe(Math.max(gameState.currentPickaxeTier, equip.tier));
       } else if (equip.slot === 'boots') {
+        if (!hadItem) {
+          gameState.itemRuns[recipe.result] = 0;
+        }
         gameState.equippedBoots = recipe.result;
       } else if (equip.slot === 'lantern') {
+        if (!hadItem) {
+          gameState.itemRuns[recipe.result] = 0;
+        }
         gameState.equippedLantern = recipe.result;
       }
     }

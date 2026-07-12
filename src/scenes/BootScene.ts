@@ -149,6 +149,7 @@ export class BootScene extends Phaser.Scene {
 
     const itemSprites = [
       'pickaxe_1', 'pickaxe_2', 'pickaxe_3', 'pickaxe_4',
+      'pickaxe_5', 'pickaxe_6', 'pickaxe_7', 'pickaxe_8', 'pickaxe_9',
       'ring_critical', 'ring_damage', 'ring_precision', 'ring_hunter',
       'boots_stamina_bronze', 'boots_stamina_silver', 'boots_stamina_gold',
       'boots_luck_bronze', 'boots_luck_silver', 'boots_luck_gold',

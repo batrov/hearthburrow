@@ -38,6 +38,11 @@ PICKAXES = {
     'pickaxe_2': (0xcc8844, 0x6a4a2a),
     'pickaxe_3': (0x88bbdd, 0x6a4a2a),
     'pickaxe_4': (0xddbb44, 0x6a4a2a),
+    'pickaxe_5': (0x44aa55, 0x6a4a2a),
+    'pickaxe_6': (0x8855aa, 0x6a4a2a),
+    'pickaxe_7': (0x88ddff, 0xccccdd),
+    'pickaxe_8': (0xdd5533, 0x443322),
+    'pickaxe_9': (0x8844bb, 0x222233),
 }
 for name, (head, handle) in PICKAXES.items():
     def make(head=head, handle=handle):

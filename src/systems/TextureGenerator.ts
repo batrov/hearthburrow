@@ -431,6 +431,41 @@ export function generateAll(scene: Phaser.Scene): void {
       g.lineStyle(2, 0x6a4a2a, 1);
       g.lineBetween(cx, cy, cx + 1, cy + 8);
     },
+    pickaxe_5: (cx, cy) => {
+      g.lineStyle(2, 0x44aa55, 1);
+      g.lineBetween(cx - 6, cy - 8, cx - 1, cy);
+      g.lineBetween(cx - 1, cy, cx + 6, cy - 6);
+      g.lineStyle(2, 0x6a4a2a, 1);
+      g.lineBetween(cx, cy, cx + 1, cy + 8);
+    },
+    pickaxe_6: (cx, cy) => {
+      g.lineStyle(2, 0x8855aa, 1);
+      g.lineBetween(cx - 6, cy - 8, cx - 1, cy);
+      g.lineBetween(cx - 1, cy, cx + 6, cy - 6);
+      g.lineStyle(2, 0x6a4a2a, 1);
+      g.lineBetween(cx, cy, cx + 1, cy + 8);
+    },
+    pickaxe_7: (cx, cy) => {
+      g.lineStyle(2, 0x88ddff, 1);
+      g.lineBetween(cx - 6, cy - 8, cx - 1, cy);
+      g.lineBetween(cx - 1, cy, cx + 6, cy - 6);
+      g.lineStyle(2, 0xccccdd, 1);
+      g.lineBetween(cx, cy, cx + 1, cy + 8);
+    },
+    pickaxe_8: (cx, cy) => {
+      g.lineStyle(2, 0xdd5533, 1);
+      g.lineBetween(cx - 6, cy - 8, cx - 1, cy);
+      g.lineBetween(cx - 1, cy, cx + 6, cy - 6);
+      g.lineStyle(2, 0x443322, 1);
+      g.lineBetween(cx, cy, cx + 1, cy + 8);
+    },
+    pickaxe_9: (cx, cy) => {
+      g.lineStyle(2, 0x8844bb, 1);
+      g.lineBetween(cx - 6, cy - 8, cx - 1, cy);
+      g.lineBetween(cx - 1, cy, cx + 6, cy - 6);
+      g.lineStyle(2, 0x222233, 1);
+      g.lineBetween(cx, cy, cx + 1, cy + 8);
+    },
     ring_critical: (cx, cy) => {
       g.lineStyle(2, 0xccccaa, 1);
       g.strokeCircle(cx, cy, 6);

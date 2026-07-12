@@ -30,6 +30,11 @@ export const RECIPE_INFO: Record<string, { desc: string; unlock?: string }> = {
   lantern_silver: { desc: '+60px light radius for 5 expeditions', unlock: 'Craft bronze version first' },
   lantern_gold: { desc: '+60px light radius for 5 expeditions', unlock: 'Craft silver version first' },
   miners_potion: { desc: 'Permanently +5 max stamina (consumed on craft)', unlock: 'Rescue a villager and talk to them at the Tavern' },
+  pickaxe_5: { desc: 'Verdant Pick — 25% stamina refund. 5 runs.', unlock: 'Defeat the Forest Guardian (floor 4)' },
+  pickaxe_6: { desc: 'Stoneheart Pick — 20% double ore drops. 5 runs.', unlock: 'Defeat the Cave Behemoth (floor 9)' },
+  pickaxe_7: { desc: 'Permafrost Pick — -1 stamina cost per mine. 5 runs.', unlock: 'Defeat the Frost Wyrm (floor 14)' },
+  pickaxe_8: { desc: 'Magma-Pick — 15% chance to trigger bomb blast. 5 runs.', unlock: 'Defeat the Magma Colossus (floor 19)' },
+  pickaxe_9: { desc: 'Void Pick — auto-collects mined items. 5 runs.', unlock: 'Defeat the Void Lich (floor 24)' },
 };
 
 function cardW(): number { return VW() - 40; }

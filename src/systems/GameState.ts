@@ -287,6 +287,11 @@ const ITEM_NAMES: Record<string, string> = {
   lantern_gold: 'Gold Lantern',
   miners_spirit: "Miner's Spirit",
   miners_potion: "Miner's Potion",
+  pickaxe_5: 'Verdant Pick',
+  pickaxe_6: 'Stoneheart Pick',
+  pickaxe_7: 'Permafrost Pick',
+  pickaxe_8: 'Magma-Pick',
+  pickaxe_9: 'Void Pick',
   forest_gem: 'Forest Gem',
   cave_heart: 'Cave Heart',
   ice_shard: 'Ice Shard',
@@ -456,13 +461,25 @@ export class GameState {
   getAvailablePickaxes(): { id: string; tier: number }[] {
     const result: { id: string; tier: number }[] = [];
     result.push({ id: 'pickaxe_1', tier: 1 });
-    for (let t = 2; t <= 4; t++) {
+    for (let t = 2; t <= 9; t++) {
       const id = `pickaxe_${t}`;
       if (this.inventory.count(id) > 0) {
         result.push({ id, tier: t });
       }
     }
     return result.sort((a, b) => a.tier - b.tier);
+  }
+
+  /** Get the special effect info for a boss pickaxe, or null if none. */
+  getPickaxeEffect(id: string): { type: string; value?: number } | null {
+    const effects: Record<string, { type: string; value?: number }> = {
+      pickaxe_5: { type: 'stamina_refund', value: 0.25 },
+      pickaxe_6: { type: 'double_drop', value: 0.20 },
+      pickaxe_7: { type: 'stamina_cost_reduction', value: 1 },
+      pickaxe_8: { type: 'bomb_proc', value: 0.15 },
+      pickaxe_9: { type: 'auto_collect' },
+    };
+    return effects[id] ?? null;
   }
 
   /** Get rings available for equipment (owned + currently equipped). */
@@ -573,6 +590,8 @@ export class GameState {
       if (this.equippedLantern === itemId) this.equippedLantern = null;
       if (this.inventory.count(itemId) > 0) {
         this.itemRuns[itemId] = 0;
+      } else {
+        delete this.itemRuns[itemId];
       }
     }
   }

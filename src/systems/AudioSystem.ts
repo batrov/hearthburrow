@@ -718,6 +718,11 @@ export class AudioSystem {
     this.playNote('sine', 1400, 1400, 0.06, 0.4, 0.45);
   }
 
+  /** Short rising ping for regen boots stamina tick. */
+  playRegen(): void {
+    this.playNote('sine', 660, 880, 0.12, 0.15, 0);
+  }
+
   /** Ascending casino-style chime for roulette wins. */
   playBingo(): void {
     this.playNote('sine', 523, 523, 0.1, 0.08, 0);

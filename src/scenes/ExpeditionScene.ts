@@ -115,7 +115,7 @@ const BOSS_CONFIGS: Record<string, BossConfig> = {
     rewards: [{ id: 'crystal', quantity: 4 }, { id: 'gold_ore', quantity: 4 }, { id: 'ice_shard', quantity: 1 }],
   },
   LAVA: {
-    name: 'Magma Colossus', hp: 20, timingSpeed: 450, hitZoneWidth: 45,
+    name: 'Magma Colossus', hp: 20, timingSpeed: 450, hitZoneWidth: 70,
     mechanic: 'fake_zone',
     rewards: [{ id: 'crystal', quantity: 5 }, { id: 'gold_ore', quantity: 4 }, { id: 'magma_core', quantity: 1 }],
   },
@@ -3418,7 +3418,6 @@ export class ExpeditionScene extends Phaser.Scene {
     this.depthTextCentered.setText(`Depth: ${this.expeditionState.depth}`);
 
     this.drawMinimap();
-    this.rocksBrokenThisRun = 0;
     this.updateDarkness();
     this.updateBiomeBackground();
   }
@@ -3650,6 +3649,8 @@ export class ExpeditionScene extends Phaser.Scene {
 
     let staminaCost = 5;
     if (gameState.getResearchLevel('efficient_mining') >= 1) staminaCost--;
+    const pkEffect = gameState.getPickaxeEffect(`pickaxe_${gameState.currentPickaxeTier}`);
+    if (pkEffect?.type === 'stamina_cost_reduction') staminaCost--;
     if (!this.stamina.consume(staminaCost)) {
       this.handleExhaustion();
     }
@@ -3678,6 +3679,17 @@ export class ExpeditionScene extends Phaser.Scene {
         this.spawnItemSprite(tx, ty, minedResource);
       }
 
+      // Boss pickaxe effects
+      if (pkEffect?.type === 'stamina_refund' && Math.random() < (pkEffect.value ?? 0)) {
+        this.stamina.refill(5);
+        audio.playRegen();
+        this.showStaminaRefundPopup();
+      }
+      if (pkEffect?.type === 'double_drop' && Math.random() < (pkEffect.value ?? 0)) {
+        this.createItemPopup(tx, ty, minedResource);
+        this.spawnItemSprite(tx, ty, minedResource);
+      }
+
       this.createHitEffect(tx, ty);
       this.createMiningParticles(tx, ty, minedResource);
       this.createItemPopup(tx, ty, minedResource);
@@ -3701,6 +3713,13 @@ export class ExpeditionScene extends Phaser.Scene {
       });
 
       const oreImg = this.oreImageMap.get(`${tx},${ty}`);
+      const finishBreak = () => {
+        this.drawFloor();
+        this.drawMinimap();
+        if (pkEffect?.type === 'bomb_proc' && Math.random() < (pkEffect.value ?? 0)) {
+          this.detonateMiningBomb();
+        }
+      };
       if (oreImg) {
         this.tweens.add({
           targets: oreImg,
@@ -3708,14 +3727,10 @@ export class ExpeditionScene extends Phaser.Scene {
           alpha: 0,
           duration: 250,
           ease: 'Quad.easeOut',
-          onComplete: () => {
-            this.drawFloor();
-            this.drawMinimap();
-          },
+          onComplete: finishBreak,
         });
       } else {
-        this.drawFloor();
-        this.drawMinimap();
+        finishBreak();
       }
     } else {
       this.createHitEffect(tx, ty);
@@ -4011,7 +4026,89 @@ export class ExpeditionScene extends Phaser.Scene {
   private checkRegenBoots(): void {
     if (gameState.equippedBoots === 'boots_regen' && this.rocksBrokenThisRun % 5 === 0) {
       this.stamina.refill(1);
+      audio.playRegen();
+      this.showBootsRegenPopup();
     }
+  }
+
+  private showBootsRegenPopup(): void {
+    if (this.activeObtainPopups.length >= 3) return;
+    const anchorX = 18;
+    const anchorY = VH() - 110;
+    const popY = anchorY - this.activeObtainPopups.length * 36;
+    const container = this.add.container(anchorX, popY).setScrollFactor(0).setDepth(DEPTH.HUD + 2);
+    this.cameras.main.ignore(container);
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0a0a1a, 0.8);
+    bg.fillRoundedRect(0, 0, 220, 36, 4);
+    container.add(bg);
+    const texKey = itemIconKey('boots_regen');
+    const sprite = this.add.image(18, 18, this.textures.exists(texKey) ? texKey : '__DEFAULT');
+    sprite.setScale(0.7);
+    container.add(sprite);
+    const label = createText(this, 38, 10, '+1 stamina', {
+      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#44ccff',
+    });
+    container.add(label);
+    this.activeObtainPopups.push(container);
+    container.setAlpha(0);
+    this.tweens.add({ targets: container, alpha: 1, duration: 100, ease: 'Quad.easeOut' });
+    this.time.delayedCall(1500, () => {
+      this.tweens.add({
+        targets: container, alpha: 0, duration: 200, ease: 'Quad.easeIn',
+        onComplete: () => {
+          const idx = this.activeObtainPopups.indexOf(container);
+          if (idx >= 0) this.activeObtainPopups.splice(idx, 1);
+          container.destroy();
+          this.activeObtainPopups.forEach((c, i) => {
+            const targetY = anchorY - i * 36;
+            this.tweens.add({
+              targets: c, y: targetY, duration: 150, ease: 'Quad.easeOut',
+            });
+          });
+        },
+      });
+    });
+  }
+
+  private showStaminaRefundPopup(): void {
+    if (this.activeObtainPopups.length >= 3) return;
+    const anchorX = 18;
+    const anchorY = VH() - 110;
+    const popY = anchorY - this.activeObtainPopups.length * 36;
+    const container = this.add.container(anchorX, popY).setScrollFactor(0).setDepth(DEPTH.HUD + 2);
+    this.cameras.main.ignore(container);
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0a0a1a, 0.8);
+    bg.fillRoundedRect(0, 0, 220, 36, 4);
+    container.add(bg);
+    const texKey = 'item_pickaxe_5';
+    const sprite = this.add.image(18, 18, this.textures.exists(texKey) ? texKey : '__DEFAULT');
+    sprite.setScale(0.7);
+    container.add(sprite);
+    const label = createText(this, 38, 10, '+5 Stamina', {
+      fontSize: fs(14), fontFamily: 'Inter', resolution: 4, color: '#44dd88',
+    });
+    container.add(label);
+    this.activeObtainPopups.push(container);
+    container.setAlpha(0);
+    this.tweens.add({ targets: container, alpha: 1, duration: 100, ease: 'Quad.easeOut' });
+    this.time.delayedCall(1500, () => {
+      this.tweens.add({
+        targets: container, alpha: 0, duration: 200, ease: 'Quad.easeIn',
+        onComplete: () => {
+          const idx = this.activeObtainPopups.indexOf(container);
+          if (idx >= 0) this.activeObtainPopups.splice(idx, 1);
+          container.destroy();
+          this.activeObtainPopups.forEach((c, i) => {
+            const targetY = anchorY - i * 36;
+            this.tweens.add({
+              targets: c, y: targetY, duration: 150, ease: 'Quad.easeOut',
+            });
+          });
+        },
+      });
+    });
   }
 
   private updateLevelDisplay(): void {
@@ -4291,6 +4388,16 @@ export class ExpeditionScene extends Phaser.Scene {
             gameState.crafting.discover('stamina_potion');
             this.showRecipeDiscovery('stamina_potion');
           }
+
+          const bossDepth = this.expeditionState.depth;
+          const bossPickaxeMap: Record<string, string> = {
+            '4': 'pickaxe_5', '9': 'pickaxe_6', '14': 'pickaxe_7', '19': 'pickaxe_8', '24': 'pickaxe_9',
+          };
+          const bossPIdx = bossPickaxeMap[String(bossDepth)];
+          if (bossPIdx && !gameState.crafting.isDiscovered(bossPIdx)) {
+            gameState.crafting.discover(bossPIdx);
+            this.showRecipeDiscovery(bossPIdx);
+          }
         } else {
           tile.broken = true;
           this.drawFloor();
@@ -4360,6 +4467,7 @@ export class ExpeditionScene extends Phaser.Scene {
       tile.resource = '';
       tile.broken = false;
       this.stairsSpawned = true;
+      audio.playPuzzleComplete();
       this.drawFloor();
     }
   }
@@ -4571,6 +4679,13 @@ export class ExpeditionScene extends Phaser.Scene {
   private spawnItemSprite(tx: number, ty: number, resource: string): void {
     const textureKey = resource.endsWith('_ore') ? resource : `${resource}_ore`;
     if (!this.textures.exists(textureKey)) return;
+
+    const pkEffect = gameState.getPickaxeEffect(`pickaxe_${gameState.currentPickaxeTier}`);
+    if (pkEffect?.type === 'auto_collect') {
+      this.giveItem(resource, 1);
+      return;
+    }
+
     const p = gridToIso(tx, ty);
     const sprite = this.add.image(p.x, p.y, textureKey)
       .setDepth(DEPTH.ITEM_SPRITE)
